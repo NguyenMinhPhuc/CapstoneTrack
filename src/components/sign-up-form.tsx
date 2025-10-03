@@ -40,7 +40,7 @@ const formSchema = z.object({
   lastName: z.string().min(1, { message: 'Tên là bắt buộc.' }),
   email: z.string().email({ message: 'Email không hợp lệ.' }),
   password: z.string().min(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự.' }),
-  role: z.enum(['student', 'supervisor'], {
+  role: z.enum(['student', 'supervisor', 'admin'], {
     required_error: 'Bạn phải chọn một vai trò.',
   }),
 });
@@ -195,6 +195,7 @@ export function SignUpForm() {
                     <SelectContent>
                       <SelectItem value="student">Sinh viên</SelectItem>
                       <SelectItem value="supervisor">Giáo viên hướng dẫn</SelectItem>
+                      <SelectItem value="admin">Quản trị viên</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>
