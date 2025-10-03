@@ -24,6 +24,15 @@
             "student"
           ]
         },
+        "status": {
+          "type": "string",
+          "description": "The status of the user account.",
+          "enum": [
+            "active",
+            "pending",
+            "disabled"
+          ]
+        },
         "studentId": {
           "type": "string",
           "description": "Reference to Student entity, if the user is a student. (Relationship: UserAccount 1:1 Student)"
@@ -36,7 +45,8 @@
       "required": [
         "id",
         "email",
-        "role"
+        "role",
+        "status"
       ]
     },
     "Student": {

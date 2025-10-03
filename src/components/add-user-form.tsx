@@ -84,6 +84,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
       await setDoc(userDocRef, {
         email: values.email,
         role: values.role,
+        status: 'active', // Default status for new users
         createdAt: serverTimestamp(),
       });
 

@@ -19,5 +19,6 @@ export type SystemUser = {
   id: string;
   email: string;
   role: 'admin' | 'supervisor' | 'student';
+  status: 'active' | 'pending' | 'disabled';
   createdAt: any; 
 };

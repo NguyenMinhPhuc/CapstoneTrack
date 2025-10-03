@@ -30,23 +30,30 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { AddUserForm } from './add-user-form';
+import { useToast } from '@/hooks/use-toast';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
 export function UserManagementTable() {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const usersCollectionRef = useMemoFirebase(
@@ -60,6 +67,36 @@ export function UserManagementTable() {
     'admin': 'default',
     'supervisor': 'secondary',
     'student': 'outline'
+  };
+
+  const statusVariant: Record<SystemUser['status'], 'default' | 'secondary' | 'destructive'> = {
+    'active': 'default',
+    'pending': 'secondary',
+    'disabled': 'destructive'
+  };
+
+  const statusLabel: Record<SystemUser['status'], string> = {
+    'active': 'Đang hoạt động',
+    'pending': 'Đang chờ',
+    'disabled': 'Đã bị khóa'
+  }
+
+  const handleStatusChange = async (userId: string, newStatus: SystemUser['status']) => {
+    const userDocRef = doc(firestore, 'users', userId);
+    try {
+      await updateDoc(userDocRef, { status: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Trạng thái người dùng đã được cập nhật thành "${statusLabel[newStatus]}".`,
+      });
+    } catch (error) {
+      console.error("Error updating user status:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái người dùng.',
+      });
+    }
   };
 
   if (isLoading) {
@@ -119,6 +156,7 @@ export function UserManagementTable() {
             <TableRow>
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Status</TableHead>
               <TableHead className="hidden md:table-cell">Created At</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -140,6 +178,9 @@ export function UserManagementTable() {
                 <TableCell>
                   <Badge variant={roleVariant[user.role]} className="capitalize">{user.role}</Badge>
                 </TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant[user.status]}>{statusLabel[user.status]}</Badge>
+                </TableCell>
                 <TableCell className="hidden md:table-cell">
                     {user.createdAt?.toDate && format(user.createdAt.toDate(), 'PPP')}
                 </TableCell>
@@ -152,6 +193,25 @@ export function UserManagementTable() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem>Edit</DropdownMenuItem>
+                       <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <span>Change Status</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                            <DropdownMenuItem onClick={() => handleStatusChange(user.id, 'active')} disabled={user.status === 'active'}>
+                              Activate
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(user.id, 'pending')} disabled={user.status === 'pending'}>
+                              Set to Pending
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(user.id, 'disabled')} disabled={user.status === 'disabled'}>
+                              Disable
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
