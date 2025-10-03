@@ -14,3 +14,10 @@ export type StudentProgress = {
   stage: string;
   count: number;
 };
+
+export type SystemUser = {
+  id: string;
+  email: string;
+  role: 'admin' | 'supervisor' | 'student';
+  createdAt: any; 
+};

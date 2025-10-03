@@ -20,24 +20,49 @@ import {
   Settings,
   GraduationCap,
   Briefcase,
+  Shield,
 } from "lucide-react";
-
-const menuItems = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { type: "separator", label: "Internship" },
-  { href: "/internship/applications", label: "Applications", icon: Briefcase },
-  { href: "/internship/students", label: "Students", icon: Users },
-  { href: "/internship/reports", label: "Reports", icon: BarChart3 },
-  { type: "separator", label: "Graduation" },
-  { href: "/graduation/projects", label: "Projects", icon: FileText },
-  { href: "/graduation/students", label: "Students", icon: Users },
-  { href: "/graduation/reports", label: "Reports", icon: BarChart3 },
-  { type: "separator" },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { Skeleton } from "./ui/skeleton";
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { user, isUserLoading } = useUser();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+
+  const menuItems = [
+    { href: "/", label: "Dashboard", icon: LayoutDashboard },
+    { type: "separator", label: "Internship" },
+    { href: "/internship/applications", label: "Applications", icon: Briefcase },
+    { href: "/internship/students", label: "Students", icon: Users },
+    { href: "/internship/reports", label: "Reports", icon: BarChart3 },
+    { type: "separator", label: "Graduation" },
+    { href: "/graduation/projects", label: "Projects", icon: FileText },
+    { href: "/graduation/students", label: "Students", icon: Users },
+    { href: "/graduation/reports", label: "Reports", icon: BarChart3 },
+    { type: "separator" },
+    { href: "/settings", label: "Settings", icon: Settings },
+  ];
+
+  const adminMenuItems = [
+    { type: "separator", label: "Admin" },
+    { href: "/admin/users", label: "User Management", icon: Shield },
+  ];
+  
+  const allItems = [...menuItems];
+  if (userData?.role === 'admin') {
+    allItems.splice(9, 0, ...adminMenuItems);
+  }
+
+  const isLoading = isUserLoading || isUserDataLoading;
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -58,32 +83,38 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarMenu>
-          {menuItems.map((item, index) => {
-            if (item.type === 'separator') {
-              return (
-                <div key={index} className="px-4 py-2">
-                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">{item.label}</p>
-                  <SidebarSeparator className="group-data-[collapsible=icon]:block hidden my-2"/>
-                </div>
-              );
-            }
-            return (
-              <SidebarMenuItem key={item.href}>
-                <SidebarMenuButton
-                  asChild
-                  isActive={pathname === item.href}
-                  tooltip={item.label}
-                >
-                  <Link href={item.href}>
-                    <item.icon />
-                    <span>{item.label}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            )
-          })}
-        </SidebarMenu>
+        {isLoading ? (
+            <div className="p-2 space-y-2">
+                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+            </div>
+        ) : (
+            <SidebarMenu>
+            {allItems.map((item, index) => {
+                if (item.type === 'separator') {
+                return (
+                    <div key={index} className="px-4 py-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">{item.label}</p>
+                    <SidebarSeparator className="group-data-[collapsible=icon]:block hidden my-2"/>
+                    </div>
+                );
+                }
+                return (
+                <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                    asChild
+                    isActive={pathname === item.href}
+                    tooltip={item.label}
+                    >
+                    <Link href={item.href}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                    </Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                )
+            })}
+            </SidebarMenu>
+        )}
       </SidebarContent>
     </Sidebar>
   );
