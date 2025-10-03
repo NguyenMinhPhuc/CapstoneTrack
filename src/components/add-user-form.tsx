@@ -44,9 +44,6 @@ const getSecondaryApp = () => {
   const secondaryAppName = 'secondary-app-for-user-creation';
   const existingApp = getApps().find(app => app.name === secondaryAppName);
   if (existingApp) {
-    // It's not strictly necessary to sign out, as the auth state is separate,
-    // but it's good practice to avoid any potential edge cases.
-    getAuth(existingApp).signOut().catch(() => {});
     return existingApp;
   }
   return initializeApp(firebaseConfig, secondaryAppName);
@@ -69,7 +66,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
     try {
-      // 1. Create user in Firebase Authentication
+      // 1. Create user in Firebase Authentication using a temporary auth instance
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
         values.email,
@@ -92,6 +89,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         setDocumentNonBlocking(studentDocRef, {
             email: values.email,
             userId: user.uid,
+            // You might want to add firstName, lastName fields to this form in the future
             createdAt: serverTimestamp(),
         }, { merge: true });
       } else if (values.role === 'supervisor') {
@@ -100,6 +98,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         setDocumentNonBlocking(supervisorDocRef, {
             email: values.email,
             userId: user.uid,
+            // You might want to add firstName, lastName fields to this form in the future
             createdAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -123,8 +122,8 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         description: description,
       });
     } finally {
-        // Sign out the temporary auth instance to clear its state
-        await tempAuth.signOut();
+        // Sign out the temporary auth instance to clear its state for the next creation
+        await signOut(tempAuth);
     }
   }
 
