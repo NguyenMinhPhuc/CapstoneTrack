@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -39,7 +39,7 @@ import {
   DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
@@ -74,6 +74,13 @@ export function UserManagementTable() {
   );
   
   const { data: users, isLoading } = useCollection<SystemUser>(usersCollectionRef);
+
+  const roleCounts = useMemo(() => {
+    return users?.reduce((acc, user) => {
+        acc[user.role] = (acc[user.role] || 0) + 1;
+        return acc;
+    }, {} as Record<SystemUser['role'], number>);
+  }, [users]);
 
   const filteredUsers = users?.filter(user => {
     const searchMatch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -141,35 +148,78 @@ export function UserManagementTable() {
 
   if (isLoading) {
     return (
-        <Card>
-            <CardHeader>
-                <Skeleton className="h-6 w-1/4" />
-                <Skeleton className="h-4 w-2/4" />
-            </CardHeader>
-            <CardContent>
-                <div className="space-y-4">
-                    {[...Array(5)].map((_, i) => (
-                        <div key={i} className="flex items-center space-x-4">
-                            <Skeleton className="h-10 w-10 rounded-full" />
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-[250px]" />
-                                <Skeleton className="h-4 w-[200px]" />
+        <div className="space-y-4">
+             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                {[...Array(3)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <Skeleton className="h-4 w-2/4" />
+                           <Skeleton className="h-6 w-6 rounded-sm" />
+                        </CardHeader>
+                        <CardContent>
+                           <Skeleton className="h-7 w-1/4 mb-2" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+            <Card>
+                <CardHeader>
+                    <Skeleton className="h-8 w-1/4" />
+                    <Skeleton className="h-4 w-2/4" />
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-4">
+                        {[...Array(5)].map((_, i) => (
+                            <div key={i} className="flex items-center space-x-4">
+                                <Skeleton className="h-10 w-10 rounded-full" />
+                                <div className="flex-1 space-y-2">
+                                    <Skeleton className="h-4 w-full" />
+                                </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
-            </CardContent>
-        </Card>
+                        ))}
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
     )
   }
 
   return (
-    <>
+    <div className="space-y-4">
+    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Admins</CardTitle>
+                <Shield className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{roleCounts?.admin || 0}</div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Supervisors</CardTitle>
+                <User className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{roleCounts?.supervisor || 0}</div>
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Students</CardTitle>
+                <GraduationCap className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+                <div className="text-2xl font-bold">{roleCounts?.student || 0}</div>
+            </CardContent>
+        </Card>
+    </div>
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
-                <CardTitle>Users</CardTitle>
+                <CardTitle>User List</CardTitle>
                 <CardDescription>
                 Manage all users in the system.
                 </CardDescription>
@@ -194,12 +244,13 @@ export function UserManagementTable() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                            <DropdownMenuCheckboxItem
+                             <DropdownMenuCheckboxItem
                                 checked={roleFilter === 'all'}
                                 onCheckedChange={() => setRoleFilter('all')}
                             >
-                                All
+                                All Roles
                             </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
                             <DropdownMenuCheckboxItem
                                 checked={roleFilter === 'admin'}
                                 onCheckedChange={() => setRoleFilter('admin')}
@@ -344,6 +395,6 @@ export function UserManagementTable() {
           )}
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 }
