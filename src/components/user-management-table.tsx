@@ -39,7 +39,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -49,11 +49,13 @@ import { format } from 'date-fns';
 import { AddUserForm } from './add-user-form';
 import { EditUserForm } from './edit-user-form';
 import { useToast } from '@/hooks/use-toast';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
 export function UserManagementTable() {
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -104,6 +106,23 @@ export function UserManagementTable() {
         variant: 'destructive',
         title: 'Lỗi',
         description: 'Không thể cập nhật trạng thái người dùng.',
+      });
+    }
+  };
+
+  const handleResetPassword = async (email: string) => {
+    try {
+      await sendPasswordResetEmail(auth, email);
+      toast({
+        title: 'Thành công',
+        description: `Email đặt lại mật khẩu đã được gửi tới ${email}.`,
+      });
+    } catch (error: any) {
+      console.error("Error sending password reset email:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: error.message || 'Không thể gửi email đặt lại mật khẩu.',
       });
     }
   };
@@ -203,6 +222,9 @@ export function UserManagementTable() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditClick(user)}>Edit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleResetPassword(user.email)}>
+                        Reset Password
+                      </DropdownMenuItem>
                        <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                           <span>Change Status</span>
