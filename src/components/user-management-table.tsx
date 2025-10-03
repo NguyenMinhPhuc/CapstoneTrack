@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
@@ -50,6 +50,7 @@ import { AddUserForm } from './add-user-form';
 import { EditUserForm } from './edit-user-form';
 import { useToast } from '@/hooks/use-toast';
 import { sendPasswordResetEmail } from 'firebase/auth';
+import { Input } from './ui/input';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
@@ -60,6 +61,7 @@ export function UserManagementTable() {
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
 
   const usersCollectionRef = useMemoFirebase(
@@ -68,6 +70,10 @@ export function UserManagementTable() {
   );
   
   const { data: users, isLoading } = useCollection<SystemUser>(usersCollectionRef);
+
+  const filteredUsers = users?.filter(user => 
+    user.email.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const roleVariant: Record<SystemUser['role'], 'default' | 'secondary' | 'outline'> = {
     'admin': 'default',
@@ -154,30 +160,44 @@ export function UserManagementTable() {
   return (
     <>
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-            <CardTitle>Users</CardTitle>
-            <CardDescription>
-            Manage all users in the system.
-            </CardDescription>
+      <CardHeader>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+                <CardTitle>Users</CardTitle>
+                <CardDescription>
+                Manage all users in the system.
+                </CardDescription>
+            </div>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-64">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search by email..."
+                        className="pl-8 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button className="w-full sm:w-auto">
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Add User
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                    <DialogTitle>Add New User</DialogTitle>
+                    <DialogDescription>
+                        Enter the details below to create a new user account.
+                    </DialogDescription>
+                    </DialogHeader>
+                    <AddUserForm onFinished={() => setIsAddUserDialogOpen(false)} />
+                </DialogContent>
+                </Dialog>
+            </div>
         </div>
-        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-                <PlusCircle className="mr-2 h-4 w-4" />
-                Add User
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[425px]">
-            <DialogHeader>
-              <DialogTitle>Add New User</DialogTitle>
-              <DialogDescription>
-                Enter the details below to create a new user account.
-              </DialogDescription>
-            </DialogHeader>
-            <AddUserForm onFinished={() => setIsAddUserDialogOpen(false)} />
-          </DialogContent>
-        </Dialog>
       </CardHeader>
       <CardContent>
         <Table>
@@ -191,7 +211,7 @@ export function UserManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {users?.map((user) => (
+            {filteredUsers?.map((user) => (
               <TableRow key={user.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
