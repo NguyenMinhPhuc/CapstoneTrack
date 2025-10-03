@@ -29,9 +29,9 @@ import {
   CardHeader,
   CardTitle,
 } from './ui/card';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { useAuth, useFirestore } from '@/firebase';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -72,31 +72,31 @@ export function SignUpForm() {
 
       // 1. ALWAYS create a document in the 'users' collection for management
       const userDocRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userDocRef, {
+      await setDoc(userDocRef, {
         email: values.email,
         role: values.role,
         createdAt: serverTimestamp(),
-      }, { merge: true });
+      });
 
       // 2. Optionally, create a profile in the role-specific collection
       if (values.role === 'student') {
         const studentDocRef = doc(firestore, 'students', user.uid);
-        setDocumentNonBlocking(studentDocRef, {
+        await setDoc(studentDocRef, {
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
           userId: user.uid,
           createdAt: serverTimestamp(),
-        }, { merge: true });
+        });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
-        setDocumentNonBlocking(supervisorDocRef, {
+        await setDoc(supervisorDocRef, {
             firstName: values.firstName,
             lastName: values.lastName,
             email: values.email,
             userId: user.uid,
             createdAt: serverTimestamp(),
-        }, { merge: true });
+        });
       }
 
       toast({

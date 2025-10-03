@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp } from 'firebase/firestore';
@@ -76,31 +76,31 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
 
       // 2. ALWAYS create a document in the 'users' collection for management
       const userDocRef = doc(firestore, 'users', user.uid);
-      setDocumentNonBlocking(userDocRef, {
+      await setDoc(userDocRef, {
         email: values.email,
         role: values.role,
         createdAt: serverTimestamp(),
-      }, { merge: true });
+      });
 
       // 3. Optionally, create a profile in the role-specific collection
       if (values.role === 'student') {
         const studentDocRef = doc(firestore, 'students', user.uid);
         // We can add more fields here later from the form if needed
-        setDocumentNonBlocking(studentDocRef, {
+        await setDoc(studentDocRef, {
             email: values.email,
             userId: user.uid,
             // You might want to add firstName, lastName fields to this form in the future
             createdAt: serverTimestamp(),
-        }, { merge: true });
+        });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
         // We can add more fields here later from the form if needed
-        setDocumentNonBlocking(supervisorDocRef, {
+        await setDoc(supervisorDocRef, {
             email: values.email,
             userId: user.uid,
             // You might want to add firstName, lastName fields to this form in the future
             createdAt: serverTimestamp(),
-        }, { merge: true });
+        });
       }
 
       toast({
@@ -123,7 +123,9 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
       });
     } finally {
         // Sign out the temporary auth instance to clear its state for the next creation
-        await signOut(tempAuth);
+        if (tempAuth.currentUser) {
+            await signOut(tempAuth);
+        }
     }
   }
 
