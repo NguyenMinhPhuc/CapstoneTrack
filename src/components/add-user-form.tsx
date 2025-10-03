@@ -22,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, Auth } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { initializeApp, getApps, deleteApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp } from 'firebase/firestore';
@@ -44,6 +44,9 @@ const getSecondaryApp = () => {
   const secondaryAppName = 'secondary-app-for-user-creation';
   const existingApp = getApps().find(app => app.name === secondaryAppName);
   if (existingApp) {
+    // Before returning the existing app, ensure its auth is signed out
+    // to prevent conflicts with the main app's auth state.
+    getAuth(existingApp).signOut().catch(() => {});
     return existingApp;
   }
   return initializeApp(firebaseConfig, secondaryAppName);
@@ -79,7 +82,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         email: values.email,
         role: values.role,
         createdAt: serverTimestamp(),
-      }, {});
+      }, { merge: true });
 
       // Optionally create a corresponding document in 'students' or 'supervisors' collection
       if (values.role === 'student') {
@@ -89,7 +92,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
             userId: user.uid,
             // Add other student-specific fields here if necessary
             createdAt: serverTimestamp(),
-        }, {});
+        }, { merge: true });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
         setDocumentNonBlocking(supervisorDocRef, {
@@ -97,7 +100,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
             userId: user.uid,
             // Add other supervisor-specific fields here if necessary
             createdAt: serverTimestamp(),
-        }, {});
+        }, { merge: true });
       }
 
       toast({
@@ -119,12 +122,11 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         description: description,
       });
     } finally {
-        // Clean up the secondary app instance to avoid memory leaks
-        try {
-            await deleteApp(secondaryApp);
-        } catch (e) {
-            console.error("Error deleting secondary app:", e);
-        }
+        // Sign out the temporary auth instance
+        await tempAuth.signOut();
+        // It's generally better to not delete the app instance frequently
+        // as it can be slow. Re-using it is more efficient.
+        // await deleteApp(secondaryApp);
     }
   }
 
