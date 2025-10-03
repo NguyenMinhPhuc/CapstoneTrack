@@ -98,16 +98,25 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
 
         for (let i = 0; i < data.length; i++) {
             const row = data[i] as any[];
-            const userObject = headers.reduce((obj, header, index) => {
+            const userObjectFromExcel = headers.reduce((obj, header, index) => {
                 obj[header] = row[index];
                 return obj;
             }, {} as { [key: string]: any });
 
-            const email = userObject['Email'] || `${userObject['StudentID']}@lhu.edu.vn`;
-            const password = userObject['Password'] || '123456'; // Default password
-            const role = userObject['Role']?.toLowerCase() || 'student'; // Default role
-            const firstName = userObject['HoSV'];
-            const lastName = userObject['TenSV'];
+            // **FIX: Filter out undefined values**
+            const cleanUserObject = Object.entries(userObjectFromExcel).reduce((acc, [key, value]) => {
+                if (value !== undefined) {
+                    acc[key] = value;
+                }
+                return acc;
+            }, {} as {[key: string]: any});
+
+
+            const email = cleanUserObject['Email'] || `${cleanUserObject['StudentID']}@lhu.edu.vn`;
+            const password = cleanUserObject['Password'] || '123456'; // Default password
+            const role = cleanUserObject['Role']?.toLowerCase() || 'student'; // Default role
+            const firstName = cleanUserObject['HoSV'];
+            const lastName = cleanUserObject['TenSV'];
 
             if (!email) {
                 errorCount++;
@@ -133,7 +142,7 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                 if (role === 'student') {
                     const studentDocRef = doc(firestore, 'students', user.uid);
                     await setDoc(studentDocRef, {
-                        ...userObject,
+                        ...cleanUserObject,
                         firstName: firstName,
                         lastName: lastName,
                         email: email,
@@ -143,7 +152,7 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                 } else if (role === 'supervisor') {
                     const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
                     await setDoc(supervisorDocRef, {
-                        ...userObject,
+                        ...cleanUserObject,
                         firstName: firstName,
                         lastName: lastName,
                         email: email,
@@ -161,6 +170,8 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
             } catch (error: any) {
                 errorCount++;
                 console.error(`Error importing user ${email}:`, error);
+                 // Log the problematic object
+                console.error("Data that caused the error:", cleanUserObject);
             }
             setImportProgress(((i + 1) / data.length) * 100);
         }
@@ -200,7 +211,7 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                                 Loaded {data.length} records from {fileName}. Review the preview below and click Import to start.
                             </AlertDescription>
                         </Alert>
-                        <div className="overflow-auto rounded-md border">
+                        <div className="overflow-auto rounded-md border max-h-64">
                             <Table>
                                 <TableHeader className="sticky top-0 bg-background">
                                     <TableRow>
@@ -212,8 +223,8 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                                 <TableBody>
                                     {data.slice(0, 10).map((row, index) => ( // Preview first 10 rows
                                         <TableRow key={index}>
-                                            {headers.map((header) => (
-                                                <TableCell key={header}>{(row as any)[headers.indexOf(header)]}</TableCell>
+                                            {headers.map((header, cellIndex) => (
+                                                <TableCell key={cellIndex}>{(row as any)[headers.indexOf(header)]}</TableCell>
                                             ))}
                                         </TableRow>
                                     ))}
