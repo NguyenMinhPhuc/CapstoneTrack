@@ -1,134 +1,126 @@
 /**
- * @fileoverview Firestore Security Rules for CapstoneTrack application.
- *
- * Core Philosophy:
- * This ruleset enforces a role-based access control model, where users can only access
- * and modify data according to their assigned role (admin, supervisor, student). User
- * accounts are stored under /users/{userId}, with additional student and supervisor
- * details stored in separate collections.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a strict user-ownership model for user accounts and open reads for graduation defense sessions.
  *
  * Data Structure:
- * - /users/{userId}: Stores user account information, including role (admin, supervisor, student).
- * - /students/{studentId}: Stores student details.
- * - /supervisors/{supervisorId}: Stores supervisor details.
+ * - /users/{userId}: Stores user account information. Accessible only to the user and admins.
+ * - /students/{studentId}: Stores student information.
+ * - /supervisors/{supervisorId}: Stores supervisor information.
+ * - /graduationDefenseSessions/{sessionId}: Stores graduation defense session information. Publicly readable, writeable by admins only.
  *
  * Key Security Decisions:
- * - Administrators have full read/write access to all data.
- * - Students and supervisors can only read their own data.
- * - Listing of users is denied to prevent unauthorized access to user data.
- * - Self-creation of user accounts is allowed, but only with a matching user ID.
- * - No data validation is enforced beyond authorization checks in this prototype.
+ * - User accounts are strictly controlled; only the owning user or an admin can read or write them.
+ * - Listing of users is disallowed to prevent enumeration.
+ * - Graduation defense sessions are publicly readable to allow easy access to session information.
  *
  * Denormalization for Authorization:
- *  - The user's role is stored directly in the /users/{userId} document to allow for easy
- *    role-based access control without additional reads.
+ *   No denormalization is used in this ruleset.
  *
  * Structural Segregation:
- *  - User account information is separated from student and supervisor details to allow
- *    for different access control policies.
+ *   No structural segregation is used in this ruleset.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the user is signed in.
-     * @path N/A (Helper function)
-     * @allow N/A (Helper function)
-     * @deny N/A (Helper function)
-     * @principle Authentication is required for all operations.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the provided userId.
-     * @path N/A (Helper function)
-     * @allow N/A (Helper function)
-     * @deny N/A (Helper function)
-     * @principle Enforces document ownership.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the authenticated user's UID matches the existing document's userId.
-     * @path N/A (Helper function)
-     * @allow N/A (Helper function)
-     * @deny N/A (Helper function)
-     * @principle Enforces document ownership and document existence for update/delete.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && resource != null;
-    }
-
-    /**
-     * @description Checks if the user has the 'admin' role.
-     * @path N/A (Helper function)
-     * @allow N/A (Helper function)
-     * @deny N/A (Helper function)
-     */
-    function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-    /**
-     * @description Defines access rules for user accounts.
+     * @description Controls access to user account documents.
      * @path /users/{userId}
-     * @allow (create) User iI2ArCWUCcbVOwDPvlpSffLPIau2 can create their own account.
-     * @allow (get) Admin user can get any user account.
-     * @deny (create) User iI2ArCWUCcbVOwDPvlpSffLPIau2 cannot create an account with a mismatched userId.
-     * @deny (update) User cannot modify another user's account.
-     * @principle Enforces user-ownership for writes and admin-only access for broader data access.
+     * @allow (get, update, delete) if the user is the owner or an admin.
+     * @allow (create) if the user's ID matches the requested ID.
+     * @deny (list) to prevent user enumeration.
+     * @deny (create, update, delete) if the user is not the owner or an admin.
+     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
      */
     match /users/{userId} {
-      // Read rules
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+
       allow get: if isOwner(userId) || isAdmin();
       allow list: if false;
-
-      // Write rules
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && resource.data.id == userId;
+      allow delete: if isSignedIn() && (isOwner(userId) || isAdmin()) && resource.data.id == userId;
     }
 
     /**
-     * @description Defines access rules for student profiles.
+     * @description Controls access to student documents.
      * @path /students/{studentId}
-     * @allow (get) User iI2ArCWUCcbVOwDPvlpSffLPIau2 can read their own student profile.
-     * @deny (create) User cannot create a student profile with a mismatched studentId.
-     * @deny (update) User cannot modify another student's profile.
-     * @principle Enforces user-ownership for writes.
+     * @allow (get) if true
+     * @allow (create) if isAdmin()
+     * @allow (update, delete) if isAdmin()
+     * @deny (list) to prevent user enumeration.
+     * @principle Enforces admin-only writes and open reads.
      */
     match /students/{studentId} {
-      // Read rules
-      allow get: if isOwner(studentId) || isAdmin();
-      allow list: if isAdmin();
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-      // Write rules
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && isAdmin();
     }
 
     /**
-     * @description Defines access rules for supervisor profiles.
+     * @description Controls access to supervisor documents.
      * @path /supervisors/{supervisorId}
-     * @allow (get) User iI2ArCWUCcbVOwDPvlpSffLPIau2 can read their own supervisor profile.
-     * @deny (create) User cannot create a supervisor profile with a mismatched supervisorId.
-     * @deny (update) User cannot modify another supervisor's profile.
-     * @principle Enforces user-ownership for writes.
+     * @allow (get) if true
+     * @allow (create) if isAdmin()
+     * @allow (update, delete) if isAdmin()
+     * @deny (list) to prevent user enumeration.
+     * @principle Enforces admin-only writes and open reads.
      */
     match /supervisors/{supervisorId} {
-      // Read rules
-      allow get: if isOwner(supervisorId) || isAdmin();
-      allow list: if isAdmin();
+      function isSignedIn() {
+        return request.auth != null;
+      }
 
-      // Write rules
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+      allow get: if true;
+      allow list: if false;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && isAdmin();
+    }
+
+    /**
+     * @description Controls access to graduation defense session documents.
+     * @path /graduationDefenseSessions/{sessionId}
+     * @allow (get, list) if true
+     * @allow (create) if isAdmin()
+     * @allow (update, delete) if isAdmin()
+     * @principle Enforces admin-only writes and open reads.
+     */
+    match /graduationDefenseSessions/{sessionId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn() && isAdmin();
+      allow update: if isSignedIn() && isAdmin();
+      allow delete: if isSignedIn() && isAdmin();
     }
   }
 }
