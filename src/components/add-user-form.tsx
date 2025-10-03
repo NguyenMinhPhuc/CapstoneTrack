@@ -23,7 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { getAuth, createUserWithEmailAndPassword, Auth } from 'firebase/auth';
-import { initializeApp, getApp, getApps, deleteApp } from 'firebase/app';
+import { initializeApp, getApps, deleteApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp } from 'firebase/firestore';
 
@@ -63,11 +63,9 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    let tempAuth: Auth | null = null;
     const secondaryApp = getSecondaryApp();
+    const tempAuth = getAuth(secondaryApp);
     try {
-      tempAuth = getAuth(secondaryApp);
-      
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
         values.email,
@@ -75,6 +73,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
       );
       const user = userCredential.user;
 
+      // Always create a document in the 'users' collection
       const userDocRef = doc(firestore, 'users', user.uid);
       setDocumentNonBlocking(userDocRef, {
         email: values.email,
@@ -82,13 +81,21 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         createdAt: serverTimestamp(),
       }, {});
 
-      // Optionally create student/supervisor docs
-      if (values.role === 'student' || values.role === 'supervisor') {
-        const collectionName = values.role === 'student' ? 'students' : 'supervisors';
-        const newDocRef = doc(firestore, collectionName, user.uid);
-        setDocumentNonBlocking(newDocRef, {
+      // Optionally create a corresponding document in 'students' or 'supervisors' collection
+      if (values.role === 'student') {
+        const studentDocRef = doc(firestore, 'students', user.uid);
+        setDocumentNonBlocking(studentDocRef, {
             email: values.email,
             userId: user.uid,
+            // Add other student-specific fields here if necessary
+            createdAt: serverTimestamp(),
+        }, {});
+      } else if (values.role === 'supervisor') {
+        const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
+        setDocumentNonBlocking(supervisorDocRef, {
+            email: values.email,
+            userId: user.uid,
+            // Add other supervisor-specific fields here if necessary
             createdAt: serverTimestamp(),
         }, {});
       }
@@ -113,12 +120,10 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
       });
     } finally {
         // Clean up the secondary app instance to avoid memory leaks
-        if (secondaryApp) {
-            try {
-                await deleteApp(secondaryApp);
-            } catch (e) {
-                console.error("Error deleting secondary app:", e);
-            }
+        try {
+            await deleteApp(secondaryApp);
+        } catch (e) {
+            console.error("Error deleting secondary app:", e);
         }
     }
   }
