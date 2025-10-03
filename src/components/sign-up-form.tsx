@@ -104,10 +104,16 @@ export function SignUpForm() {
       router.push('/');
     } catch (error: any) {
       console.error(error);
+      let description = 'Không thể tạo tài khoản. Vui lòng thử lại.';
+      if (error.code === 'auth/email-already-in-use') {
+        description = 'Email này đã được sử dụng. Vui lòng chọn một email khác.'
+      } else {
+        description = error.message;
+      }
       toast({
         variant: 'destructive',
         title: 'Ôi! Đã xảy ra lỗi.',
-        description: error.message || 'Không thể tạo tài khoản. Vui lòng thử lại.',
+        description: description,
       });
     }
   }
