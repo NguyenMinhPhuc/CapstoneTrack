@@ -28,11 +28,11 @@ import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from 'next/image';
 
 const applications: Application[] = [
-  { id: '1', studentName: 'Olivia Martin', studentId: 'ST123', avatar: PlaceHolderImages.find(p => p.id === 'avatar1')?.imageUrl ?? '', projectTitle: 'AI in Healthcare', status: 'Approved', submissionDate: '2024-05-20' },
-  { id: '2', studentName: 'Jackson Lee', studentId: 'ST124', avatar: PlaceHolderImages.find(p => p.id === 'avatar2')?.imageUrl ?? '', projectTitle: 'Quantum Computing Algo', status: 'Pending', submissionDate: '2024-05-22' },
-  { id: '3', studentName: 'Isabella Nguyen', studentId: 'ST125', avatar: PlaceHolderImages.find(p => p.id === 'avatar3')?.imageUrl ?? '', projectTitle: 'Blockchain for Supply Chain', status: 'Pending', submissionDate: '2024-05-23' },
-  { id: '4', studentName: 'William Kim', studentId: 'ST126', avatar: PlaceHolderImages.find(p => p.id === 'avatar4')?.imageUrl ?? '', projectTitle: 'Renewable Energy Solutions', status: 'Rejected', submissionDate: '2024-05-19' },
-  { id: '5', studentName: 'Sophia Garcia', studentId: 'ST127', avatar: PlaceHolderImages.find(p => p.id === 'avatar5')?.imageUrl ?? '', projectTitle: 'Machine Learning for Finance', status: 'Approved', submissionDate: '2024-05-18' },
+  { id: '1', studentName: 'Olivia Martin', studentId: 'ST123', avatar: PlaceHolderImages.find(p => p.id === 'avatar1')?.imageUrl ?? '', projectTitle: 'AI in Healthcare', status: 'Approved', submissionDate: '2024-05-20', type: 'Graduation' },
+  { id: '2', studentName: 'Jackson Lee', studentId: 'ST124', avatar: PlaceHolderImages.find(p => p.id === 'avatar2')?.imageUrl ?? '', projectTitle: 'Quantum Computing Algo', status: 'Pending', submissionDate: '2024-05-22', type: 'Graduation' },
+  { id: '3', studentName: 'Isabella Nguyen', studentId: 'ST125', avatar: PlaceHolderImages.find(p => p.id === 'avatar3')?.imageUrl ?? '', projectTitle: 'Internship at VinAI', status: 'Pending', submissionDate: '2024-05-23', type: 'Internship' },
+  { id: '4', studentName: 'William Kim', studentId: 'ST126', avatar: PlaceHolderImages.find(p => p.id === 'avatar4')?.imageUrl ?? '', projectTitle: 'Renewable Energy Solutions', status: 'Rejected', submissionDate: '2024-05-19', type: 'Graduation' },
+  { id: '5', studentName: 'Sophia Garcia', studentId: 'ST127', avatar: PlaceHolderImages.find(p => p.id === 'avatar5')?.imageUrl ?? '', projectTitle: 'Internship at FPT Software', status: 'Approved', submissionDate: '2024-05-18', type: 'Internship' },
 ];
 
 const statusVariant: Record<Application['status'], 'default' | 'secondary' | 'destructive'> = {
@@ -55,7 +55,8 @@ export function DashboardApplicationsTable() {
           <TableHeader>
             <TableRow>
               <TableHead>Student</TableHead>
-              <TableHead className="hidden md:table-cell">Project Title</TableHead>
+              <TableHead className="hidden md:table-cell">Project/Internship Title</TableHead>
+              <TableHead>Type</TableHead>
               <TableHead>Status</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -73,6 +74,9 @@ export function DashboardApplicationsTable() {
                   </div>
                 </TableCell>
                 <TableCell className="hidden md:table-cell">{app.projectTitle}</TableCell>
+                <TableCell>
+                  <Badge variant={app.type === 'Graduation' ? 'outline' : 'secondary'}>{app.type}</Badge>
+                </TableCell>
                 <TableCell>
                   <Badge variant={statusVariant[app.status]}>{app.status}</Badge>
                 </TableCell>

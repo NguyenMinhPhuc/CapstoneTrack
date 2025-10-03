@@ -7,6 +7,7 @@ export type Application = {
   supervisor?: string;
   status: 'Pending' | 'Approved' | 'Rejected';
   submissionDate: string;
+  type: 'Internship' | 'Graduation';
 };
 
 export type StudentProgress = {
