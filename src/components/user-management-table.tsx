@@ -53,6 +53,7 @@ import { useToast } from '@/hooks/use-toast';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from './ui/input';
 import { ImportUsersDialog } from './import-users-dialog';
+import { cn } from '@/lib/utils';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
@@ -94,7 +95,9 @@ export function UserManagementTable() {
     return users.reduce((acc, user) => {
         if (acc[user.role]) {
             acc[user.role].total++;
-            acc[user.role][user.status]++;
+            if (acc[user.role][user.status] !== undefined) {
+              acc[user.role][user.status]++;
+            }
         }
         return acc;
     }, stats);
@@ -124,6 +127,12 @@ export function UserManagementTable() {
     'pending': 'Đang chờ',
     'disabled': 'Đã bị khóa'
   }
+
+  const statusColor: Record<SystemUser['status'], string> = {
+    'active': 'text-green-600 dark:text-green-500',
+    'pending': 'text-orange-600 dark:text-orange-500',
+    'disabled': 'text-red-600 dark:text-red-500'
+  };
   
   const handleEditClick = (user: SystemUser) => {
     setSelectedUser(user);
@@ -214,8 +223,10 @@ export function UserManagementTable() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{roleStats.admin.total}</div>
-                <p className="text-xs text-muted-foreground">
-                    {roleStats.admin.active} active, {roleStats.admin.pending} pending, {roleStats.admin.disabled} disabled
+                <p className="text-xs text-muted-foreground space-x-2">
+                    <span className={cn('font-medium', statusColor.active)}>{roleStats.admin.active} active</span>
+                    <span className={cn('font-medium', statusColor.pending)}>{roleStats.admin.pending} pending</span>
+                    <span className={cn('font-medium', statusColor.disabled)}>{roleStats.admin.disabled} disabled</span>
                 </p>
             </CardContent>
         </Card>
@@ -226,8 +237,10 @@ export function UserManagementTable() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{roleStats.supervisor.total}</div>
-                 <p className="text-xs text-muted-foreground">
-                    {roleStats.supervisor.active} active, {roleStats.supervisor.pending} pending, {roleStats.supervisor.disabled} disabled
+                 <p className="text-xs text-muted-foreground space-x-2">
+                    <span className={cn('font-medium', statusColor.active)}>{roleStats.supervisor.active} active</span>
+                    <span className={cn('font-medium', statusColor.pending)}>{roleStats.supervisor.pending} pending</span>
+                    <span className={cn('font-medium', statusColor.disabled)}>{roleStats.supervisor.disabled} disabled</span>
                 </p>
             </CardContent>
         </Card>
@@ -238,8 +251,10 @@ export function UserManagementTable() {
             </CardHeader>
             <CardContent>
                 <div className="text-2xl font-bold">{roleStats.student.total}</div>
-                 <p className="text-xs text-muted-foreground">
-                    {roleStats.student.active} active, {roleStats.student.pending} pending, {roleStats.student.disabled} disabled
+                 <p className="text-xs text-muted-foreground space-x-2">
+                    <span className={cn('font-medium', statusColor.active)}>{roleStats.student.active} active</span>
+                    <span className={cn('font-medium', statusColor.pending)}>{roleStats.student.pending} pending</span>
+                    <span className={cn('font-medium', statusColor.disabled)}>{roleStats.student.disabled} disabled</span>
                 </p>
             </CardContent>
         </Card>
