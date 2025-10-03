@@ -23,7 +23,7 @@ import {
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { initializeApp, getApps, deleteApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp } from 'firebase/firestore';
 
@@ -39,13 +39,13 @@ interface AddUserFormProps {
   onFinished: () => void;
 }
 
-// Helper to get a secondary app instance
+// Helper to get a secondary app instance for user creation
 const getSecondaryApp = () => {
   const secondaryAppName = 'secondary-app-for-user-creation';
   const existingApp = getApps().find(app => app.name === secondaryAppName);
   if (existingApp) {
-    // Before returning the existing app, ensure its auth is signed out
-    // to prevent conflicts with the main app's auth state.
+    // It's not strictly necessary to sign out, as the auth state is separate,
+    // but it's good practice to avoid any potential edge cases.
     getAuth(existingApp).signOut().catch(() => {});
     return existingApp;
   }
@@ -69,6 +69,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
     try {
+      // 1. Create user in Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
         values.email,
@@ -76,7 +77,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
       );
       const user = userCredential.user;
 
-      // Always create a document in the 'users' collection
+      // 2. ALWAYS create a document in the 'users' collection for management
       const userDocRef = doc(firestore, 'users', user.uid);
       setDocumentNonBlocking(userDocRef, {
         email: values.email,
@@ -84,21 +85,21 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         createdAt: serverTimestamp(),
       }, { merge: true });
 
-      // Optionally create a corresponding document in 'students' or 'supervisors' collection
+      // 3. Optionally, create a profile in the role-specific collection
       if (values.role === 'student') {
         const studentDocRef = doc(firestore, 'students', user.uid);
+        // We can add more fields here later from the form if needed
         setDocumentNonBlocking(studentDocRef, {
             email: values.email,
             userId: user.uid,
-            // Add other student-specific fields here if necessary
             createdAt: serverTimestamp(),
         }, { merge: true });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
+        // We can add more fields here later from the form if needed
         setDocumentNonBlocking(supervisorDocRef, {
             email: values.email,
             userId: user.uid,
-            // Add other supervisor-specific fields here if necessary
             createdAt: serverTimestamp(),
         }, { merge: true });
       }
@@ -107,7 +108,7 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         title: 'Thành công',
         description: `Tài khoản cho ${values.email} đã được tạo.`,
       });
-      onFinished();
+      onFinished(); // Close the dialog on success
     } catch (error: any) {
       console.error("Error creating user:", error);
       let description = 'Không thể tạo tài khoản. Vui lòng thử lại.';
@@ -122,11 +123,8 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         description: description,
       });
     } finally {
-        // Sign out the temporary auth instance
+        // Sign out the temporary auth instance to clear its state
         await tempAuth.signOut();
-        // It's generally better to not delete the app instance frequently
-        // as it can be slow. Re-using it is more efficient.
-        // await deleteApp(secondaryApp);
     }
   }
 
