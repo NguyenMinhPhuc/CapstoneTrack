@@ -1,117 +1,138 @@
 /**
- * @fileoverview Firestore Security Rules for CapstoneTrack system.
+ * @fileoverview Firestore Security Rules for CapstoneTrack System
  *
  * Core Philosophy:
- * This ruleset enforces a strict user-ownership model for user accounts, student data, and supervisor data.
- * All data is nested under /users/{userId}, ensuring that only the authenticated user can access their own information.
+ * This ruleset enforces a strict user-ownership model for user accounts, student profiles, and supervisor profiles.
+ * Only authenticated users can access their own data.
  *
  * Data Structure:
- * - /users/{userId}/userAccount: Stores user account information.
- * - /users/{userId}/student: Stores student-specific data.
- * - /users/{userId}/supervisor: Stores supervisor-specific data.
+ * - /users/{userId}: Stores user account information. Access is restricted to the user with the matching userId.
+ * - /students/{studentId}: Stores student profile information.
+ * - /supervisors/{supervisorId}: Stores supervisor profile information.
  *
  * Key Security Decisions:
- * - User listing is implicitly denied by the structure. Only authenticated users can access their own data.
- * - Data consistency between the path and the document's internal ID is strictly enforced on creation and updates to prevent unauthorized access.
+ * - Users can only read and write their own user account data.
+ * - Students can only read and write their own student profile data.
+ * - Supervisors can only read and write their own supervisor profile data.
+ * - Listing of users, students, and supervisors is denied to prevent information disclosure.
+ * - The rules prioritize security by default, denying access unless explicitly allowed.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Secure user account information. Only the authenticated user can read, update, or delete their own account.
-     * @path /users/{userId}/userAccount
-     * @allow (create) User with matching UID can create their account.
-     * @allow (get, list, update, delete) Authenticated user can access their own account.
-     * @deny (create) User cannot create an account with a mismatched UID.
-     * @principle Enforces document ownership for all operations.
+     * @description Controls access to user account information.
+     * @path /users/{userId}
+     * @allow (get, create, update, delete) User with matching ID can access their own data.
+     * @deny (get, create, update, delete) User trying to access another user's data.
+     * @principle Enforces document ownership for writes.
      */
-    match /users/{userId}/userAccount {
-      // Anyone signed in
+    match /users/{userId} {
+      // Function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Only the owner of the userId can modify
+      // Function to check if the authenticated user is the owner of the document
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return isSignedIn() && request.auth.uid == userId;
       }
 
-      // Only the owner of the userId can modify an existing doc
+      // Function to check if the authenticated user is the owner of the existing document
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
 
+      // Allow read access to the user's own document
       allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+      // Deny listing of all users
+      allow list: if false;
 
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      // Allow creation of a user document if the user is authenticated and the userId matches the authenticated user's UID
+      allow create: if isOwner(userId) && request.resource.data.id == request.auth.uid;
+
+      // Allow updates to the user's own document if the user is authenticated and the userId matches the authenticated user's UID
       allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
-    }
 
-     /**
-      * @description Secure student information. Only the authenticated user can read, update, or delete their own student profile.
-      * @path /users/{userId}/student
-      * @allow (create) User with matching UID can create their student profile.
-      * @allow (get, list, update, delete) Authenticated user can access their own student profile.
-      * @deny (create) User cannot create a student profile with a mismatched UID.
-      * @principle Enforces document ownership for all operations.
-      */
-    match /users/{userId}/student {
-      // Anyone signed in
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      // Only the owner of the userId can modify
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      // Only the owner of the userId can modify an existing doc
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
-      }
-
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
-
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      // Allow deletion of the user's own document if the user is authenticated and the userId matches the authenticated user's UID
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Secure supervisor information. Only the authenticated user can read, update, or delete their own supervisor profile.
-     * @path /users/{userId}/supervisor
-     * @allow (create) User with matching UID can create their supervisor profile.
-     * @allow (get, list, update, delete) Authenticated user can access their own supervisor profile.
-     * @deny (create) User cannot create a supervisor profile with a mismatched UID.
-     * @principle Enforces document ownership for all operations.
+     * @description Controls access to student profile information.
+     * @path /students/{studentId}
+     * @allow (get, create, update, delete) Student with matching ID can access their own profile.
+     * @deny (get, create, update, delete) User trying to access another student's profile.
+     * @principle Enforces document ownership for writes.
      */
-    match /users/{userId}/supervisor {
-      // Anyone signed in
+    match /students/{studentId} {
+       // Function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Only the owner of the userId can modify
-      function isOwner(userId) {
-        return request.auth.uid == userId;
+      // Function to check if the authenticated user is the owner of the document
+      function isOwner(studentId) {
+        return isSignedIn() && request.auth.uid == studentId;
       }
 
-      // Only the owner of the userId can modify an existing doc
-      function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        // Function to check if the authenticated user is the owner of the existing document
+      function isExistingOwner(studentId) {
+        return isOwner(studentId) && resource != null;
       }
 
-      allow get: if isOwner(userId);
-      allow list: if isOwner(userId);
+      // Allow read access to the student's own profile
+      allow get: if isOwner(studentId);
+      // Deny listing of all student profiles
+      allow list: if false;
 
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(userId);
+      // Allow creation of a student profile if the user is authenticated and the studentId matches the authenticated user's UID
+      allow create: if isOwner(studentId) && request.resource.data.id == request.auth.uid;
+
+      // Allow updates to the student's own profile if the user is authenticated and the studentId matches the authenticated user's UID
+      allow update: if isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
+
+      // Allow deletion of the student's own profile if the user is authenticated and the studentId matches the authenticated user's UID
+      allow delete: if isExistingOwner(studentId);
+    }
+
+    /**
+     * @description Controls access to supervisor profile information.
+     * @path /supervisors/{supervisorId}
+     * @allow (get, create, update, delete) Supervisor with matching ID can access their own profile.
+     * @deny (get, create, update, delete) User trying to access another supervisor's profile.
+     * @principle Enforces document ownership for writes.
+     */
+    match /supervisors/{supervisorId} {
+       // Function to check if the user is signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Function to check if the authenticated user is the owner of the document
+      function isOwner(supervisorId) {
+        return isSignedIn() && request.auth.uid == supervisorId;
+      }
+
+      // Function to check if the authenticated user is the owner of the existing document
+      function isExistingOwner(supervisorId) {
+        return isOwner(supervisorId) && resource != null;
+      }
+
+      // Allow read access to the supervisor's own profile
+      allow get: if isOwner(supervisorId);
+      // Deny listing of all supervisor profiles
+      allow list: if false;
+
+      // Allow creation of a supervisor profile if the user is authenticated and the supervisorId matches the authenticated user's UID
+      allow create: if isOwner(supervisorId) && request.resource.data.id == request.auth.uid;
+
+      // Allow updates to the supervisor's own profile if the user is authenticated and the supervisorId matches the authenticated user's UID
+      allow update: if isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
+
+      // Allow deletion of the supervisor's own profile if the user is authenticated and the supervisorId matches the authenticated user's UID
+      allow delete: if isExistingOwner(supervisorId);
     }
   }
 }
