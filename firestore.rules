@@ -1,22 +1,15 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces role-based access control for the CapstoneTrack system.
- *
- * Data Structure:
- * - /users/{userId}: Stores user account information, accessible only to the user themselves and admins.
- * - /students/{studentId}: Stores student details, accessible only to admins.
- * - /supervisors/{supervisorId}: Stores supervisor details, accessible only to admins.
- *
- * Key Security Decisions:
- * - Admins have full read and write access to all collections.
- * - Users (students and supervisors) can only read and write their own user account data.
- * - Listing of users, students, and supervisors is restricted to admins only.
- *
- * Role-Based Access:
- * The system implements Role-Based Access Control (RBAC) using the 'role' field in the /users/{userId} document.
- * Currently, the roles are 'admin', 'supervisor', and 'student'.
- *
- * Note: In a production environment, consider more granular role management and auditing.
+ * @file Firestore Security Rules for CapstoneTrack System
+ * @description This ruleset enforces a user-ownership model for users, students, and supervisors, ensuring that only authenticated users can access their respective data.
+ * @dataStructure
+ *   - /users/{userId}: Stores user account information, with access restricted to the user themselves.
+ *   - /students/{studentId}: Stores student information, with access restricted to the student themselves.
+ *   - /supervisors/{supervisorId}: Stores supervisor information, with access restricted to the supervisor themselves.
+ * @keySecurityDecisions
+ *   - Users can only access their own user accounts.
+ *   - Students can only access their own student profiles.
+ *   - Supervisors can only access their own supervisor profiles.
+ *   - No listing is allowed for users, students or supervisors.
  */
 rules_version = '2';
 service cloud.firestore {
@@ -25,74 +18,94 @@ service cloud.firestore {
     /**
      * @description Controls access to user account information.
      * @path /users/{userId}
-     * @allow (read, write) if the user is the owner of the account or an admin.
-     * @deny (read, write) if the user is not the owner and not an admin.
-     * @principle Enforces user ownership and admin override for user accounts.
+     * @allow (create) - User with ID 'user123' can create their account.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.id: 'user123'
+     * @allow (get, update, delete) - User with ID 'user123' can access and modify their own account.
+     *   - request.auth.uid: 'user123'
+     *   - resource.data.id: 'user123'
+     * @deny (create) - User with ID 'user123' cannot create an account with ID 'user456'.
+     *   - request.auth.uid: 'user123'
+     *   - request.resource.data.id: 'user456'
+     * @deny (get, update, delete) - User with ID 'user123' cannot access or modify an account with ID 'user456'.
+     *   - request.auth.uid: 'user123'
+     *   - resource.data.id: 'user456'
+     * @principle Enforces document ownership for writes and reads, ensuring only the owner can modify or view their data.
      */
     match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
       function isOwner(userId) {
-        return request.auth.uid == userId;
+        return request.auth != null && request.auth.uid == userId;
       }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
       }
-
-      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow list: if isAdmin();
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin()) && resource.data.id == userId;
-      allow delete: if isSignedIn() && (isOwner(userId) || isAdmin()) && resource.data.id == userId;
+      allow get: if isOwner(userId);
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
      * @description Controls access to student information.
      * @path /students/{studentId}
-     * @allow (read, write) if the user is an admin.
-     * @deny (read, write) if the user is not an admin.
-     * @principle Restricts access to student data to admins only.
+     * @allow (create) - User with ID 'student123' can create their student profile.
+     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
+     *   - request.resource.data.id: 'student123'
+     * @allow (get, update, delete) - User with ID 'student123' can access and modify their own student profile.
+     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
+     *   - resource.data.id: 'student123'
+     * @deny (create) - User with ID 'student123' cannot create a student profile with ID 'student456'.
+     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
+     *   - request.resource.data.id: 'student456'
+     * @deny (get, update, delete) - User with ID 'student123' cannot access or modify a student profile with ID 'student456'.
+     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
+     *   - resource.data.id: 'student456'
+     * @principle Enforces document ownership for writes and reads, ensuring only the owner can modify or view their data.
      */
     match /students/{studentId} {
-      function isSignedIn() {
-        return request.auth != null;
+      function isOwner(studentId) {
+        return request.auth != null && request.auth.uid == studentId;
       }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      function isExistingOwner(studentId) {
+        return isOwner(studentId) && resource != null;
       }
-
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if isOwner(studentId);
+      allow list: if false;
+      allow create: if isOwner(studentId) && request.resource.data.id == studentId;
+      allow update: if isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(studentId);
     }
 
     /**
      * @description Controls access to supervisor information.
      * @path /supervisors/{supervisorId}
-     * @allow (read, write) if the user is an admin.
-     * @deny (read, write) if the user is not an admin.
-     * @principle Restricts access to supervisor data to admins only.
+     * @allow (create) - User with ID 'supervisor123' can create their supervisor profile.
+     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
+     *   - request.resource.data.id: 'supervisor123'
+     * @allow (get, update, delete) - User with ID 'supervisor123' can access and modify their own supervisor profile.
+     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
+     *   - resource.data.id: 'supervisor123'
+     * @deny (create) - User with ID 'supervisor123' cannot create a supervisor profile with ID 'supervisor456'.
+     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
+     *   - request.resource.data.id: 'supervisor456'
+     * @deny (get, update, delete) - User with ID 'supervisor123' cannot access or modify a supervisor profile with ID 'supervisor456'.
+     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
+     *   - resource.data.id: 'supervisor456'
+     * @principle Enforces document ownership for writes and reads, ensuring only the owner can modify or view their data.
      */
     match /supervisors/{supervisorId} {
-      function isSignedIn() {
-        return request.auth != null;
+      function isOwner(supervisorId) {
+        return request.auth != null && request.auth.uid == supervisorId;
       }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      function isExistingOwner(supervisorId) {
+        return isOwner(supervisorId) && resource != null;
       }
-
-      allow get: if isAdmin();
-      allow list: if isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if isOwner(supervisorId);
+      allow list: if false;
+      allow create: if isOwner(supervisorId) && request.resource.data.id == supervisorId;
+      allow update: if isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(supervisorId);
     }
   }
 }
