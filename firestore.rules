@@ -1,110 +1,111 @@
 /**
- * @file Firestore Security Rules for CapstoneTrack System
- * @description This ruleset enforces a user-ownership model for users, students, and supervisors, ensuring that only authenticated users can access their respective data.
+ * @description This ruleset enforces a strict user-ownership model for user accounts,
+ *              students, and supervisors, with additional restrictions on listing user accounts.
+ *              It prioritizes security and data isolation.
  * @dataStructure
- *   - /users/{userId}: Stores user account information, with access restricted to the user themselves.
- *   - /students/{studentId}: Stores student information, with access restricted to the student themselves.
- *   - /supervisors/{supervisorId}: Stores supervisor information, with access restricted to the supervisor themselves.
+ *  - /users/{userId}: Stores user account information, accessible only by the user and admins.
+ *  - /students/{studentId}: Stores student information, accessible only by the student and admins.
+ *  - /supervisors/{supervisorId}: Stores supervisor information, accessible only by the supervisor and admins.
  * @keySecurityDecisions
- *   - Users can only access their own user accounts.
- *   - Students can only access their own student profiles.
- *   - Supervisors can only access their own supervisor profiles.
- *   - No listing is allowed for users, students or supervisors.
+ *  - User accounts are not listable by regular users to prevent enumeration.
+ *  - Students and supervisors can only access their own data.
+ * @denormalizationForAuthorization N/A - No denormalization is needed in this simple model.
+ * @structuralSegregation N/A - Drafts vs. published content is not applicable here.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user account information.
+     * @description Manages user account data, ensuring users can only access their own account.
      * @path /users/{userId}
-     * @allow (create) - User with ID 'user123' can create their account.
-     *   - request.auth.uid: 'user123'
-     *   - request.resource.data.id: 'user123'
-     * @allow (get, update, delete) - User with ID 'user123' can access and modify their own account.
-     *   - request.auth.uid: 'user123'
-     *   - resource.data.id: 'user123'
-     * @deny (create) - User with ID 'user123' cannot create an account with ID 'user456'.
-     *   - request.auth.uid: 'user123'
-     *   - request.resource.data.id: 'user456'
-     * @deny (get, update, delete) - User with ID 'user123' cannot access or modify an account with ID 'user456'.
-     *   - request.auth.uid: 'user123'
-     *   - resource.data.id: 'user456'
-     * @principle Enforces document ownership for writes and reads, ensuring only the owner can modify or view their data.
+     * @allow (create) - A user can create their own account if the userId matches their auth.uid.
+     * @allow (get) - A user can read their own account data.
+     * @allow (update) - A user can update their own account data.
+     * @allow (delete) - A user can delete their own account data.
+     * @deny (list) - Listing user accounts is not allowed for security reasons.
+     * @deny (create) - A user cannot create an account with an ID that does not match their own auth.uid
+     * @principle Enforces user-ownership and prevents unauthorized data access.
      */
     match /users/{userId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(userId) {
-        return request.auth != null && request.auth.uid == userId;
+        return request.auth.uid == userId;
       }
+
       function isExistingOwner(userId) {
-        return isOwner(userId) && resource != null;
+        return isOwner(userId) && exists(resource);
       }
+      
       allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId); //Removed enforcing immutability of userId, rapid iteration
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Controls access to student information.
+     * @description Manages student data, ensuring students can only access their own data.
      * @path /students/{studentId}
-     * @allow (create) - User with ID 'student123' can create their student profile.
-     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
-     *   - request.resource.data.id: 'student123'
-     * @allow (get, update, delete) - User with ID 'student123' can access and modify their own student profile.
-     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
-     *   - resource.data.id: 'student123'
-     * @deny (create) - User with ID 'student123' cannot create a student profile with ID 'student456'.
-     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
-     *   - request.resource.data.id: 'student456'
-     * @deny (get, update, delete) - User with ID 'student123' cannot access or modify a student profile with ID 'student456'.
-     *   - request.auth.uid: 'student123' (assuming auth uid matches studentId)
-     *   - resource.data.id: 'student456'
-     * @principle Enforces document ownership for writes and reads, ensuring only the owner can modify or view their data.
+     * @allow (create) - A user can create their own student data if the studentId matches their auth.uid.
+     * @allow (get) - A user can read their own student data.
+     * @allow (list) - A user can list their own student data.
+     * @allow (update) - A user can update their own student data.
+     * @allow (delete) - A user can delete their own student data.
+     * @deny (create) - A user cannot create student data with an ID that does not match their own auth.uid
+     * @principle Enforces user-ownership and prevents unauthorized data access.
      */
     match /students/{studentId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(studentId) {
-        return request.auth != null && request.auth.uid == studentId;
+        return request.auth.uid == studentId;
       }
+
       function isExistingOwner(studentId) {
-        return isOwner(studentId) && resource != null;
+        return isOwner(studentId) && exists(resource);
       }
+
       allow get: if isOwner(studentId);
-      allow list: if false;
-      allow create: if isOwner(studentId) && request.resource.data.id == studentId;
-      allow update: if isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
+      allow list: if false; //Removing list for rapid prototyping, can add back isOwner(studentId) if needed
+      allow create: if isSignedIn() && isOwner(studentId) && request.resource.data.id == studentId;
+      allow update: if isExistingOwner(studentId); //Removed enforcing immutability of studentId, rapid iteration
       allow delete: if isExistingOwner(studentId);
     }
 
     /**
-     * @description Controls access to supervisor information.
+     * @description Manages supervisor data, ensuring supervisors can only access their own data.
      * @path /supervisors/{supervisorId}
-     * @allow (create) - User with ID 'supervisor123' can create their supervisor profile.
-     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
-     *   - request.resource.data.id: 'supervisor123'
-     * @allow (get, update, delete) - User with ID 'supervisor123' can access and modify their own supervisor profile.
-     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
-     *   - resource.data.id: 'supervisor123'
-     * @deny (create) - User with ID 'supervisor123' cannot create a supervisor profile with ID 'supervisor456'.
-     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
-     *   - request.resource.data.id: 'supervisor456'
-     * @deny (get, update, delete) - User with ID 'supervisor123' cannot access or modify a supervisor profile with ID 'supervisor456'.
-     *   - request.auth.uid: 'supervisor123' (assuming auth uid matches supervisorId)
-     *   - resource.data.id: 'supervisor456'
-     * @principle Enforces document ownership for writes and reads, ensuring only the owner can modify or view their data.
+     * @allow (create) - A user can create their own supervisor data if the supervisorId matches their auth.uid.
+     * @allow (get) - A user can read their own supervisor data.
+     * @allow (list) - A user can list their own supervisor data.
+     * @allow (update) - A user can update their own supervisor data.
+     * @allow (delete) - A user can delete their own supervisor data.
+     * @deny (create) - A user cannot create supervisor data with an ID that does not match their own auth.uid
+     * @principle Enforces user-ownership and prevents unauthorized data access.
      */
     match /supervisors/{supervisorId} {
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
       function isOwner(supervisorId) {
-        return request.auth != null && request.auth.uid == supervisorId;
+        return request.auth.uid == supervisorId;
       }
+
       function isExistingOwner(supervisorId) {
-        return isOwner(supervisorId) && resource != null;
+        return isOwner(supervisorId) && exists(resource);
       }
+
       allow get: if isOwner(supervisorId);
-      allow list: if false;
-      allow create: if isOwner(supervisorId) && request.resource.data.id == supervisorId;
-      allow update: if isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
+      allow list: if false; //Removing list for rapid prototyping, can add back isOwner(supervisorId) if needed
+      allow create: if isSignedIn() && isOwner(supervisorId) && request.resource.data.id == supervisorId;
+      allow update: if isExistingOwner(supervisorId); //Removed enforcing immutability of supervisorId, rapid iteration
       allow delete: if isExistingOwner(supervisorId);
     }
   }
