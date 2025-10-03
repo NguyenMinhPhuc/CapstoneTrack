@@ -38,7 +38,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
@@ -51,6 +51,7 @@ import { EditUserForm } from './edit-user-form';
 import { useToast } from '@/hooks/use-toast';
 import { sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from './ui/input';
+import { ImportUsersDialog } from './import-users-dialog';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
@@ -59,6 +60,7 @@ export function UserManagementTable() {
   const auth = useAuth();
   const { toast } = useToast();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isImportUserDialogOpen, setIsImportUserDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -179,23 +181,36 @@ export function UserManagementTable() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button className="w-full sm:w-auto">
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add User
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-[425px]">
-                    <DialogHeader>
-                    <DialogTitle>Add New User</DialogTitle>
-                    <DialogDescription>
-                        Enter the details below to create a new user account.
-                    </DialogDescription>
-                    </DialogHeader>
-                    <AddUserForm onFinished={() => setIsAddUserDialogOpen(false)} />
-                </DialogContent>
-                </Dialog>
+                <div className="flex w-full sm:w-auto gap-2">
+                    <Dialog open={isImportUserDialogOpen} onOpenChange={setIsImportUserDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Import
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-4xl">
+                            <ImportUsersDialog onFinished={() => setIsImportUserDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                    <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Add User
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-[425px]">
+                            <DialogHeader>
+                            <DialogTitle>Add New User</DialogTitle>
+                            <DialogDescription>
+                                Enter the details below to create a new user account.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <AddUserForm onFinished={() => setIsAddUserDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </div>
       </CardHeader>
