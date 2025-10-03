@@ -56,6 +56,13 @@ import { ImportUsersDialog } from './import-users-dialog';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
+type RoleStats = {
+    total: number;
+    active: number;
+    pending: number;
+    disabled: number;
+}
+
 export function UserManagementTable() {
   const firestore = useFirestore();
   const auth = useAuth();
@@ -75,12 +82,24 @@ export function UserManagementTable() {
   
   const { data: users, isLoading } = useCollection<SystemUser>(usersCollectionRef);
 
-  const roleCounts = useMemo(() => {
-    return users?.reduce((acc, user) => {
-        acc[user.role] = (acc[user.role] || 0) + 1;
+  const roleStats = useMemo(() => {
+    const stats: Record<SystemUser['role'], RoleStats> = {
+        admin: { total: 0, active: 0, pending: 0, disabled: 0 },
+        supervisor: { total: 0, active: 0, pending: 0, disabled: 0 },
+        student: { total: 0, active: 0, pending: 0, disabled: 0 },
+    };
+
+    if (!users) return stats;
+
+    return users.reduce((acc, user) => {
+        if (acc[user.role]) {
+            acc[user.role].total++;
+            acc[user.role][user.status]++;
+        }
         return acc;
-    }, {} as Record<SystemUser['role'], number>);
+    }, stats);
   }, [users]);
+
 
   const filteredUsers = users?.filter(user => {
     const searchMatch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
@@ -158,6 +177,7 @@ export function UserManagementTable() {
                         </CardHeader>
                         <CardContent>
                            <Skeleton className="h-7 w-1/4 mb-2" />
+                           <Skeleton className="h-4 w-full" />
                         </CardContent>
                     </Card>
                 ))}
@@ -193,7 +213,10 @@ export function UserManagementTable() {
                 <Shield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{roleCounts?.admin || 0}</div>
+                <div className="text-2xl font-bold">{roleStats.admin.total}</div>
+                <p className="text-xs text-muted-foreground">
+                    {roleStats.admin.active} active, {roleStats.admin.pending} pending, {roleStats.admin.disabled} disabled
+                </p>
             </CardContent>
         </Card>
         <Card>
@@ -202,7 +225,10 @@ export function UserManagementTable() {
                 <User className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{roleCounts?.supervisor || 0}</div>
+                <div className="text-2xl font-bold">{roleStats.supervisor.total}</div>
+                 <p className="text-xs text-muted-foreground">
+                    {roleStats.supervisor.active} active, {roleStats.supervisor.pending} pending, {roleStats.supervisor.disabled} disabled
+                </p>
             </CardContent>
         </Card>
         <Card>
@@ -211,7 +237,10 @@ export function UserManagementTable() {
                 <GraduationCap className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-                <div className="text-2xl font-bold">{roleCounts?.student || 0}</div>
+                <div className="text-2xl font-bold">{roleStats.student.total}</div>
+                 <p className="text-xs text-muted-foreground">
+                    {roleStats.student.active} active, {roleStats.student.pending} pending, {roleStats.student.disabled} disabled
+                </p>
             </CardContent>
         </Card>
     </div>
