@@ -16,6 +16,14 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -33,11 +41,13 @@ import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
+import { AddUserForm } from './add-user-form';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
 
 export function UserManagementTable() {
   const firestore = useFirestore();
+  const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
 
   const usersCollectionRef = useMemoFirebase(
     () => collection(firestore, 'users'),
@@ -85,10 +95,23 @@ export function UserManagementTable() {
             Manage all users in the system.
             </CardDescription>
         </div>
-        <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add User
-        </Button>
+        <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add User
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="sm:max-w-[425px]">
+            <DialogHeader>
+              <DialogTitle>Add New User</DialogTitle>
+              <DialogDescription>
+                Enter the details below to create a new user account.
+              </DialogDescription>
+            </DialogHeader>
+            <AddUserForm onFinished={() => setIsAddUserDialogOpen(false)} />
+          </DialogContent>
+        </Dialog>
       </CardHeader>
       <CardContent>
         <Table>
