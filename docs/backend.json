@@ -1,0 +1,167 @@
+{
+  "entities": {
+    "UserAccount": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserAccount",
+      "type": "object",
+      "description": "Represents a user account within the CapstoneTrack system, differentiating user roles.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the user account."
+        },
+        "email": {
+          "type": "string",
+          "description": "Email address of the user account.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the user account (e.g., student, supervisor, admin)."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to Student entity, if the user is a student. (Relationship: UserAccount 1:1 Student)"
+        },
+        "supervisorId": {
+          "type": "string",
+          "description": "Reference to Supervisor entity, if the user is a supervisor. (Relationship: UserAccount 1:1 Supervisor)"
+        }
+      },
+      "required": [
+        "id",
+        "email",
+        "role"
+      ]
+    },
+    "Student": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Student",
+      "type": "object",
+      "description": "Represents a student within the CapstoneTrack system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the student."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the student."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the student."
+        },
+        "major": {
+          "type": "string",
+          "description": "Major of the student."
+        },
+        "enrollmentYear": {
+          "type": "number",
+          "description": "Year the student enrolled.",
+          "format": "number"
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "major",
+        "enrollmentYear"
+      ]
+    },
+    "Supervisor": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Supervisor",
+      "type": "object",
+      "description": "Represents a supervisor within the CapstoneTrack system.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the supervisor."
+        },
+        "firstName": {
+          "type": "string",
+          "description": "First name of the supervisor."
+        },
+        "lastName": {
+          "type": "string",
+          "description": "Last name of the supervisor."
+        },
+        "department": {
+          "type": "string",
+          "description": "Department of the supervisor."
+        },
+        "facultyRank": {
+          "type": "string",
+          "description": "The faculty rank of the supervisor."
+        }
+      },
+      "required": [
+        "id",
+        "firstName",
+        "lastName",
+        "department"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}/userAccount",
+        "definition": {
+          "entityName": "UserAccount",
+          "schema": {
+            "$ref": "#/backend/entities/UserAccount"
+          },
+          "description": "Stores user account information. Includes denormalized role information from the UserAccount document itself. Path-based ownership allows direct access control based on {userId}.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user account, derived from Firebase Authentication."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/student",
+        "definition": {
+          "entityName": "Student",
+          "schema": {
+            "$ref": "#/backend/entities/Student"
+          },
+          "description": "Stores student information related to the user account. Path-based ownership allows direct access control based on {userId}. Used to distinguish student role.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user account, derived from Firebase Authentication."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/users/{userId}/supervisor",
+        "definition": {
+          "entityName": "Supervisor",
+          "schema": {
+            "$ref": "#/backend/entities/Supervisor"
+          },
+          "description": "Stores supervisor information related to the user account. Path-based ownership allows direct access control based on {userId}. Used to distinguish supervisor role.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier of the user account, derived from Firebase Authentication."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore structure is designed to manage user accounts and associated data related to student internships and graduation processes. It emphasizes authorization independence through path-based ownership and explicit role assignments. The structure segregates different types of data into distinct collections to simplify security rules and ensure secure list operations (QAPs). Specifically, UserAccounts are stored at the root level, while Students and Supervisors are stored as subcollections of UserAccounts. Roles will be checked based on user authentication and existence of related documents in the corresponding subcollections. This approach avoids complex `get()` calls in security rules and ensures atomic operations and simpler debugging.\n\nThis structure achieves Authorization Independence by relying on path-based ownership for user data (students, supervisors), avoiding the need to fetch parent document data to authorize access. The QAPs are supported by segregating data based on user roles and ownership using the directory-like structure."
+  }
+}

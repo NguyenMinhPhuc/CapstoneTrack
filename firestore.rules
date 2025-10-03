@@ -1,0 +1,117 @@
+/**
+ * @fileoverview Firestore Security Rules for CapstoneTrack system.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user accounts, student data, and supervisor data.
+ * All data is nested under /users/{userId}, ensuring that only the authenticated user can access their own information.
+ *
+ * Data Structure:
+ * - /users/{userId}/userAccount: Stores user account information.
+ * - /users/{userId}/student: Stores student-specific data.
+ * - /users/{userId}/supervisor: Stores supervisor-specific data.
+ *
+ * Key Security Decisions:
+ * - User listing is implicitly denied by the structure. Only authenticated users can access their own data.
+ * - Data consistency between the path and the document's internal ID is strictly enforced on creation and updates to prevent unauthorized access.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * @description Secure user account information. Only the authenticated user can read, update, or delete their own account.
+     * @path /users/{userId}/userAccount
+     * @allow (create) User with matching UID can create their account.
+     * @allow (get, list, update, delete) Authenticated user can access their own account.
+     * @deny (create) User cannot create an account with a mismatched UID.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/userAccount {
+      // Anyone signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Only the owner of the userId can modify
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      // Only the owner of the userId can modify an existing doc
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+     /**
+      * @description Secure student information. Only the authenticated user can read, update, or delete their own student profile.
+      * @path /users/{userId}/student
+      * @allow (create) User with matching UID can create their student profile.
+      * @allow (get, list, update, delete) Authenticated user can access their own student profile.
+      * @deny (create) User cannot create a student profile with a mismatched UID.
+      * @principle Enforces document ownership for all operations.
+      */
+    match /users/{userId}/student {
+      // Anyone signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Only the owner of the userId can modify
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      // Only the owner of the userId can modify an existing doc
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+
+    /**
+     * @description Secure supervisor information. Only the authenticated user can read, update, or delete their own supervisor profile.
+     * @path /users/{userId}/supervisor
+     * @allow (create) User with matching UID can create their supervisor profile.
+     * @allow (get, list, update, delete) Authenticated user can access their own supervisor profile.
+     * @deny (create) User cannot create a supervisor profile with a mismatched UID.
+     * @principle Enforces document ownership for all operations.
+     */
+    match /users/{userId}/supervisor {
+      // Anyone signed in
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      // Only the owner of the userId can modify
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      // Only the owner of the userId can modify an existing doc
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+    }
+  }
+}
