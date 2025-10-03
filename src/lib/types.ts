@@ -22,3 +22,12 @@ export type SystemUser = {
   status: 'active' | 'pending' | 'disabled';
   createdAt: any; 
 };
+
+export type GraduationDefenseSession = {
+  id: string;
+  name: string;
+  startDate: any;
+  expectedReportDate: any;
+  description?: string;
+  createdAt: any;
+}

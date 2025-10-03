@@ -118,6 +118,42 @@
         "lastName",
         "department"
       ]
+    },
+    "GraduationDefenseSession": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "GraduationDefenseSession",
+      "type": "object",
+      "description": "Represents a period for organizing graduation project defenses.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the defense session."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the defense session (e.g., 'Spring 2024 Defense')."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The start date of the session.",
+          "format": "date"
+        },
+        "expectedReportDate": {
+          "type": "string",
+          "description": "The expected date for the final defense reports.",
+          "format": "date"
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief description of the session."
+        }
+      },
+      "required": [
+        "id",
+        "name",
+        "startDate",
+        "expectedReportDate"
+      ]
     }
   },
   "auth": {
@@ -144,6 +180,12 @@
         "$ref": "#/entities/Supervisor"
       },
       "description": "Stores detailed information about supervisors."
+    },
+    "/graduationDefenseSessions/{sessionId}": {
+      "schema": {
+        "$ref": "#/entities/GraduationDefenseSession"
+      },
+      "description": "Stores information about graduation defense sessions."
     }
   }
 }

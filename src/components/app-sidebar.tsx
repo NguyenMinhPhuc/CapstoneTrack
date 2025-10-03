@@ -21,6 +21,7 @@ import {
   GraduationCap,
   Briefcase,
   Shield,
+  Calendar,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -55,6 +56,7 @@ export function AppSidebar() {
   const adminMenuItems = [
     { type: "separator", label: "Admin" },
     { href: "/admin/users", label: "User Management", icon: Shield },
+    { href: "/admin/defense-sessions", label: "Defense Sessions", icon: Calendar },
   ];
   
   const allItems = [...menuItems];
