@@ -53,11 +53,18 @@ export function SignInForm() {
       });
       router.push('/');
     } catch (error: any) {
+      let description = 'Không thể đăng nhập. Vui lòng thử lại.';
+      if (error.code === 'auth/invalid-credential') {
+        description = 'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại.';
+      } else {
+        description = error.message;
+      }
+      
       console.error(error);
       toast({
         variant: 'destructive',
         title: 'Ôi! Đã xảy ra lỗi.',
-        description: error.message || 'Không thể đăng nhập. Vui lòng thử lại.',
+        description: description,
       });
     }
   }
