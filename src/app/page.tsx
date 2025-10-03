@@ -1,27 +1,58 @@
+
+'use client';
 import { Suspense } from 'react';
 import { DashboardStats } from '@/components/dashboard-stats';
 import { DashboardProgressChart } from '@/components/dashboard-progress-chart';
 import { DashboardApplicationsTable } from '@/components/dashboard-applications-table';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useUser } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
+import { AppSidebar } from '@/components/app-sidebar';
+import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
+import { AppHeader } from '@/components/app-header';
 
 export default function Home() {
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-      <Suspense fallback={<DashboardStats.Skeleton />}>
-        <DashboardStats />
-      </Suspense>
-      <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 space-y-8 lg:space-y-0">
-        <div className="lg:col-span-2">
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
-            <DashboardApplicationsTable />
-          </Suspense>
-        </div>
-        <div className="lg:col-span-1">
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
-            <DashboardProgressChart />
-          </Suspense>
-        </div>
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, isUserLoading, router]);
+
+  if (isUserLoading || !user) {
+    return (
+      <div className="flex h-screen w-full items-center justify-center">
+        <Skeleton className="h-16 w-16 rounded-full" />
       </div>
-    </div>
+    );
+  }
+
+  return (
+    <SidebarProvider defaultOpen>
+        <AppSidebar />
+        <SidebarInset>
+            <AppHeader />
+            <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+            <Suspense fallback={<DashboardStats.Skeleton />}>
+                <DashboardStats />
+            </Suspense>
+            <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 space-y-8 lg:space-y-0">
+                <div className="lg:col-span-2">
+                <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
+                    <DashboardApplicationsTable />
+                </Suspense>
+                </div>
+                <div className="lg:col-span-1">
+                <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
+                    <DashboardProgressChart />
+                </Suspense>
+                </div>
+            </div>
+            </div>
+        </SidebarInset>
+    </SidebarProvider>
   );
 }

@@ -15,10 +15,27 @@ import { Search, Bell } from "lucide-react";
 import { Input } from "./ui/input";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from 'next/image';
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { useRouter } from "next/navigation";
 
 const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
 
 export function AppHeader() {
+  const auth = useAuth();
+  const { user } = useUser();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await signOut(auth);
+    router.push('/login');
+  };
+
+  const getInitials = (email?: string | null) => {
+    if (!email) return 'AD';
+    return email.substring(0, 2).toUpperCase();
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-card px-4 md:px-6">
       <SidebarTrigger className="hidden max-md:flex" />
@@ -45,7 +62,9 @@ export function AppHeader() {
         <DropdownMenuTrigger asChild>
           <Button variant="ghost" size="icon" className="rounded-full">
             <Avatar className="h-8 w-8">
-              {userAvatar && (
+              {user?.photoURL ? (
+                <AvatarImage src={user.photoURL} alt={user.displayName || 'User'} />
+              ) : userAvatar && (
                  <Image 
                   src={userAvatar.imageUrl} 
                   alt={userAvatar.description} 
@@ -54,17 +73,26 @@ export function AppHeader() {
                   data-ai-hint={userAvatar.imageHint}
                 />
               )}
-              <AvatarFallback>AD</AvatarFallback>
+              <AvatarFallback>{getInitials(user?.email)}</AvatarFallback>
             </Avatar>
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Admin</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Profile</DropdownMenuItem>
-          <DropdownMenuItem>Settings</DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem>Logout</DropdownMenuItem>
+          {user ? (
+            <>
+              <DropdownMenuLabel>{user.email}</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem>Profile</DropdownMenuItem>
+              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+            </>
+          ) : (
+            <>
+              <DropdownMenuItem onClick={() => router.push('/login')}>Login</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => router.push('/register')}>Register</DropdownMenuItem>
+            </>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </header>
