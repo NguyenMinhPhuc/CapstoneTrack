@@ -47,6 +47,7 @@ import Image from 'next/image';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { AddUserForm } from './add-user-form';
+import { EditUserForm } from './edit-user-form';
 import { useToast } from '@/hooks/use-toast';
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
@@ -55,6 +56,9 @@ export function UserManagementTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddUserDialogOpen, setIsAddUserDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
+
 
   const usersCollectionRef = useMemoFirebase(
     () => collection(firestore, 'users'),
@@ -80,6 +84,11 @@ export function UserManagementTable() {
     'pending': 'Đang chờ',
     'disabled': 'Đã bị khóa'
   }
+  
+  const handleEditClick = (user: SystemUser) => {
+    setSelectedUser(user);
+    setIsEditDialogOpen(true);
+  };
 
   const handleStatusChange = async (userId: string, newStatus: SystemUser['status']) => {
     const userDocRef = doc(firestore, 'users', userId);
@@ -124,6 +133,7 @@ export function UserManagementTable() {
   }
 
   return (
+    <>
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
@@ -192,7 +202,7 @@ export function UserManagementTable() {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                      <DropdownMenuItem>Edit</DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleEditClick(user)}>Edit</DropdownMenuItem>
                        <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
                           <span>Change Status</span>
@@ -222,5 +232,23 @@ export function UserManagementTable() {
         </Table>
       </CardContent>
     </Card>
+
+    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Edit User</DialogTitle>
+            <DialogDescription>
+              Update the user's details below. Click save when you're done.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedUser && (
+            <EditUserForm
+              user={selectedUser}
+              onFinished={() => setIsEditDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
