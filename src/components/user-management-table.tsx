@@ -36,9 +36,10 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuPortal,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
@@ -64,6 +65,7 @@ export function UserManagementTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<string>('all');
 
 
   const usersCollectionRef = useMemoFirebase(
@@ -73,9 +75,11 @@ export function UserManagementTable() {
   
   const { data: users, isLoading } = useCollection<SystemUser>(usersCollectionRef);
 
-  const filteredUsers = users?.filter(user => 
-    user.email.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredUsers = users?.filter(user => {
+    const searchMatch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+    return searchMatch && roleMatch;
+  });
 
   const roleVariant: Record<SystemUser['role'], 'default' | 'secondary' | 'outline'> = {
     'admin': 'default',
@@ -171,15 +175,51 @@ export function UserManagementTable() {
                 </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-64">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Search by email..."
-                        className="pl-8 w-full"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex w-full sm:w-auto gap-2">
+                  <div className="relative w-full sm:w-auto">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                          type="search"
+                          placeholder="Search by email..."
+                          className="pl-8 w-full sm:w-64"
+                          value={searchTerm}
+                          onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                  </div>
+                   <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
+                                <ListFilter className="h-3.5 w-3.5" />
+                                <span className="sr-only sm:not-sr-only">Filter</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuCheckboxItem
+                                checked={roleFilter === 'all'}
+                                onCheckedChange={() => setRoleFilter('all')}
+                            >
+                                All
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={roleFilter === 'admin'}
+                                onCheckedChange={() => setRoleFilter('admin')}
+                            >
+                                Admin
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={roleFilter === 'supervisor'}
+                                onCheckedChange={() => setRoleFilter('supervisor')}
+                            >
+                                Supervisor
+                            </DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem
+                                checked={roleFilter === 'student'}
+                                onCheckedChange={() => setRoleFilter('student')}
+                            >
+                                Student
+                            </DropdownMenuCheckboxItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <div className="flex w-full sm:w-auto gap-2">
                     <Dialog open={isImportUserDialogOpen} onOpenChange={setIsImportUserDialogOpen}>
