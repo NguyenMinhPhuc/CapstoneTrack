@@ -110,7 +110,13 @@
     "providers": [
       "password",
       "anonymous"
-    ]
+    ],
+    "customClaims": {
+      "role": {
+        "type": "string",
+        "enum": ["admin", "supervisor", "student"]
+      }
+    }
   },
   "firestore": {
     "structure": [

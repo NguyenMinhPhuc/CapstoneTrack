@@ -1,3 +1,23 @@
+/**
+ * @fileoverview Firestore Security Rules for CapstoneTrack application.
+ *
+ * Core Philosophy:
+ * This ruleset enforces a strict user-ownership model for user profiles (users, students, supervisors).
+ *
+ * Data Structure:
+ * - /users/{userId}: Stores user account information, with {userId} matching the Firebase Authentication UID.
+ * - /students/{studentId}: Stores student-specific data.
+ * - /supervisors/{supervisorId}: Stores supervisor-specific data.
+ *
+ * Key Security Decisions:
+ * - Listing of all users, students, and supervisors is disallowed to protect user privacy.
+ * - All write operations are protected by authorization checks based on the authenticated user's UID.
+ * - The 'id' field in each document is used as the ownership field and is immutable after creation.
+ *
+ * Denormalization for Authorization:
+ * - UserAccount documents are stored at `/users/{userId}`, where {userId} corresponds to the Firebase Auth UID.
+ *   This denormalization avoids the need for complex `get()` operations to determine user identity.
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -5,10 +25,14 @@ service cloud.firestore {
     /**
      * @description Controls access to user account documents.
      * @path /users/{userId}
-     * @allow (create) User with UID 'testUID' can create their own user document.
-     * @allow (get, update, delete) User with UID 'testUID' can read, update, and delete their own user document.
-     * @deny (create) User with UID 'testUID' cannot create a user document with a different userId.
-     * @deny (get, update, delete) User with UID 'anotherUID' cannot read, update, or delete the user document of user 'testUID'.
+     * @allow (create) User with matching UID can create their own document.
+     * @allow (get) User with matching UID can read their own document.
+     * @allow (update) User with matching UID can update their own document.
+     * @allow (delete) User with matching UID can delete their own document.
+     * @deny (list) Listing all users is not allowed.
+     * @deny (create) User cannot create a document with a different UID.
+     * @deny (update) User cannot update a document with a different UID.
+     * @deny (delete) User cannot delete a document with a different UID.
      * @principle Enforces document ownership for all operations.
      */
     match /users/{userId} {
@@ -21,23 +45,26 @@ service cloud.firestore {
       }
 
       function isExistingOwner(userId) {
-        return isSignedIn() && resource.data.keys().hasAll(['id']) && resource != null && isOwner(userId);
+        return isOwner(userId) && resource != null;
       }
-
-      allow get: if isSignedIn() && isOwner(userId);
+      allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(userId);
     }
 
     /**
      * @description Controls access to student documents.
      * @path /students/{studentId}
-     * @allow (create) User with UID 'testUID' can create their own student document.
-     * @allow (get, update, delete) User with UID 'testUID' can read, update, and delete their own student document.
-     * @deny (create) User with UID 'testUID' cannot create a student document with a different studentId.
-     * @deny (get, update, delete) User with UID 'anotherUID' cannot read, update, or delete the student document of user 'testUID'.
+     * @allow (create) User with matching UID can create their own document.
+     * @allow (get) User with matching UID can read their own document.
+     * @allow (update) User with matching UID can update their own document.
+     * @allow (delete) User with matching UID can delete their own document.
+     * @deny (list) Listing all students is not allowed.
+     * @deny (create) User cannot create a document with a different UID.
+     * @deny (update) User cannot update a document with a different UID.
+     * @deny (delete) User cannot delete a document with a different UID.
      * @principle Enforces document ownership for all operations.
      */
     match /students/{studentId} {
@@ -49,24 +76,28 @@ service cloud.firestore {
         return request.auth.uid == studentId;
       }
 
-      function isExistingOwner(studentId) {
-        return isSignedIn() && resource.data.keys().hasAll(['id']) && resource != null && isOwner(studentId);
+       function isExistingOwner(studentId) {
+        return isOwner(studentId) && resource != null;
       }
 
-      allow get: if isSignedIn() && isOwner(studentId);
+      allow get: if isOwner(studentId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(studentId);
-      allow update: if isExistingOwner(studentId);
+      allow create: if isSignedIn() && isOwner(studentId) && request.resource.data.id == studentId;
+      allow update: if isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(studentId);
     }
 
     /**
      * @description Controls access to supervisor documents.
      * @path /supervisors/{supervisorId}
-     * @allow (create) User with UID 'testUID' can create their own supervisor document.
-     * @allow (get, update, delete) User with UID 'testUID' can read, update, and delete their own supervisor document.
-     * @deny (create) User with UID 'testUID' cannot create a supervisor document with a different supervisorId.
-     * @deny (get, update, delete) User with UID 'anotherUID' cannot read, update, or delete the supervisor document of user 'testUID'.
+     * @allow (create) User with matching UID can create their own document.
+     * @allow (get) User with matching UID can read their own document.
+     * @allow (update) User with matching UID can update their own document.
+     * @allow (delete) User with matching UID can delete their own document.
+     * @deny (list) Listing all supervisors is not allowed.
+     * @deny (create) User cannot create a document with a different UID.
+     * @deny (update) User cannot update a document with a different UID.
+     * @deny (delete) User cannot delete a document with a different UID.
      * @principle Enforces document ownership for all operations.
      */
     match /supervisors/{supervisorId} {
@@ -78,14 +109,14 @@ service cloud.firestore {
         return request.auth.uid == supervisorId;
       }
 
-      function isExistingOwner(supervisorId) {
-        return isSignedIn() && resource.data.keys().hasAll(['id']) && resource != null && isOwner(supervisorId);
+       function isExistingOwner(supervisorId) {
+        return isOwner(supervisorId) && resource != null;
       }
 
-      allow get: if isSignedIn() && isOwner(supervisorId);
+      allow get: if isOwner(supervisorId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(supervisorId);
-      allow update: if isExistingOwner(supervisorId);
+      allow create: if isSignedIn() && isOwner(supervisorId) && request.resource.data.id == supervisorId;
+      allow update: if isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
       allow delete: if isExistingOwner(supervisorId);
     }
   }
