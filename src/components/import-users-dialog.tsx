@@ -16,6 +16,7 @@ import {
     DialogTitle,
     DialogDescription,
     DialogFooter,
+    DialogContent,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
@@ -144,7 +145,7 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                     await setDoc(supervisorDocRef, {
                         ...userObject,
                         firstName: firstName,
-lastName: lastName,
+                        lastName: lastName,
                         email: email,
                         userId: user.uid,
                         createdAt: serverTimestamp(),
@@ -175,14 +176,14 @@ lastName: lastName,
     };
 
     return (
-        <>
-            <DialogHeader>
+        <DialogContent className="sm:max-w-4xl grid grid-rows-[auto_1fr_auto] p-0 max-h-[90vh]">
+            <DialogHeader className="p-6 pb-0">
                 <DialogTitle>Import Users from Excel</DialogTitle>
                 <DialogDescription>
                     Upload an Excel file to bulk-create user accounts. The file must contain columns like 'Email' or 'StudentID', 'HoSV', 'TenSV', 'Role'.
                 </DialogDescription>
             </DialogHeader>
-            <div className="py-4 space-y-4">
+            <div className="py-4 px-6 space-y-4 overflow-y-auto">
                 <Input
                     id="excel-file"
                     type="file"
@@ -199,7 +200,7 @@ lastName: lastName,
                                 Loaded {data.length} records from {fileName}. Review the preview below and click Import to start.
                             </AlertDescription>
                         </Alert>
-                        <div className="max-h-64 overflow-auto rounded-md border">
+                        <div className="overflow-auto rounded-md border">
                             <Table>
                                 <TableHeader className="sticky top-0 bg-background">
                                     <TableRow>
@@ -236,12 +237,12 @@ lastName: lastName,
                     </div>
                 )}
             </div>
-            <DialogFooter>
+            <DialogFooter className="p-6 pt-0 border-t">
                 <Button variant="outline" onClick={onFinished} disabled={isImporting}>Cancel</Button>
                 <Button onClick={handleImport} disabled={data.length === 0 || isImporting}>
                     {isImporting ? 'Importing...' : `Import ${data.length} Users`}
                 </Button>
             </DialogFooter>
-        </>
+        </DialogContent>
     );
 }

@@ -189,9 +189,7 @@ export function UserManagementTable() {
                                 Import
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-4xl">
-                            <ImportUsersDialog onFinished={() => setIsImportUserDialogOpen(false)} />
-                        </DialogContent>
+                        <ImportUsersDialog onFinished={() => setIsImportUserDialogOpen(false)} />
                     </Dialog>
                     <Dialog open={isAddUserDialogOpen} onOpenChange={setIsAddUserDialogOpen}>
                         <DialogTrigger asChild>
