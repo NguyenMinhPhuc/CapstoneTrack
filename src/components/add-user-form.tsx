@@ -27,6 +27,11 @@ import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
+// IMPORTANT: To prevent "auth/network-request-failed" errors, ensure that the
+// domain your application is running on (e.g., localhost) is added to the
+// list of authorized domains in the Firebase console under:
+// Authentication > Settings > Authorized domains.
+
 const formSchema = z.object({
   email: z.string().email({ message: 'Email không hợp lệ.' }),
   password: z.string().min(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự.' }),
@@ -85,20 +90,16 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
       // 3. Optionally, create a profile in the role-specific collection
       if (values.role === 'student') {
         const studentDocRef = doc(firestore, 'students', user.uid);
-        // We can add more fields here later from the form if needed
         await setDoc(studentDocRef, {
             email: values.email,
             userId: user.uid,
-            // You might want to add firstName, lastName fields to this form in the future
             createdAt: serverTimestamp(),
         });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
-        // We can add more fields here later from the form if needed
         await setDoc(supervisorDocRef, {
             email: values.email,
             userId: user.uid,
-            // You might want to add firstName, lastName fields to this form in the future
             createdAt: serverTimestamp(),
         });
       }
@@ -107,12 +108,14 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         title: 'Thành công',
         description: `Tài khoản cho ${values.email} đã được tạo.`,
       });
-      onFinished(); // Close the dialog on success
+      onFinished();
     } catch (error: any) {
       console.error("Error creating user:", error);
       let description = 'Không thể tạo tài khoản. Vui lòng thử lại.';
       if (error.code === 'auth/email-already-in-use') {
         description = 'Email này đã được sử dụng.';
+      } else if (error.code === 'auth/network-request-failed') {
+          description = 'Lỗi mạng hoặc tên miền chưa được cấp phép. Vui lòng kiểm tra kết nối và cấu hình tên miền trong Firebase console.';
       } else {
         description = error.message;
       }
@@ -122,7 +125,6 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         description: description,
       });
     } finally {
-        // Sign out the temporary auth instance to clear its state for the next creation
         if (tempAuth.currentUser) {
             await signOut(tempAuth);
         }
