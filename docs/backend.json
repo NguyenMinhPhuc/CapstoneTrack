@@ -17,7 +17,8 @@
         },
         "role": {
           "type": "string",
-          "description": "Role of the user account (e.g., student, supervisor, admin)."
+          "description": "Role of the user account.",
+          "enum": ["admin", "supervisor", "student"]
         },
         "studentId": {
           "type": "string",
@@ -94,7 +95,7 @@
         },
         "facultyRank": {
           "type": "string",
-          "description": "The faculty rank of the supervisor."
+"description": "The faculty rank of the supervisor."
         }
       },
       "required": [
@@ -114,7 +115,7 @@
   "firestore": {
     "structure": [
       {
-        "path": "/users/{userId}/userAccount",
+        "path": "/users/{userId}",
         "definition": {
           "entityName": "UserAccount",
           "schema": {
@@ -130,7 +131,7 @@
         }
       },
       {
-        "path": "/users/{userId}/student",
+        "path": "/students/{studentId}",
         "definition": {
           "entityName": "Student",
           "schema": {
@@ -139,14 +140,14 @@
           "description": "Stores student information related to the user account. Path-based ownership allows direct access control based on {userId}. Used to distinguish student role.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user account, derived from Firebase Authentication."
+              "name": "studentId",
+              "description": "The unique identifier of the student."
             }
           ]
         }
       },
       {
-        "path": "/users/{userId}/supervisor",
+        "path": "/supervisors/{supervisorId}",
         "definition": {
           "entityName": "Supervisor",
           "schema": {
@@ -155,13 +156,13 @@
           "description": "Stores supervisor information related to the user account. Path-based ownership allows direct access control based on {userId}. Used to distinguish supervisor role.",
           "params": [
             {
-              "name": "userId",
-              "description": "The unique identifier of the user account, derived from Firebase Authentication."
+              "name": "supervisorId",
+              "description": "The unique identifier of the supervisor."
             }
           ]
         }
       }
     ],
-    "reasoning": "The Firestore structure is designed to manage user accounts and associated data related to student internships and graduation processes. It emphasizes authorization independence through path-based ownership and explicit role assignments. The structure segregates different types of data into distinct collections to simplify security rules and ensure secure list operations (QAPs). Specifically, UserAccounts are stored at the root level, while Students and Supervisors are stored as subcollections of UserAccounts. Roles will be checked based on user authentication and existence of related documents in the corresponding subcollections. This approach avoids complex `get()` calls in security rules and ensures atomic operations and simpler debugging.\n\nThis structure achieves Authorization Independence by relying on path-based ownership for user data (students, supervisors), avoiding the need to fetch parent document data to authorize access. The QAPs are supported by segregating data based on user roles and ownership using the directory-like structure."
+    "reasoning": "The Firestore structure is designed to manage user accounts and associated data related to student internships and graduation processes. It emphasizes authorization independence through path-based ownership and explicit role assignments. The structure segregates different types of data into distinct collections to simplify security rules and ensure secure list operations (QAPs). Specifically, UserAccounts, Students and Supervisors are stored at the root level. Roles will be checked based on user authentication and the role field in the user document. This approach avoids complex `get()` calls in security rules and ensures atomic operations and simpler debugging.\n\nThis structure achieves Authorization Independence by relying on path-based ownership for user data (students, supervisors), avoiding the need to fetch parent document data to authorize access. The QAPs are supported by segregating data based on user roles and ownership using the directory-like structure."
   }
 }
