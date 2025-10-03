@@ -18,7 +18,11 @@
         "role": {
           "type": "string",
           "description": "Role of the user account.",
-          "enum": ["admin", "supervisor", "student"]
+          "enum": [
+            "admin",
+            "supervisor",
+            "student"
+          ]
         },
         "studentId": {
           "type": "string",
@@ -95,7 +99,7 @@
         },
         "facultyRank": {
           "type": "string",
-"description": "The faculty rank of the supervisor."
+          "description": "The faculty rank of the supervisor."
         }
       },
       "required": [
@@ -113,56 +117,23 @@
     ]
   },
   "firestore": {
-    "structure": [
-      {
-        "path": "/users/{userId}",
-        "definition": {
-          "entityName": "UserAccount",
-          "schema": {
-            "$ref": "#/backend/entities/UserAccount"
-          },
-          "description": "Stores user account information. Includes denormalized role information from the UserAccount document itself. Path-based ownership allows direct access control based on {userId}.",
-          "params": [
-            {
-              "name": "userId",
-              "description": "The unique identifier of the user account, derived from Firebase Authentication."
-            }
-          ]
-        }
+    "/users/{userId}": {
+      "schema": {
+        "$ref": "#/entities/UserAccount"
       },
-      {
-        "path": "/students/{studentId}",
-        "definition": {
-          "entityName": "Student",
-          "schema": {
-            "$ref": "#/backend/entities/Student"
-          },
-          "description": "Stores student information related to the user account. Path-based ownership allows direct access control based on {userId}. Used to distinguish student role.",
-          "params": [
-            {
-              "name": "studentId",
-              "description": "The unique identifier of the student."
-            }
-          ]
-        }
+      "description": "Stores user account information including their role."
+    },
+    "/students/{studentId}": {
+      "schema": {
+        "$ref": "#/entities/Student"
       },
-      {
-        "path": "/supervisors/{supervisorId}",
-        "definition": {
-          "entityName": "Supervisor",
-          "schema": {
-            "$ref": "#/backend/entities/Supervisor"
-          },
-          "description": "Stores supervisor information related to the user account. Path-based ownership allows direct access control based on {userId}. Used to distinguish supervisor role.",
-          "params": [
-            {
-              "name": "supervisorId",
-              "description": "The unique identifier of the supervisor."
-            }
-          ]
-        }
-      }
-    ],
-    "reasoning": "The Firestore structure is designed to manage user accounts and associated data related to student internships and graduation processes. It emphasizes authorization independence through path-based ownership and explicit role assignments. The structure segregates different types of data into distinct collections to simplify security rules and ensure secure list operations (QAPs). Specifically, UserAccounts, Students and Supervisors are stored at the root level. Roles will be checked based on user authentication and the role field in the user document. This approach avoids complex `get()` calls in security rules and ensures atomic operations and simpler debugging.\n\nThis structure achieves Authorization Independence by relying on path-based ownership for user data (students, supervisors), avoiding the need to fetch parent document data to authorize access. The QAPs are supported by segregating data based on user roles and ownership using the directory-like structure."
+      "description": "Stores detailed information about students."
+    },
+    "/supervisors/{supervisorId}": {
+      "schema": {
+        "$ref": "#/entities/Supervisor"
+      },
+      "description": "Stores detailed information about supervisors."
+    }
   }
 }

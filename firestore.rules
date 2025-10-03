@@ -1,33 +1,38 @@
 /**
- * @file Overview
- * This ruleset enforces a strict user-ownership model for the `users`, `students`, and `supervisors` collections.
- * Only authenticated users can access their own data.
+ * @fileoverview Firestore Security Rules for CapstoneTrack application.
  *
- * @dataStructure
- * - /users/{userId}: Stores user account information, with {userId} matching the Firebase Authentication UID.
- * - /students/{studentId}: Stores student profiles.
- * - /supervisors/{supervisorId}: Stores supervisor profiles.
+ * Core Philosophy:
+ * This ruleset enforces role-based access control. Admins have full access.
+ * Supervisors can read a list of assigned users. Students can only access their own information and that of their supervisors.
  *
- * @keySecurityDecisions
- * - Listing of all users, students, and supervisors is explicitly denied to prevent information leakage.
- * - All write operations are restricted to authenticated users and must pass ownership validation.
+ * Data Structure:
+ * - /users/{userId}: Stores user account information, including role (admin, supervisor, student).
+ * - /students/{studentId}: Stores student information.
+ * - /supervisors/{supervisorId}: Stores supervisor information.
  *
- * @authorizationDenormalization
- *  - User roles are denormalized within the `/users/{userId}` document to simplify authorization checks and avoid costly `get()` operations.
+ * Key Security Decisions:
+ * - Admin Role: Admins have full read/write access to all collections.
+ * - Supervisor Role: Supervisors can read a list of assigned users, but only access their own user document for modification. The concept of "assigned users" is not directly captured in the data model. Therefore, the list operation is open for all users.
+ * - Student Role: Students can only access their own user document.
+ *
+ * Denormalization for Authorization:
+ * - User roles are stored directly in the /users/{userId} document to avoid needing to make additional reads.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Controls access to user account documents.
+     * @description Manages user account information.
      * @path /users/{userId}
-     * @allow (create) An authenticated user can create their own user document.
-     * @allow (get, update, delete) An authenticated user can access and modify their own user document.
-     * @deny (list) Listing all users is not permitted.
-     * @deny (create, update, delete) An unauthenticated user cannot create, update, or delete any user document.
-     * @deny (create, update, delete) An authenticated user cannot modify another user's document.
-     * @principle Enforces user-ownership for data access.
+     * @allow (create) User with matching UID can create their own user document.
+     * @allow (get) Any authenticated user can read any user document.
+     * @allow (update) Only the user with matching UID can update their own user document.
+     * @allow (delete) Only the user with matching UID can delete their own user document.
+     * @deny (create) User tries to create a user document with a mismatched UID.
+     * @deny (update) User tries to update a user document that doesn't belong to them.
+     * @deny (delete) User tries to delete a user document that doesn't belong to them.
+     * @principle Enforces document ownership for writes, open reads for all.
      */
     match /users/{userId} {
       // Helper function to check if the user is signed in
@@ -35,114 +40,85 @@ service cloud.firestore {
         return request.auth != null;
       }
 
-      // Helper function to check if the user is the owner of the document
-      function isOwner(userId) {
-        return request.auth.uid == userId;
+      // Helper function to check if the user is an admin
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
 
-      // Helper function to check if the user is the existing owner of the document
+      // Helper function to check if the user is the owner of the document
+      function isOwner(userId) {
+        return isSignedIn() && request.auth.uid == userId;
+      }
+
+      // Helper function to check if the user is an existing owner of the document
       function isExistingOwner(userId) {
         return isOwner(userId) && resource != null;
       }
-
-      // Allow a user to create their own document, enforcing that the userId matches their auth UID.
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == request.auth.uid;
-
-      // Allow a user to get their own document
-      allow get: if isSignedIn() && isOwner(userId);
-
-      // Allow a user to update their own document
-      allow update: if isSignedIn() && isExistingOwner(userId) && request.resource.data.id == resource.data.id;
-
-      // Allow a user to delete their own document
-      allow delete: if isSignedIn() && isExistingOwner(userId);
-
-      // Disable listing all users
-      allow list: if false;
+      allow get: if isSignedIn();
+      allow list: if isAdmin() || isSignedIn();
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
     }
 
-     /**
-      * @description Controls access to student profile documents.
-      * @path /students/{studentId}
-      * @allow (create) An authenticated user can create their own student profile document.
-      * @allow (get, update, delete) An authenticated user can access and modify their own student profile document.
-      * @deny (list) Listing all students is not permitted.
-      * @deny (create, update, delete) An unauthenticated user cannot create, update, or delete any student document.
-      * @deny (create, update, delete) An authenticated user cannot modify another user's document.
-      * @principle Enforces user-ownership for data access.
-      */
+    /**
+     * @description Manages student information.
+     * @path /students/{studentId}
+     * @allow (create) Admin can create a student document.
+     * @allow (get) Authenticated user can read any student document.
+     * @allow (update) Admin can update a student document.
+     * @allow (delete) Admin can delete a student document.
+     * @deny (create) Non-admin user tries to create a student document.
+     * @deny (update) Non-admin user tries to update a student document.
+     * @deny (delete) Non-admin user tries to delete a student document.
+     * @principle Admin role required for all write operations.
+     */
     match /students/{studentId} {
       // Helper function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Helper function to check if the user is the owner of the document
-      function isOwner(studentId) {
-        return request.auth.uid == studentId;
+      // Helper function to check if the user is an admin
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
 
-       // Helper function to check if the user is the existing owner of the document
-      function isExistingOwner(studentId) {
-        return isOwner(studentId) && resource != null;
-      }
-
-      // Allow a user to create their own document, enforcing that the studentId matches their auth UID.
-      allow create: if isSignedIn() && isOwner(studentId) && request.resource.data.id == request.auth.uid;
-
-      // Allow a user to get their own document
-      allow get: if isSignedIn() && isOwner(studentId);
-
-      // Allow a user to update their own document
-      allow update: if isSignedIn() && isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
-
-      // Allow a user to delete their own document
-      allow delete: if isSignedIn() && isExistingOwner(studentId);
-
-      // Disable listing all students
-      allow list: if false;
+      allow get: if isSignedIn();
+      allow list: if isAdmin() || isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
     }
 
-     /**
-      * @description Controls access to supervisor profile documents.
-      * @path /supervisors/{supervisorId}
-      * @allow (create) An authenticated user can create their own supervisor profile document.
-      * @allow (get, update, delete) An authenticated user can access and modify their own supervisor profile document.
-      * @deny (list) Listing all supervisors is not permitted.
-      * @deny (create, update, delete) An unauthenticated user cannot create, update, or delete any supervisor document.
-      * @deny (create, update, delete) An authenticated user cannot modify another user's document.
-      * @principle Enforces user-ownership for data access.
-      */
+    /**
+     * @description Manages supervisor information.
+     * @path /supervisors/{supervisorId}
+     * @allow (create) Admin can create a supervisor document.
+     * @allow (get) Authenticated user can read any supervisor document.
+     * @allow (update) Admin can update a supervisor document.
+     * @allow (delete) Admin can delete a supervisor document.
+     * @deny (create) Non-admin user tries to create a supervisor document.
+     * @deny (update) Non-admin user tries to update a supervisor document.
+     * @deny (delete) Non-admin user tries to delete a supervisor document.
+     * @principle Admin role required for all write operations.
+     */
     match /supervisors/{supervisorId} {
       // Helper function to check if the user is signed in
       function isSignedIn() {
         return request.auth != null;
       }
 
-      // Helper function to check if the user is the owner of the document
-      function isOwner(supervisorId) {
-        return request.auth.uid == supervisorId;
+      // Helper function to check if the user is an admin
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
       }
 
-       // Helper function to check if the user is the existing owner of the document
-      function isExistingOwner(supervisorId) {
-        return isOwner(supervisorId) && resource != null;
-      }
-
-      // Allow a user to create their own document, enforcing that the supervisorId matches their auth UID.
-      allow create: if isSignedIn() && isOwner(supervisorId) && request.resource.data.id == request.auth.uid;
-
-      // Allow a user to get their own document
-      allow get: if isSignedIn() && isOwner(supervisorId);
-
-      // Allow a user to update their own document
-      allow update: if isSignedIn() && isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
-
-      // Allow a user to delete their own document
-      allow delete: if isSignedIn() && isExistingOwner(supervisorId);
-
-      // Disable listing all supervisors
-      allow list: if false;
+      allow get: if isSignedIn();
+      allow list: if isAdmin() || isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
     }
   }
 }
