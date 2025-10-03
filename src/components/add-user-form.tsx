@@ -21,8 +21,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
+import { getAuth, createUserWithEmailAndPassword, Auth } from 'firebase/auth';
+import { initializeApp, getApp, getApps, deleteApp } from 'firebase/app';
+import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
@@ -34,12 +36,22 @@ const formSchema = z.object({
 });
 
 interface AddUserFormProps {
-    onFinished: () => void;
+  onFinished: () => void;
 }
+
+// Helper to get a secondary app instance
+const getSecondaryApp = () => {
+  const secondaryAppName = 'secondary-app-for-user-creation';
+  const existingApp = getApps().find(app => app.name === secondaryAppName);
+  if (existingApp) {
+    return existingApp;
+  }
+  return initializeApp(firebaseConfig, secondaryAppName);
+};
+
 
 export function AddUserForm({ onFinished }: AddUserFormProps) {
   const { toast } = useToast();
-  const auth = useAuth();
   const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -51,10 +63,10 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    let tempAuth: Auth | null = null;
+    const secondaryApp = getSecondaryApp();
     try {
-      // NOTE: This creates a temporary second auth instance to create the user.
-      // This is a workaround because the primary auth instance is tied to the logged-in admin.
-      const tempAuth = auth.app.name === 'temp' ? auth : { ...auth, app: { ...auth.app, name: 'temp' } };
+      tempAuth = getAuth(secondaryApp);
       
       const userCredential = await createUserWithEmailAndPassword(
         tempAuth,
@@ -99,6 +111,15 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         title: 'Ôi! Đã xảy ra lỗi.',
         description: description,
       });
+    } finally {
+        // Clean up the secondary app instance to avoid memory leaks
+        if (secondaryApp) {
+            try {
+                await deleteApp(secondaryApp);
+            } catch (e) {
+                console.error("Error deleting secondary app:", e);
+            }
+        }
     }
   }
 
