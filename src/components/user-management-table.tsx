@@ -307,6 +307,7 @@ export function UserManagementTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">#</TableHead>
               <TableHead>User</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
@@ -315,8 +316,9 @@ export function UserManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers?.map((user) => (
+            {filteredUsers?.map((user, index) => (
               <TableRow key={user.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell>
                   <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10">
