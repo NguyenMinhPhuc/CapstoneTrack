@@ -3,10 +3,10 @@
 import { Suspense } from 'react';
 import { UserManagementTable } from '@/components/user-management-table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser, useDoc, useMemoFirebase } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { doc, getFirestore } from 'firebase/firestore';
+import { useEffect } from 'react';
+import { doc } from 'firebase/firestore';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/app-header';
@@ -14,7 +14,7 @@ import { AppHeader } from '@/components/app-header';
 export default function UserManagementPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
-  const firestore = getFirestore();
+  const firestore = useFirestore();
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -24,21 +24,25 @@ export default function UserManagementPage() {
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
   useEffect(() => {
+    // If not loading and no user is logged in, redirect to login page.
     if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
+    // After user data has loaded, check the role.
+    // If the user is not an admin, redirect them to the home page.
     if (!isUserDataLoading && userData && userData.role !== 'admin') {
       router.push('/');
     }
   }, [userData, isUserDataLoading, router]);
 
-
   const isLoading = isUserLoading || isUserDataLoading;
 
-  if (isLoading || !user || !userData || userData.role !== 'admin') {
+  // Show a loading skeleton until we confirm the user is an admin.
+  // If not an admin, they will be redirected by the useEffect above.
+  if (isLoading || !userData || userData.role !== 'admin') {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Skeleton className="h-16 w-16 rounded-full" />
@@ -46,6 +50,7 @@ export default function UserManagementPage() {
     );
   }
 
+  // Render the page only if the user is a confirmed admin.
   return (
     <SidebarProvider defaultOpen>
       <AppSidebar />
