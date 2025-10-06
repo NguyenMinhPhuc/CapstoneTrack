@@ -130,7 +130,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
                 <SelectContent>
                   {students.map(student => (
                     <SelectItem key={student.id} value={student.id}>
-                      {`${student.firstName} ${student.lastName} (${student.id})`}
+                      {`${student.firstName} ${student.lastName} (${student.studentId})`}
                     </SelectItem>
                   ))}
                 </SelectContent>

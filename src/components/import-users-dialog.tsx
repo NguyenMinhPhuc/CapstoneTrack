@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, ChangeEvent } from 'react';
 import * as XLSX from 'xlsx';
@@ -67,12 +68,11 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                 const workbook = XLSX.read(event.target?.result, { type: 'binary' });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
-                const jsonData: UserData[] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+                const jsonData: UserData[] = XLSX.utils.sheet_to_json(sheet);
 
                 if (jsonData.length > 0) {
-                    const headerRow = jsonData[0] as string[];
-                    setHeaders(headerRow);
-                    setData(jsonData.slice(1));
+                    setHeaders(Object.keys(jsonData[0]));
+                    setData(jsonData);
                 }
             } catch (error) {
                 console.error("Error reading Excel file:", error);
@@ -97,30 +97,18 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
         let errorCount = 0;
 
         for (let i = 0; i < data.length; i++) {
-            const row = data[i] as any[];
-            const userObjectFromExcel = headers.reduce((obj, header, index) => {
-                obj[header] = row[index];
-                return obj;
-            }, {} as { [key: string]: any });
+            const row = data[i];
+            
+            const studentId = row['StudentID'] || row['Mã SV'];
+            const email = row['Email'] || `${studentId}@lhu.edu.vn`;
+            const password = row['Password'] || '123456'; // Default password
+            const role = row['Role']?.toLowerCase() || 'student'; // Default role
+            const firstName = row['HoSV'];
+            const lastName = row['TenSV'];
 
-            // **FIX: Filter out undefined values**
-            const cleanUserObject = Object.entries(userObjectFromExcel).reduce((acc, [key, value]) => {
-                if (value !== undefined) {
-                    acc[key] = value;
-                }
-                return acc;
-            }, {} as {[key: string]: any});
-
-
-            const email = cleanUserObject['Email'] || `${cleanUserObject['StudentID']}@lhu.edu.vn`;
-            const password = cleanUserObject['Password'] || '123456'; // Default password
-            const role = cleanUserObject['Role']?.toLowerCase() || 'student'; // Default role
-            const firstName = cleanUserObject['HoSV'];
-            const lastName = cleanUserObject['TenSV'];
-
-            if (!email) {
+            if (!email || !studentId) {
                 errorCount++;
-                console.warn(`Skipping row ${i + 1} due to missing email or StudentID.`);
+                console.warn(`Skipping row ${i + 2} due to missing email or StudentID.`);
                 continue;
             }
 
@@ -139,26 +127,30 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                 });
 
                 // 3. Create doc in role-specific collection
+                const dataToSet = {
+                    ...row,
+                    email: email,
+                    userId: user.uid,
+                    createdAt: serverTimestamp(),
+                    firstName: firstName,
+                    lastName: lastName,
+                    studentId: String(studentId), // Ensure studentId is stored
+                };
+
+                 // Clean up the object to remove any fields that were not in the excel, but are in the row object due to sheet_to_json
+                Object.keys(dataToSet).forEach(key => {
+                    if (dataToSet[key] === undefined) {
+                        delete dataToSet[key];
+                    }
+                });
+
+
                 if (role === 'student') {
                     const studentDocRef = doc(firestore, 'students', user.uid);
-                    await setDoc(studentDocRef, {
-                        ...cleanUserObject,
-                        firstName: firstName,
-                        lastName: lastName,
-                        email: email,
-                        userId: user.uid,
-                        createdAt: serverTimestamp(),
-                    });
+                    await setDoc(studentDocRef, dataToSet);
                 } else if (role === 'supervisor') {
                     const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
-                    await setDoc(supervisorDocRef, {
-                        ...cleanUserObject,
-                        firstName: firstName,
-                        lastName: lastName,
-                        email: email,
-                        userId: user.uid,
-                        createdAt: serverTimestamp(),
-                    });
+                    await setDoc(supervisorDocRef, dataToSet);
                 }
 
                 // Important: Sign out the created user from the temporary auth instance
@@ -170,8 +162,7 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
             } catch (error: any) {
                 errorCount++;
                 console.error(`Error importing user ${email}:`, error);
-                 // Log the problematic object
-                console.error("Data that caused the error:", cleanUserObject);
+                console.error("Data that caused the error:", row);
             }
             setImportProgress(((i + 1) / data.length) * 100);
         }
@@ -191,7 +182,7 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
             <DialogHeader className="p-6 pb-0">
                 <DialogTitle>Import Users from Excel</DialogTitle>
                 <DialogDescription>
-                    Upload an Excel file to bulk-create user accounts. The file must contain columns like 'Email' or 'StudentID', 'HoSV', 'TenSV', 'Role'.
+                    Upload an Excel file to bulk-create user accounts. The file must contain columns like 'StudentID' (or 'Mã SV'), 'HoSV', 'TenSV', 'Email', and 'Role'. 'Password' is optional.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 px-6 space-y-4 overflow-y-auto">
@@ -223,8 +214,8 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                                 <TableBody>
                                     {data.slice(0, 10).map((row, index) => ( // Preview first 10 rows
                                         <TableRow key={index}>
-                                            {headers.map((header, cellIndex) => (
-                                                <TableCell key={cellIndex}>{(row as any)[headers.indexOf(header)]}</TableCell>
+                                            {headers.map((header) => (
+                                                <TableCell key={header}>{row[header]}</TableCell>
                                             ))}
                                         </TableRow>
                                     ))}

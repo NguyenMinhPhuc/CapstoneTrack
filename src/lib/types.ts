@@ -38,7 +38,8 @@ export type GraduationDefenseSession = {
 }
 
 export type Student = {
-    id: string;
+    id: string; // This is the Firebase Auth UID
+    studentId: string; // This is the official Student ID (e.g., 122001306)
     firstName: string;
     lastName: string;
     email: string;
