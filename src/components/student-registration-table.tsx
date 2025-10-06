@@ -14,7 +14,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -37,7 +36,7 @@ import {
 import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
-import type { DefenseRegistration } from '@/lib/types';
+import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -46,12 +45,31 @@ import { ImportRegistrationsDialog } from './import-registrations-dialog';
 import { EditStudentRegistrationForm } from './edit-student-registration-form';
 import { Input } from './ui/input';
 import { AddStudentsByClassDialog } from './add-students-by-class-dialog';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 interface StudentRegistrationTableProps {
   sessionId: string;
+  initialData: StudentWithRegistrationDetails[] | null;
+  isLoading: boolean;
 }
 
-export function StudentRegistrationTable({ sessionId }: StudentRegistrationTableProps) {
+const statusLabel: Record<Student['status'], string> = {
+  studying: 'Đang học',
+  reserved: 'Bảo lưu',
+  dropped_out: 'Đã nghỉ',
+  graduated: 'Đã tốt nghiệp',
+};
+
+const statusColorClass: Record<Student['status'], string> = {
+  studying: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
+  reserved: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700',
+  dropped_out: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
+  graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
+};
+
+
+export function StudentRegistrationTable({ sessionId, initialData, isLoading }: StudentRegistrationTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -62,27 +80,20 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   const [searchTerm, setSearchTerm] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
 
-  const registrationsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', sessionId)),
-    [firestore, sessionId]
-  );
-
-  const { data: registrations, isLoading } = useCollection<DefenseRegistration>(registrationsQuery);
-
   const uniqueSupervisors = useMemo(() => {
-    if (!registrations) return [];
+    if (!initialData) return [];
     const supervisorSet = new Set<string>();
-    registrations.forEach(reg => {
+    initialData.forEach(reg => {
       if (reg.supervisorName) {
         supervisorSet.add(reg.supervisorName);
       }
     });
     return Array.from(supervisorSet).sort();
-  }, [registrations]);
+  }, [initialData]);
 
   const filteredRegistrations = useMemo(() => {
-    if (!registrations) return [];
-    return registrations.filter(reg => {
+    if (!initialData) return [];
+    return initialData.filter(reg => {
       const term = searchTerm.toLowerCase();
       const nameMatch = reg.studentName.toLowerCase().includes(term);
       const idMatch = reg.studentId.toLowerCase().includes(term);
@@ -92,7 +103,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
 
       return searchMatch && supervisorMatch;
     });
-  }, [registrations, searchTerm, supervisorFilter]);
+  }, [initialData, searchTerm, supervisorFilter]);
 
   const handleEditClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
@@ -200,7 +211,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                             Thêm theo lớp
                         </Button>
                     </DialogTrigger>
-                    <AddStudentsByClassDialog sessionId={sessionId} existingRegistrations={registrations || []} onFinished={() => setIsAddByClassDialogOpen(false)} />
+                    <AddStudentsByClassDialog sessionId={sessionId} existingRegistrations={initialData || []} onFinished={() => setIsAddByClassDialogOpen(false)} />
                 </Dialog>
                   <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
@@ -232,6 +243,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                 <TableHead>STT</TableHead>
                 <TableHead>Tên sinh viên</TableHead>
                 <TableHead>MSSV</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead>Tên đề tài</TableHead>
                 <TableHead>GVHD</TableHead>
                 <TableHead>Ngày đăng ký</TableHead>
@@ -245,6 +257,11 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{reg.studentName}</TableCell>
                     <TableCell>{reg.studentId}</TableCell>
+                    <TableCell>
+                        <Badge className={cn(statusColorClass[reg.status])}>
+                            {statusLabel[reg.status]}
+                        </Badge>
+                    </TableCell>
                     <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
                     <TableCell>
@@ -269,7 +286,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center">
+                  <TableCell colSpan={8} className="text-center">
                     Chưa có sinh viên nào được thêm vào đợt này.
                   </TableCell>
                 </TableRow>

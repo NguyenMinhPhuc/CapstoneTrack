@@ -4,7 +4,7 @@
 import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
+import { collection, doc, query, where, getDocs } from 'firebase/firestore';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/app-header';
@@ -13,7 +13,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarIcon, LinkIcon, Users, UserCheck, FileText } from 'lucide-react';
-import { type GraduationDefenseSession, type DefenseRegistration } from '@/lib/types';
+import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 
 export default function DefenseSessionDetailPage() {
@@ -44,7 +44,28 @@ export default function DefenseSessionDetailPage() {
   );
   
   const { data: registrations, isLoading: areRegistrationsLoading } = useCollection<DefenseRegistration>(registrationsQuery);
-  
+
+  const studentsCollectionRef = useMemoFirebase(
+    () => collection(firestore, 'students'),
+    [firestore]
+  );
+  const { data: allStudents, isLoading: areStudentsLoading } = useCollection<Student>(studentsCollectionRef);
+
+  const combinedRegistrationData = useMemo<StudentWithRegistrationDetails[] | null>(() => {
+    if (!registrations || !allStudents) {
+      return null;
+    }
+    const studentMap = new Map(allStudents.map(s => [s.id, s]));
+
+    return registrations.map(reg => {
+      const studentData = studentMap.get(reg.studentDocId);
+      return {
+        ...reg,
+        status: studentData?.status || 'studying', // Default to 'studying' if not found
+      };
+    });
+  }, [registrations, allStudents]);
+
   const stats = useMemo(() => {
     if (!registrations) {
       return { studentCount: 0, supervisorCount: 0, projectCount: 0 };
@@ -72,7 +93,7 @@ export default function DefenseSessionDetailPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading;
 
   if (isLoading || !user || !userData || userData.role !== 'admin') {
     return (
@@ -196,11 +217,14 @@ export default function DefenseSessionDetailPage() {
               </Card>
             </div>
 
-            <StudentRegistrationTable sessionId={sessionId} />
+            <StudentRegistrationTable 
+                sessionId={sessionId} 
+                initialData={combinedRegistrationData}
+                isLoading={isLoading}
+            />
 
         </main>
       </SidebarInset>
     </SidebarProvider>
   );
 }
-
