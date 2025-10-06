@@ -66,6 +66,13 @@ export function AppSidebar() {
 
   const isLoading = isUserLoading || isUserDataLoading;
 
+  const isActive = (href: string) => {
+    if (href === '/') {
+        return pathname === href;
+    }
+    return pathname.startsWith(href);
+  }
+
   return (
     <Sidebar variant="inset" collapsible="icon">
       <SidebarHeader>
@@ -104,7 +111,7 @@ export function AppSidebar() {
                 <SidebarMenuItem key={item.href}>
                     <SidebarMenuButton
                     asChild
-                    isActive={pathname === item.href}
+                    isActive={isActive(item.href)}
                     tooltip={item.label}
                     >
                     <Link href={item.href}>
