@@ -1,0 +1,91 @@
+
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
+const formSchema = z.object({
+  name: z.string().min(1, { message: 'Tên tiểu ban là bắt buộc.' }),
+});
+
+interface AddSubCommitteeFormProps {
+  sessionId: string;
+  onFinished: () => void;
+}
+
+export function AddSubCommitteeForm({ sessionId, onFinished }: AddSubCommitteeFormProps) {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: '',
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const subcommitteesCollectionRef = collection(firestore, `graduationDefenseSessions/${sessionId}/subCommittees`);
+    
+    const newSubcommitteeData = {
+      sessionId: sessionId,
+      name: values.name,
+      members: [], // Initialize with an empty member list
+      createdAt: serverTimestamp(),
+    };
+    
+    addDoc(subcommitteesCollectionRef, newSubcommitteeData)
+        .then(() => {
+            toast({
+                title: 'Thành công',
+                description: `Đã tạo tiểu ban mới: ${values.name}`,
+            });
+            onFinished();
+        })
+        .catch(error => {
+            const contextualError = new FirestorePermissionError({
+              path: subcommitteesCollectionRef.path,
+              operation: 'create',
+              requestResourceData: newSubcommitteeData,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <FormField
+          control={form.control}
+          name="name"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên tiểu ban</FormLabel>
+              <FormControl>
+                <Input placeholder="Ví dụ: Tiểu ban 1 - CNTT" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+            {form.formState.isSubmitting ? "Đang tạo..." : "Tạo tiểu ban"}
+        </Button>
+      </form>
+    </Form>
+  );
+}
