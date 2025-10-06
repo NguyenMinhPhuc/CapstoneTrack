@@ -57,7 +57,13 @@ export function EditStudentForm({ student, onFinished }: EditStudentFormProps) {
     try {
       // We don't update email here as it's tied to auth.
       const { email, ...updateData } = values;
-      await updateDoc(studentDocRef, updateData);
+      
+      const dataToUpdate = {
+        ...updateData,
+        enrollmentYear: updateData.enrollmentYear || null,
+      };
+
+      await updateDoc(studentDocRef, dataToUpdate);
       
       toast({
         title: 'Thành công',
