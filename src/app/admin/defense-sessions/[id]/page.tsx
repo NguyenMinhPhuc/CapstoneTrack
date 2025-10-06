@@ -252,13 +252,13 @@ export default function DefenseSessionDetailPage() {
                 </div>
             </CardContent>
           </Card>
-          <Card className="flex flex-col">
+          <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Số GVHD ({stats.supervisorCount})</CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col min-h-0">
-              <ScrollArea className="flex-1">
+            <CardContent>
+              <ScrollArea className="h-40">
                 <div className="space-y-4">
                   {stats.supervisorDetails.length > 0 ? stats.supervisorDetails.map(sv => (
                     <div key={sv.name} className="text-sm">
