@@ -16,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
@@ -58,48 +58,61 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
-    const password = uuidv4().substring(0, 8); // Generate a random password
+    const password = uuidv4().substring(0, 8);
 
     try {
-      // 1. Create Auth user
-      const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
-      const user = userCredential.user;
+        const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
+        const user = userCredential.user;
 
-      const batch = writeBatch(firestore);
+        const batch = writeBatch(firestore);
 
-      // 2. Create 'users' collection document
-      const userDocRef = doc(firestore, 'users', user.uid);
-      batch.set(userDocRef, {
-        email: values.email,
-        role: 'supervisor',
-        status: 'active',
-        createdAt: serverTimestamp(),
-      });
+        const userDocRef = doc(firestore, 'users', user.uid);
+        const userData = {
+            email: values.email,
+            role: 'supervisor',
+            status: 'active',
+            createdAt: serverTimestamp(),
+        };
+        batch.set(userDocRef, userData);
 
-      // 3. Create 'supervisors' collection document
-      const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
-      batch.set(supervisorDocRef, {
-        ...values,
-        id: user.uid,
-        userId: user.uid,
-        createdAt: serverTimestamp(),
-      });
-      
-      await batch.commit();
+        const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
+        const supervisorData = {
+            ...values,
+            id: user.uid,
+            userId: user.uid,
+            createdAt: serverTimestamp(),
+        };
+        batch.set(supervisorDocRef, supervisorData);
 
-      toast({
-        title: 'Thành công',
-        description: `Giáo viên ${values.firstName} ${values.lastName} đã được tạo. Mật khẩu tạm thời: ${password}`,
-        duration: 9000,
-      });
-      onFinished();
-    } catch (error: any) {
-      console.error("Error creating supervisor:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: error.code === 'auth/email-already-in-use' ? 'Email này đã được sử dụng.' : `Không thể tạo giáo viên: ${error.message}`,
-      });
+        batch.commit()
+            .then(() => {
+                toast({
+                    title: 'Thành công',
+                    description: `Giáo viên ${values.firstName} ${values.lastName} đã được tạo. Mật khẩu tạm thời: ${password}`,
+                    duration: 9000,
+                });
+                onFinished();
+            })
+            .catch((error) => {
+                console.error("Error committing batch:", error);
+                const contextualError = new FirestorePermissionError({
+                    path: 'batch operation', // Path is not specific to one doc in a batch
+                    operation: 'write',
+                    requestResourceData: {
+                        user: userData,
+                        supervisor: supervisorData,
+                    },
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            });
+
+    } catch (authError: any) {
+        console.error("Error creating supervisor auth user:", authError);
+        toast({
+            variant: 'destructive',
+            title: 'Lỗi tạo tài khoản',
+            description: authError.code === 'auth/email-already-in-use' ? 'Email này đã được sử dụng.' : `Không thể tạo tài khoản: ${authError.message}`,
+        });
     } finally {
         if (tempAuth.currentUser) {
             await signOut(tempAuth);
