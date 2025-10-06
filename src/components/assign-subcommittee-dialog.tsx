@@ -37,7 +37,10 @@ export function AssignSubcommitteeDialog({
   const [progress, setProgress] = useState(0);
 
   const projectGroups = useMemo(() => {
-    const unassigned = allRegistrations.filter(reg => !reg.subCommitteeId && reg.registrationStatus === 'reporting');
+    // Filter for unassigned students who are in 'reporting' status
+    const unassigned = allRegistrations.filter(
+      reg => !reg.subCommitteeId && reg.registrationStatus === 'reporting'
+    );
     const groups = new Map<string, DefenseRegistration[]>();
     
     unassigned.forEach(reg => {
@@ -131,7 +134,7 @@ export function AssignSubcommitteeDialog({
                     <FolderGit2 className="h-6 w-6 text-muted-foreground" />
                     <div>
                         <p className="font-semibold">{projectGroups.length}</p>
-                        <p className="text-sm text-muted-foreground">Đề tài chưa phân công</p>
+                        <p className="text-sm text-muted-foreground">Đề tài hợp lệ để phân công</p>
                     </div>
                 </div>
                  <div className="flex items-center gap-4 p-4 rounded-lg border">
