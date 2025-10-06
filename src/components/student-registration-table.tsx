@@ -36,7 +36,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -53,6 +53,13 @@ import { SpecialExemptionForm } from './special-exemption-form';
 import { WithdrawRegistrationForm } from './withdraw-registration-form';
 import { AssignSubcommitteeDialog } from './assign-subcommittee-dialog';
 import { AssignSubcommitteeManualDialog } from './assign-subcommittee-manual-dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 
 interface StudentRegistrationTableProps {
@@ -87,6 +94,7 @@ const registrationStatusVariant: Record<DefenseRegistration['registrationStatus'
     withdrawn: 'destructive',
 };
 
+const UNASSIGNED_VALUE = "__UNASSIGNED__";
 
 
 export function StudentRegistrationTable({ sessionId, initialData, isLoading }: StudentRegistrationTableProps) {
@@ -149,6 +157,29 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       return searchMatch && supervisorMatch && statusMatch;
     });
   }, [initialData, searchTerm, supervisorFilter, statusFilter]);
+
+  const handleSubcommitteeChange = async (registrationId: string, newSubCommitteeId: string) => {
+      const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
+      const subCommitteeIdToUpdate = newSubCommitteeId === UNASSIGNED_VALUE ? "" : newSubCommitteeId;
+      
+      const updateData = { subCommitteeId: subCommitteeIdToUpdate };
+
+      updateDoc(registrationDocRef, updateData)
+        .then(() => {
+            toast({
+                title: 'Thành công',
+                description: 'Đã cập nhật tiểu ban cho sinh viên.',
+            });
+        })
+        .catch(error => {
+            const contextualError = new FirestorePermissionError({
+              path: registrationDocRef.path,
+              operation: 'update',
+              requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
+  };
 
   const handleEditClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
@@ -488,7 +519,23 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     <TableCell>{reg.studentId}</TableCell>
                     <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
-                    <TableCell>{reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) || 'N/A' : 'Chưa phân công'}</TableCell>
+                    <TableCell>
+                        <Select
+                            value={reg.subCommitteeId || UNASSIGNED_VALUE}
+                            onValueChange={(newId) => handleSubcommitteeChange(reg.id, newId)}
+                            disabled={!subCommittees || subCommittees.length === 0}
+                        >
+                            <SelectTrigger className="w-40 text-xs h-8">
+                                <SelectValue placeholder="Chọn tiểu ban" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value={UNASSIGNED_VALUE}>Chưa phân công</SelectItem>
+                                {subCommittees?.map(sc => (
+                                    <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
+                    </TableCell>
                     <TableCell>
                        <Badge variant={registrationStatusVariant[reg.registrationStatus]}>
                           {registrationStatusLabel[reg.registrationStatus]}
