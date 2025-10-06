@@ -25,6 +25,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -40,7 +50,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, ListFilter } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, updateDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { GraduationDefenseSession } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -71,7 +81,9 @@ export function DefenseSessionsTable() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<GraduationDefenseSession | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<GraduationDefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -94,6 +106,33 @@ export function DefenseSessionsTable() {
   const handleEditClick = (session: GraduationDefenseSession) => {
     setSelectedSession(session);
     setIsEditDialogOpen(true);
+  };
+  
+  const handleDeleteClick = (session: GraduationDefenseSession) => {
+    setSessionToDelete(session);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    if (!sessionToDelete) return;
+    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionToDelete.id);
+    try {
+      await deleteDoc(sessionDocRef);
+      toast({
+        title: 'Thành công',
+        description: `Đợt báo cáo "${sessionToDelete.name}" đã được xóa.`,
+      });
+    } catch (error) {
+       console.error("Error deleting session:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể xóa đợt báo cáo.',
+      });
+    } finally {
+        setIsDeleteDialogOpen(false);
+        setSessionToDelete(null);
+    }
   };
 
   const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
@@ -274,7 +313,8 @@ export function DefenseSessionsTable() {
                               </DropdownMenuSubContent>
                             </DropdownMenuPortal>
                           </DropdownMenuSub>
-                          <DropdownMenuItem className="text-destructive">Xóa</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(session)}>Xóa</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </TableCell>
@@ -301,6 +341,21 @@ export function DefenseSessionsTable() {
           )}
         </DialogContent>
       </Dialog>
+       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+            <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn không?</AlertDialogTitle>
+            <AlertDialogDescription>
+                Hành động này không thể được hoàn tác. Thao tác này sẽ xóa vĩnh viễn
+                đợt báo cáo và tất cả dữ liệu liên quan khỏi máy chủ của chúng tôi.
+            </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Tiếp tục</AlertDialogAction>
+            </AlertDialogFooter>
+        </AlertDialogContent>
+    </AlertDialog>
     </div>
   );
 }
