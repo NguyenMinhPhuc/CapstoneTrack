@@ -47,7 +47,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -61,6 +61,7 @@ import { ImportStudentsDialog } from './import-students-dialog';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
+import { AssignClassDialog } from './assign-class-dialog';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -89,6 +90,7 @@ export function StudentManagementTable() {
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAssignClassDialogOpen, setIsAssignClassDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -220,6 +222,11 @@ export function StudentManagementTable() {
     }
   };
 
+  const handleAssignClassFinished = () => {
+    setIsAssignClassDialogOpen(false);
+    setSelectedRowIds([]);
+  }
+
   if (isLoading) {
     return (
       <Card>
@@ -249,12 +256,18 @@ export function StudentManagementTable() {
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="flex-1">
+            <div className="flex items-center gap-2">
                  {selectedRowIds.length > 0 && (
-                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Xóa ({selectedRowIds.length}) mục đã chọn
-                    </Button>
+                    <>
+                        <Button variant="outline" size="sm" onClick={() => setIsAssignClassDialogOpen(true)}>
+                            <Users className="mr-2 h-4 w-4" />
+                            Xếp lớp ({selectedRowIds.length})
+                        </Button>
+                        <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Xóa ({selectedRowIds.length})
+                        </Button>
+                    </>
                 )}
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
@@ -358,7 +371,7 @@ export function StudentManagementTable() {
                 </TableCell>
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
-                <TableCell>{student.className}</TableCell>
+                <TableCell>{student.className || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
                 <TableCell>
                     <Badge className={cn(statusColorClass[student.status])}>
                         {statusLabel[student.status]}
@@ -406,6 +419,16 @@ export function StudentManagementTable() {
         </Table>
       </CardContent>
     </Card>
+    
+    {isAssignClassDialogOpen && (
+        <AssignClassDialog
+            isOpen={isAssignClassDialogOpen}
+            onOpenChange={setIsAssignClassDialogOpen}
+            studentIds={selectedRowIds}
+            allStudents={students || []}
+            onFinished={handleAssignClassFinished}
+        />
+    )}
 
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
@@ -441,4 +464,3 @@ export function StudentManagementTable() {
     </div>
   );
 }
-
