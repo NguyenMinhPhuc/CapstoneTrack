@@ -263,6 +263,73 @@
         "registrationDate",
         "registrationStatus"
       ]
+    },
+     "DefenseCouncil": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DefenseCouncil",
+      "type": "object",
+      "description": "Represents a member of the defense council for a specific graduation session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the council member entry."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Reference to the GraduationDefenseSession this council belongs to."
+        },
+        "supervisorId": {
+          "type": "string",
+          "description": "Reference to the supervisor's document ID in the 'supervisors' collection."
+        },
+        "name": {
+            "type": "string",
+            "description": "Full name of the supervisor for display purposes."
+        },
+        "role": {
+          "type": "string",
+          "description": "Role of the member within the council.",
+          "enum": ["President", "Vice President", "Secretary", "Member"]
+        }
+      },
+      "required": ["id", "sessionId", "supervisorId", "name", "role"]
+    },
+    "DefenseSubCommittee": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DefenseSubCommittee",
+      "type": "object",
+      "description": "Represents a sub-committee or panel within a graduation defense session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the sub-committee."
+        },
+        "sessionId": {
+          "type": "string",
+          "description": "Reference to the GraduationDefenseSession this sub-committee belongs to."
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the sub-committee (e.g., 'Tiểu ban 1 - CNTT')."
+        },
+        "members": {
+            "type": "array",
+            "description": "A list of members in this sub-committee.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "supervisorId": {"type": "string"},
+                    "name": {"type": "string"},
+                    "role": {
+                        "type": "string",
+                        "enum": ["Head", "Secretary", "Commissioner"]
+                    }
+                },
+                "required": ["supervisorId", "name", "role"]
+            }
+        }
+      },
+      "required": ["id", "sessionId", "name", "members"]
     }
   },
   "auth": {
@@ -302,6 +369,20 @@
         "$ref": "#/entities/DefenseSessionRegistration"
       },
       "description": "Stores student registrations for all defense sessions."
+    },
+     "/graduationDefenseSessions/{sessionId}/council/{councilMemberId}": {
+      "schema": {
+        "$ref": "#/entities/DefenseCouncil"
+      },
+      "description": "Stores the members of the main defense council for a specific session."
+    },
+    "/graduationDefenseSessions/{sessionId}/subCommittees/{subCommitteeId}": {
+      "schema": {
+        "$ref": "#/entities/DefenseSubCommittee"
+      },
+      "description": "Stores the sub-committees (panels) for a specific defense session."
     }
   }
 }
+
+    

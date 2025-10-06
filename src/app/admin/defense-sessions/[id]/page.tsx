@@ -9,9 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, LinkIcon, Users, UserCheck, FileText } from 'lucide-react';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck } from 'lucide-react';
 import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function DefenseSessionDetailPage() {
   const router = useRouter();
@@ -130,7 +132,15 @@ export default function DefenseSessionDetailPage() {
                         <CardTitle className="text-3xl">{session.name}</CardTitle>
                         <CardDescription className="mt-1">{session.description || 'Không có mô tả.'}</CardDescription>
                     </div>
-                    <Badge>{session.status}</Badge>
+                    <div className="flex items-center gap-2">
+                        <Badge>{session.status}</Badge>
+                         <Button asChild variant="outline">
+                            <Link href={`/admin/defense-sessions/${sessionId}/council`}>
+                                <ShieldCheck className="mr-2 h-4 w-4" />
+                                Quản lý Hội đồng
+                            </Link>
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -213,3 +223,5 @@ export default function DefenseSessionDetailPage() {
     </main>
   );
 }
+
+    

@@ -95,3 +95,26 @@ export type DefenseSessionRegistration = {
 export type StudentWithRegistrationDetails = DefenseRegistration & {
   status: Student['status'];
 };
+
+export type DefenseCouncilMember = {
+    id: string;
+    sessionId: string;
+    supervisorId: string;
+    name: string;
+    role: 'President' | 'Vice President' | 'Secretary' | 'Member';
+}
+
+export type SubCommitteeMember = {
+    supervisorId: string;
+    name: string;
+    role: 'Head' | 'Secretary' | 'Commissioner';
+}
+
+export type DefenseSubCommittee = {
+    id: string;
+    sessionId: string;
+    name: string;
+    members: SubCommitteeMember[];
+}
+
+    
