@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck } from 'lucide-react';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle } from 'lucide-react';
 import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
@@ -67,16 +67,30 @@ export default function DefenseSessionDetailPage() {
 
   const stats = useMemo(() => {
     if (!registrations) {
-      return { studentCount: 0, supervisorCount: 0, projectCount: 0 };
+      return { 
+          studentCount: 0, 
+          supervisorCount: 0, 
+          projectCount: 0,
+          reportingCount: 0,
+          exemptedCount: 0,
+          withdrawnCount: 0,
+       };
     }
     const studentCount = registrations.length;
     const supervisorSet = new Set(registrations.map(r => r.supervisorName).filter(Boolean));
     const projectCount = registrations.filter(r => r.projectTitle).length;
     
+    const reportingCount = registrations.filter(r => r.registrationStatus === 'reporting').length;
+    const exemptedCount = registrations.filter(r => r.registrationStatus === 'exempted').length;
+    const withdrawnCount = registrations.filter(r => r.registrationStatus === 'withdrawn').length;
+
     return {
       studentCount,
       supervisorCount: supervisorSet.size,
       projectCount,
+      reportingCount,
+      exemptedCount,
+      withdrawnCount,
     };
   }, [registrations]);
 
@@ -188,8 +202,31 @@ export default function DefenseSessionDetailPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.studentCount}</div>
-              <p className="text-xs text-muted-foreground">Tổng số sinh viên đã đăng ký</p>
+                <div className="text-2xl font-bold">{stats.studentCount}</div>
+                <p className="text-xs text-muted-foreground">Tổng số sinh viên đã đăng ký</p>
+                <div className="mt-4 space-y-2 text-sm">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <FileCheck2 className="h-4 w-4 text-green-500" />
+                            <span>Báo cáo</span>
+                        </div>
+                        <span className="font-semibold">{stats.reportingCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-yellow-500" />
+                            <span>Đặc cách</span>
+                        </div>
+                        <span className="font-semibold">{stats.exemptedCount}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <XCircle className="h-4 w-4 text-red-500" />
+                            <span>Bỏ báo cáo</span>
+                        </div>
+                        <span className="font-semibold">{stats.withdrawnCount}</span>
+                    </div>
+                </div>
             </CardContent>
           </Card>
           <Card>
