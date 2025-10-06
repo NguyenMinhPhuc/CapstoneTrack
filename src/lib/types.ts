@@ -51,6 +51,17 @@ export type Student = {
     status: 'studying' | 'reserved' | 'dropped_out';
 }
 
+export type Supervisor = {
+    id: string;
+    userId: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    department?: string;
+    facultyRank?: string;
+    createdAt: any;
+}
+
 export type DefenseRegistration = {
   id: string;
   sessionId: string;

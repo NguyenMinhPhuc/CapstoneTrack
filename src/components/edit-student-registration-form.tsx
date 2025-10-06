@@ -18,6 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
+import { SupervisorSelect } from './supervisor-select';
 
 const formSchema = z.object({
   projectTitle: z.string().optional(),
@@ -92,10 +93,13 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
           name="supervisorName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên giáo viên hướng dẫn (tùy chọn)</FormLabel>
-              <FormControl>
-                <Input placeholder="Ví dụ: Nguyễn Văn B" {...field} />
-              </FormControl>
+              <FormLabel>Giáo viên hướng dẫn</FormLabel>
+               <FormControl>
+                 <SupervisorSelect
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                />
+               </FormControl>
               <FormMessage />
             </FormItem>
           )}

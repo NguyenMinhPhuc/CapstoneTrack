@@ -26,6 +26,7 @@ import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { useEffect, useState } from 'react';
+import { SupervisorSelect } from './supervisor-select';
 
 const formSchema = z.object({
   studentDocId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
@@ -169,10 +170,13 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
           name="supervisorName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên giáo viên hướng dẫn (tùy chọn)</FormLabel>
-              <FormControl>
-                <Input placeholder="Ví dụ: Nguyễn Văn B" {...field} />
-              </FormControl>
+              <FormLabel>Giáo viên hướng dẫn</FormLabel>
+               <FormControl>
+                 <SupervisorSelect
+                    value={field.value || ''}
+                    onChange={field.onChange}
+                />
+               </FormControl>
               <FormMessage />
             </FormItem>
           )}
@@ -184,5 +188,3 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     </Form>
   );
 }
-
-    
