@@ -75,6 +75,16 @@ export type DefenseRegistration = {
   registrationDate: any;
 }
 
+// Represents a student's registration for a specific graduation defense session.
+export type DefenseSessionRegistration = {
+  id: string;
+  sessionId: string;
+  studentId: string; // docId of the student
+  studentName: string;
+  studentIdentifier: string; // official student ID number
+  registrationDate: any;
+}
+
 
 // Combined type for the student registration table
 export type StudentWithRegistrationDetails = DefenseRegistration & {

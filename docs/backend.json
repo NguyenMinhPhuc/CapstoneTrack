@@ -199,11 +199,11 @@
         "status"
       ]
     },
-    "DefenseRegistration": {
+    "DefenseSessionRegistration": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "DefenseRegistration",
+      "title": "DefenseSessionRegistration",
       "type": "object",
-      "description": "Represents a student's registration for a specific graduation defense session.",
+      "description": "Represents a student's registration for a specific defense session.",
       "properties": {
         "id": {
           "type": "string",
@@ -215,19 +215,15 @@
         },
         "studentId": {
           "type": "string",
-          "description": "Reference to the registered student."
+          "description": "Reference to the registered student's document ID."
         },
         "studentName": {
           "type": "string",
           "description": "Full name of the student for display purposes."
         },
-        "projectTitle": {
+        "studentIdentifier": {
           "type": "string",
-          "description": "The title of the student's capstone project."
-        },
-        "supervisorName": {
-          "type": "string",
-          "description": "Name of the project supervisor."
+          "description": "The official student ID number (e.g., 122001306)."
         },
         "registrationDate": {
           "type": "string",
@@ -240,6 +236,7 @@
         "sessionId",
         "studentId",
         "studentName",
+        "studentIdentifier",
         "registrationDate"
       ]
     }
@@ -251,7 +248,7 @@
     ]
   },
   "firestore": {
-    "rules": "rules_version = '2';\n\nservice cloud.firestore {\n  match /databases/{database}/documents {\n\n    function isAuthOwner(userId) {\n      return request.auth != null && request.auth.uid == userId;\n    }\n\n    function isAdmin() {\n      return request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n\n    match /users/{userId} {\n      allow read: if isAuthOwner(userId) || isAdmin();\n      allow write: if isAdmin();\n    }\n\n    match /students/{studentId} {\n      allow read: if request.auth != null;\n      allow write: if isAdmin();\n    }\n\n    match /supervisors/{supervisorId} {\n      allow read: if request.auth != null;\n      allow write: if isAdmin();\n    }\n\n    match /graduationDefenseSessions/{sessionId} {\n      allow read, list: if request.auth != null;\n      allow write: if isAdmin();\n    }\n\n    match /defenseRegistrations/{registrationId} {\n      allow read, list: if request.auth != null;\n      allow write: if isAdmin();\n    }\n\n    match /{document=**} {\n      allow read, write: if false;\n    }\n  }\n}",
+    "rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    \n    /**\n     * =====================================\n     * 🚀 DEVELOPMENT MODE - FULL ACCESS\n     * =====================================\n     * ⚠️ CHỈ DÙNG KHI ĐANG PHÁT TRIỂN\n     * Toàn quyền cho mọi người (bao gồm cả anonymous).\n     * Khi lên production, PHẢI khóa lại!\n     */\n\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}\n",
     "/users/{userId}": {
       "schema": {
         "$ref": "#/entities/UserAccount"
@@ -278,7 +275,7 @@
     },
     "/defenseRegistrations/{registrationId}": {
       "schema": {
-        "$ref": "#/entities/DefenseRegistration"
+        "$ref": "#/entities/DefenseSessionRegistration"
       },
       "description": "Stores student registrations for all defense sessions."
     }

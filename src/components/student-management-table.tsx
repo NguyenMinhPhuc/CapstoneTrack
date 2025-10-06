@@ -47,7 +47,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -62,6 +62,7 @@ import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { AssignClassDialog } from './assign-class-dialog';
+import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -94,6 +95,7 @@ export function StudentManagementTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignClassDialogOpen, setIsAssignClassDialogOpen] = useState(false);
+  const [isAddToSessionDialogOpen, setIsAddToSessionDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -225,8 +227,9 @@ export function StudentManagementTable() {
     }
   };
 
-  const handleAssignClassFinished = () => {
+  const handleDialogFinished = () => {
     setIsAssignClassDialogOpen(false);
+    setIsAddToSessionDialogOpen(false);
     setSelectedRowIds([]);
   }
 
@@ -265,6 +268,10 @@ export function StudentManagementTable() {
                         <Button variant="outline" size="sm" onClick={() => setIsAssignClassDialogOpen(true)}>
                             <Users className="mr-2 h-4 w-4" />
                             Xếp lớp ({selectedRowIds.length})
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => setIsAddToSessionDialogOpen(true)}>
+                            <FilePlus2 className="mr-2 h-4 w-4" />
+                            Thêm vào đợt ({selectedRowIds.length})
                         </Button>
                         <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
                             <Trash2 className="mr-2 h-4 w-4" />
@@ -434,7 +441,17 @@ export function StudentManagementTable() {
             onOpenChange={setIsAssignClassDialogOpen}
             studentIds={selectedRowIds}
             allStudents={students || []}
-            onFinished={handleAssignClassFinished}
+            onFinished={handleDialogFinished}
+        />
+    )}
+
+    {isAddToSessionDialogOpen && (
+        <AddStudentsToSessionDialog
+            isOpen={isAddToSessionDialogOpen}
+            onOpenChange={setIsAddToSessionDialogOpen}
+            studentIds={selectedRowIds}
+            allStudents={students || []}
+            onFinished={handleDialogFinished}
         />
     )}
 
