@@ -257,8 +257,8 @@ export default function DefenseSessionDetailPage() {
               <CardTitle className="text-sm font-medium">Số GVHD ({stats.supervisorCount})</CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent className="flex-1 flex flex-col">
-              <ScrollArea className="flex-1 h-24">
+            <CardContent className="flex-1 flex flex-col min-h-0">
+              <ScrollArea className="flex-1">
                 <div className="space-y-4">
                   {stats.supervisorDetails.length > 0 ? stats.supervisorDetails.map(sv => (
                     <div key={sv.name} className="text-sm">
