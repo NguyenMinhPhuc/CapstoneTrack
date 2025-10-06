@@ -37,7 +37,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
@@ -143,6 +143,55 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const handleEditClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
     setIsEditDialogOpen(true);
+  };
+
+  const handleRevertToReporting = async (registrationIds: string[]) => {
+    if (registrationIds.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Chưa chọn sinh viên",
+        description: "Vui lòng chọn ít nhất một sinh viên để thực hiện.",
+      });
+      return;
+    }
+
+    const batch = writeBatch(firestore);
+    
+    // Data to reset the status and clear related fields
+    const dataToUpdate = {
+        registrationStatus: 'reporting' as const,
+        statusNote: "",
+        exemptionDecisionNumber: "",
+        exemptionDecisionDate: null,
+        exemptionProofLink: "",
+    };
+
+    registrationIds.forEach(id => {
+      const registrationDocRef = doc(firestore, 'defenseRegistrations', id);
+      batch.update(registrationDocRef, dataToUpdate);
+    });
+
+    try {
+        await batch.commit();
+        toast({
+            title: 'Thành công',
+            description: `Đã cập nhật trạng thái cho ${registrationIds.length} sinh viên về "Báo cáo".`,
+        });
+        setSelectedRowIds([]); // Clear selection after action
+    } catch(error) {
+        console.error('Error reverting registration status:', error);
+        const contextualError = new FirestorePermissionError({
+          path: 'batch update on defenseRegistrations',
+          operation: 'update',
+          requestResourceData: dataToUpdate,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+        toast({
+            variant: 'destructive',
+            title: 'Lỗi',
+            description: `Không thể cập nhật trạng thái sinh viên.`
+        })
+    }
   };
 
   const handleDelete = async (registrationId: string) => {
@@ -268,6 +317,10 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 onFinished={handleGroupActionFinished}
                             />
                         </Dialog>
+                         <Button variant="outline" size="sm" onClick={() => handleRevertToReporting(selectedRowIds)}>
+                            <RefreshCw className="mr-2 h-4 w-4" />
+                            Chuyển về 'Báo cáo' ({selectedRowIds.length})
+                        </Button>
                     </>
                 )}
             </div>
@@ -426,16 +479,24 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditClick(reg)}>Sửa</DropdownMenuItem>
                           <DropdownMenuSeparator />
+                           <DropdownMenuItem onClick={() => handleRevertToReporting([reg.id])}
+                                disabled={reg.registrationStatus === 'reporting'}
+                           >
+                                <RefreshCw className="mr-2 h-4 w-4" />
+                                Chuyển về 'Báo cáo'
+                           </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => {
                                 setIsExemptionDialogOpen(true);
                                 setSelectedRowIds([reg.id]);
                            }}>
+                                <Star className="mr-2 h-4 w-4" />
                                 Xét đặc cách
                            </DropdownMenuItem>
                            <DropdownMenuItem onClick={() => {
                                 setIsWithdrawDialogOpen(true);
                                 setSelectedRowIds([reg.id]);
                            }}>
+                                <XCircle className="mr-2 h-4 w-4" />
                                 Bỏ báo cáo
                            </DropdownMenuItem>
                           <DropdownMenuSeparator />
