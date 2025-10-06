@@ -123,13 +123,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle>Danh sách Sinh viên Đăng ký</CardTitle>
-            <CardDescription>
-              Quản lý danh sách sinh viên tham gia đợt báo cáo này.
-            </CardDescription>
-          </div>
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
               <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
