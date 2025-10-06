@@ -131,6 +131,7 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
                 projectTitle: row['ProjectTitle'] || row['Tên đề tài'] || '',
                 supervisorName: row['SupervisorName'] || row['GVHD'] || '',
                 registrationDate: serverTimestamp(),
+                registrationStatus: 'reporting', // Set default status
             };
             batch.set(newRegistrationRef, registrationData);
             successCount++;

@@ -74,6 +74,7 @@ export function AddStudentsToSessionDialog({
         studentId: student.studentId,
         studentName: `${student.firstName} ${student.lastName}`,
         registrationDate: serverTimestamp(),
+        registrationStatus: 'reporting', // Set default status
       });
     });
 
