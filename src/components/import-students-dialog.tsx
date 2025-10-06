@@ -160,9 +160,11 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                     studentId: String(studentIdValue),
                     firstName: row['HoSV'] || row['HoLot'] || '',
                     lastName: row['TenSV'] || row['Ten'] || '',
-                    major: row['Ngành'] || '',
+                    major: row['Ngành'] || row['tenNganh'] || '',
                     enrollmentYear: null, // Ignore date field as requested
-                    className: row['Lop'] || '',
+                    className: row['Lop'] || row['LopID'] || '',
+                    phone: row['SoDienThoai'] || '',
+                    CCCD: row['cmnd'] || '',
                     status: mapStatus(row['Tình trạng']),
                     createdAt: serverTimestamp(),
                 };
@@ -206,7 +208,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
             <DialogHeader className="p-6 pb-0">
                 <DialogTitle>Nhập sinh viên từ Excel</DialogTitle>
                 <DialogDescription>
-                    Tải lên tệp Excel để tạo hàng loạt tài khoản. Các cột cần thiết: 'Mã SV', 'HoSV', 'TenSV', 'Lop', 'Ngành', 'Tình trạng', 'Email'. Cột ngày tháng sẽ được bỏ qua.
+                    Tải lên tệp Excel để tạo hàng loạt tài khoản. Các cột cần thiết: 'Mã SV', 'HoSV', 'TenSV', 'Email'. Các cột khác là tùy chọn.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 px-6 space-y-4 overflow-y-auto">

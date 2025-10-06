@@ -47,6 +47,8 @@ export type Student = {
     major?: string;
     enrollmentYear?: number;
     className?: string; // Add className field
+    phone?: string;
+    CCCD?: string;
     createdAt: any;
     status: 'studying' | 'reserved' | 'dropped_out';
 }
