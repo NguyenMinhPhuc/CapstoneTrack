@@ -54,10 +54,14 @@ const mapStatus = (status: string): 'studying' | 'reserved' | 'dropped_out' => {
 
 const getYearFromDate = (date: any): number | null => {
     if (!date) return null;
+    // Handle JavaScript Date object
     if (date instanceof Date) {
-        return date.getFullYear();
+        if (!isNaN(date.getTime())) {
+            return date.getFullYear();
+        }
     }
-    if (typeof date === 'string' || typeof date === 'number') {
+    // Handle string date
+    if (typeof date === 'string') {
         const parsedDate = new Date(date);
         if (!isNaN(parsedDate.getTime())) {
             return parsedDate.getFullYear();
@@ -65,6 +69,8 @@ const getYearFromDate = (date: any): number | null => {
     }
     // Handle Excel's numeric date format
     if (typeof date === 'number' && date > 1) {
+        // Excel's epoch starts on 1899-12-30 for compatibility with Lotus 1-2-3
+        // The number represents days since epoch.
         const excelEpoch = new Date(1899, 11, 30);
         const jsDate = new Date(excelEpoch.getTime() + date * 86400000);
         if (!isNaN(jsDate.getTime())) {
@@ -92,7 +98,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const workbook = XLSX.read(event.target?.result, { type: 'binary', cellDates: true });
+                const workbook = XLSX.read(event.target?.result, { type: 'binary' });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
                 const jsonData: StudentData[] = XLSX.utils.sheet_to_json(sheet);
@@ -126,7 +132,6 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
 
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
-            const batch = writeBatch(firestore);
             
             const studentIdValue = row['Mã SV'];
             const email = row['Email'] || (studentIdValue ? `${studentIdValue}@lhu.edu.vn` : undefined);
@@ -136,6 +141,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                 errorCount++;
                 failedRows.push({ ...row, reason: 'Thiếu Email hoặc Mã SV' });
                 console.warn(`Skipping row ${i + 2} due to missing email or StudentID.`);
+                setImportProgress(((i + 1) / data.length) * 100);
                 continue;
             }
 
@@ -144,9 +150,13 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                 const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
                 const user = userCredential.user;
 
+                // Use a single batch for this user's writes
+                const batch = writeBatch(firestore);
+
                 // 2. Create doc in 'users' collection
                 const userDocRef = doc(firestore, 'users', user.uid);
                 batch.set(userDocRef, {
+                    id: user.uid,
                     email: email,
                     role: 'student',
                     status: 'active',
@@ -241,7 +251,15 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                                     {data.slice(0, 10).map((row, index) => ( // Preview first 10 rows
                                         <TableRow key={index}>
                                             {headers.map((header) => (
-                                                <TableCell key={header}>{String(row[header] instanceof Date ? row[header].toLocaleDateString() : row[header] ?? '')}</TableCell>
+                                                <TableCell key={header}>
+                                                    {(() => {
+                                                        const cellValue = row[header];
+                                                        if (cellValue instanceof Date) {
+                                                          return cellValue.toLocaleDateString();
+                                                        }
+                                                        return String(cellValue ?? '');
+                                                      })()}
+                                                </TableCell>
                                             ))}
                                         </TableRow>
                                     ))}
@@ -275,3 +293,4 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
     );
 }
 
+    
