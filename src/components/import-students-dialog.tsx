@@ -44,40 +44,12 @@ const getSecondaryApp = () => {
     return existingApp || initializeApp(firebaseConfig, secondaryAppName);
 };
 
-const mapStatus = (status: string): 'studying' | 'reserved' | 'dropped_out' => {
-    const lowerStatus = status?.toLowerCase();
-    if (lowerStatus?.includes('đang học')) return 'studying';
-    if (lowerStatus?.includes('bảo lưu')) return 'reserved';
-    if (lowerStatus?.includes('thôi học') || lowerStatus?.includes('đã nghỉ')) return 'dropped_out';
+const mapStatus = (status: string | undefined): 'studying' | 'reserved' | 'dropped_out' => {
+    const lowerStatus = status?.toLowerCase() || '';
+    if (lowerStatus.includes('đang học')) return 'studying';
+    if (lowerStatus.includes('bảo lưu')) return 'reserved';
+    if (lowerStatus.includes('thôi học') || lowerStatus.includes('đã nghỉ')) return 'dropped_out';
     return 'studying'; // Default status
-}
-
-const getYearFromDate = (date: any): number | null => {
-    if (!date) return null;
-    // Handle JavaScript Date object
-    if (date instanceof Date) {
-        if (!isNaN(date.getTime())) {
-            return date.getFullYear();
-        }
-    }
-    // Handle string date
-    if (typeof date === 'string') {
-        const parsedDate = new Date(date);
-        if (!isNaN(parsedDate.getTime())) {
-            return parsedDate.getFullYear();
-        }
-    }
-    // Handle Excel's numeric date format
-    if (typeof date === 'number' && date > 1) {
-        // Excel's epoch starts on 1899-12-30 for compatibility with Lotus 1-2-3
-        // The number represents days since epoch.
-        const excelEpoch = new Date(1899, 11, 30);
-        const jsDate = new Date(excelEpoch.getTime() + date * 86400000);
-        if (!isNaN(jsDate.getTime())) {
-            return jsDate.getFullYear();
-        }
-    }
-    return null;
 }
 
 export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) {
@@ -107,20 +79,18 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                 });
 
                 if (jsonData.length > 0) {
-                    // Trim headers
                     const firstRow = jsonData[0];
-                    const trimmedHeaders = Object.keys(firstRow).map(h => h.trim());
-                    
-                    const trimmedData = jsonData.map(row => {
+                    const processedHeaders = Object.keys(firstRow).map(h => h.trim());
+                    setHeaders(processedHeaders);
+
+                    const processedData = jsonData.map(row => {
                         const newRow: StudentData = {};
                         for (const key in row) {
                             newRow[key.trim()] = row[key];
                         }
                         return newRow;
                     });
-                    
-                    setHeaders(trimmedHeaders);
-                    setData(trimmedData);
+                    setData(processedData);
                 } else {
                     toast({ variant: 'destructive', title: 'Tệp rỗng', description: 'Tệp Excel không chứa dữ liệu.' });
                 }
@@ -191,9 +161,9 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                     firstName: row['HoSV'] || row['HoLot'] || '',
                     lastName: row['TenSV'] || row['Ten'] || '',
                     major: row['Ngành'] || '',
-                    enrollmentYear: getYearFromDate(row['Ngày nhập học']) || null,
+                    enrollmentYear: null, // Ignore date field as requested
                     className: row['Lop'] || '',
-                    status: mapStatus(row['Tình trạng'] || ''),
+                    status: mapStatus(row['Tình trạng']),
                     createdAt: serverTimestamp(),
                 };
                 batch.set(studentDocRef, studentData);
@@ -236,7 +206,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
             <DialogHeader className="p-6 pb-0">
                 <DialogTitle>Nhập sinh viên từ Excel</DialogTitle>
                 <DialogDescription>
-                    Tải lên tệp Excel để tạo hàng loạt tài khoản và hồ sơ sinh viên. Các cột được khuyến nghị: 'Mã SV', 'HoSV', 'TenSV', 'Lop', 'Ngành', 'Ngày nhập học', 'Tình trạng', 'Email'.
+                    Tải lên tệp Excel để tạo hàng loạt tài khoản. Các cột cần thiết: 'Mã SV', 'HoSV', 'TenSV', 'Lop', 'Ngành', 'Tình trạng', 'Email'. Cột ngày tháng sẽ được bỏ qua.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 px-6 space-y-4 overflow-y-auto">
