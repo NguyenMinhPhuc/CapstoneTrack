@@ -14,6 +14,7 @@ import { type GraduationDefenseSession, type DefenseRegistration, type Student, 
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 export default function DefenseSessionDetailPage() {
   const router = useRouter();
@@ -74,23 +75,44 @@ export default function DefenseSessionDetailPage() {
           reportingCount: 0,
           exemptedCount: 0,
           withdrawnCount: 0,
+          supervisorDetails: [],
        };
     }
     const studentCount = registrations.length;
-    const supervisorSet = new Set(registrations.map(r => r.supervisorName).filter(Boolean));
-    const projectCount = registrations.filter(r => r.projectTitle).length;
-    
     const reportingCount = registrations.filter(r => r.registrationStatus === 'reporting').length;
     const exemptedCount = registrations.filter(r => r.registrationStatus === 'exempted').length;
     const withdrawnCount = registrations.filter(r => r.registrationStatus === 'withdrawn').length;
 
+    const supervisorMap = new Map<string, { projects: Set<string>, studentCount: number }>();
+    registrations.forEach(reg => {
+        if (reg.supervisorName) {
+            if (!supervisorMap.has(reg.supervisorName)) {
+                supervisorMap.set(reg.supervisorName, { projects: new Set(), studentCount: 0 });
+            }
+            const supervisorData = supervisorMap.get(reg.supervisorName)!;
+            supervisorData.studentCount++;
+            if (reg.projectTitle) {
+                supervisorData.projects.add(reg.projectTitle);
+            }
+        }
+    });
+
+    const supervisorDetails = Array.from(supervisorMap.entries()).map(([name, data]) => ({
+        name,
+        projectCount: data.projects.size,
+        studentCount: data.studentCount,
+    }));
+    
+    const projectCount = registrations.filter(r => r.projectTitle).length;
+
     return {
       studentCount,
-      supervisorCount: supervisorSet.size,
+      supervisorCount: supervisorMap.size,
       projectCount,
       reportingCount,
       exemptedCount,
       withdrawnCount,
+      supervisorDetails,
     };
   }, [registrations]);
 
@@ -229,14 +251,27 @@ export default function DefenseSessionDetailPage() {
                 </div>
             </CardContent>
           </Card>
-          <Card>
+          <Card className="flex flex-col">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Số GVHD</CardTitle>
+              <CardTitle className="text-sm font-medium">Số GVHD ({stats.supervisorCount})</CardTitle>
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.supervisorCount}</div>
-               <p className="text-xs text-muted-foreground">Tổng số GVHD duy nhất</p>
+            <CardContent className="flex-1 flex flex-col">
+              <ScrollArea className="flex-1">
+                <div className="space-y-4">
+                  {stats.supervisorDetails.length > 0 ? stats.supervisorDetails.map(sv => (
+                    <div key={sv.name} className="text-sm">
+                      <p className="font-semibold truncate">{sv.name}</p>
+                      <div className="flex justify-between text-xs text-muted-foreground">
+                        <span>{sv.projectCount} đề tài</span>
+                        <span>{sv.studentCount} sinh viên</span>
+                      </div>
+                    </div>
+                  )) : (
+                    <p className="text-sm text-muted-foreground text-center py-4">Chưa có GVHD nào.</p>
+                  )}
+                </div>
+              </ScrollArea>
             </CardContent>
           </Card>
           <Card>
@@ -260,5 +295,3 @@ export default function DefenseSessionDetailPage() {
     </main>
   );
 }
-
-    
