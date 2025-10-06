@@ -109,6 +109,7 @@ export function DefenseSessionsTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead className="w-[50px]">STT</TableHead>
                 <TableHead>Tên đợt</TableHead>
                 <TableHead>Ngày bắt đầu</TableHead>
                 <TableHead>Hạn đăng ký</TableHead>
@@ -117,8 +118,9 @@ export function DefenseSessionsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sessions?.map((session) => (
+              {sessions?.map((session, index) => (
                 <TableRow key={session.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{session.name}</TableCell>
                   <TableCell>
                     {session.startDate?.toDate && format(session.startDate.toDate(), 'PPP')}
