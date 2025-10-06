@@ -33,7 +33,13 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen')}>
         <FirebaseClientProvider>
-          {children}
+          <SidebarProvider defaultOpen>
+            <AppSidebar />
+            <SidebarInset>
+              <AppHeader />
+              {children}
+            </SidebarInset>
+          </SidebarProvider>
         </FirebaseClientProvider>
         <Toaster />
       </body>

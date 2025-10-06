@@ -266,31 +266,35 @@ export function StudentManagementTable() {
                  {selectedRowIds.length > 0 && (
                     <>
                       <Dialog open={isAssignClassDialogOpen} onOpenChange={setIsAssignClassDialogOpen}>
-                          <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                  <Users className="mr-2 h-4 w-4" />
-                                  Xếp lớp ({selectedRowIds.length})
-                              </Button>
-                          </DialogTrigger>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Users className="mr-2 h-4 w-4" />
+                            Xếp lớp ({selectedRowIds.length})
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
                           <AssignClassDialog
-                              studentIds={selectedRowIds}
-                              allStudents={students || []}
-                              onFinished={handleDialogFinished}
+                            studentIds={selectedRowIds}
+                            allStudents={students || []}
+                            onFinished={handleDialogFinished}
                           />
+                        </DialogContent>
                       </Dialog>
 
                       <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
-                          <DialogTrigger asChild>
-                              <Button variant="outline" size="sm">
-                                  <FilePlus2 className="mr-2 h-4 w-4" />
-                                  Thêm vào đợt ({selectedRowIds.length})
-                              </Button>
-                          </DialogTrigger>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <FilePlus2 className="mr-2 h-4 w-4" />
+                            Thêm vào đợt ({selectedRowIds.length})
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
                           <AddStudentsToSessionDialog
-                              studentIds={selectedRowIds}
-                              allStudents={students || []}
-                              onFinished={handleDialogFinished}
+                            studentIds={selectedRowIds}
+                            allStudents={students || []}
+                            onFinished={handleDialogFinished}
                           />
+                        </DialogContent>
                       </Dialog>
 
                       <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
@@ -489,3 +493,5 @@ export function StudentManagementTable() {
     </div>
   );
 }
+
+    

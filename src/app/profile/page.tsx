@@ -1,10 +1,7 @@
 'use client';
 
-import { AppHeader } from '@/components/app-header';
-import { AppSidebar } from '@/components/app-sidebar';
 import { ProfileForm } from '@/components/profile-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDoc, useFirestore, useMemoFirebase, useUser } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -40,26 +37,20 @@ export default function ProfilePage() {
   }
 
   return (
-    <SidebarProvider defaultOpen>
-      <AppSidebar />
-      <SidebarInset>
-        <AppHeader />
-        <main className="p-4 sm:p-6 lg:p-8">
-          <div className="max-w-4xl mx-auto">
-            <Card>
-              <CardHeader>
-                <CardTitle>Hồ sơ cá nhân</CardTitle>
-                <CardDescription>
-                  Quản lý thông tin cá nhân và cài đặt tài khoản của bạn.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ProfileForm user={user} userData={userData} />
-              </CardContent>
-            </Card>
-          </div>
-        </main>
-      </SidebarInset>
-    </SidebarProvider>
+    <main className="p-4 sm:p-6 lg:p-8">
+      <div className="max-w-4xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle>Hồ sơ cá nhân</CardTitle>
+            <CardDescription>
+              Quản lý thông tin cá nhân và cài đặt tài khoản của bạn.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProfileForm user={user} userData={userData} />
+          </CardContent>
+        </Card>
+      </div>
+    </main>
   );
 }

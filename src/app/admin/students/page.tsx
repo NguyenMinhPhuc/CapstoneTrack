@@ -8,9 +8,6 @@ import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { doc } from 'firebase/firestore';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
-import { AppHeader } from '@/components/app-header';
 
 export default function StudentManagementPage() {
   const { user, isUserLoading } = useUser();
@@ -47,17 +44,11 @@ export default function StudentManagementPage() {
   }
 
   return (
-    <SidebarProvider defaultOpen>
-      <AppSidebar />
-      <SidebarInset>
-        <AppHeader />
-        <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-          <h1 className="text-2xl font-bold">Quản lý Sinh viên</h1>
-          <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
-            <StudentManagementTable />
-          </Suspense>
-        </div>
-      </SidebarInset>
-    </SidebarProvider>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+      <h1 className="text-2xl font-bold">Quản lý Sinh viên</h1>
+      <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
+        <StudentManagementTable />
+      </Suspense>
+    </div>
   );
 }
