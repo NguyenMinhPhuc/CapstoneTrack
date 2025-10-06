@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo, useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -44,14 +44,14 @@ export default function DefenseSessionDetailPage() {
 
     if (!user) {
       router.push('/login');
-    } else if (userData?.role !== 'admin') {
+    } else if (userData && userData.role !== 'admin') {
       router.push('/');
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
   const isLoading = isUserLoading || isUserDataLoading || isSessionLoading;
 
-  if (isLoading || !user || userData?.role !== 'admin') {
+  if (isLoading || !user || !userData || userData.role !== 'admin') {
     return (
       <SidebarProvider defaultOpen>
         <AppSidebar />
