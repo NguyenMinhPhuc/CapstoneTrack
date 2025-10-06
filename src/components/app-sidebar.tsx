@@ -22,6 +22,7 @@ import {
   Briefcase,
   Shield,
   Calendar,
+  UserSquare,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -47,21 +48,27 @@ export function AppSidebar() {
     { type: "separator", label: "Graduation" },
     { href: "/graduation/projects", label: "Projects", icon: FileText },
     { href: "/graduation/reports", label: "Reports", icon: BarChart3 },
-    { type: "separator" },
-    { href: "/settings", label: "Settings", icon: Settings },
   ];
 
   const adminMenuItems = [
     { type: "separator", label: "Admin" },
     { href: "/admin/users", label: "User Management", icon: Shield },
     { href: "/admin/students", label: "Student Management", icon: Users },
+    { href: "/admin/supervisors", label: "Supervisor Management", icon: UserSquare },
     { href: "/admin/defense-sessions", label: "Defense Sessions", icon: Calendar },
   ];
   
+  const settingItems = [
+      { type: "separator" },
+      { href: "/settings", label: "Settings", icon: Settings },
+  ]
+  
   const allItems = [...menuItems];
   if (userData?.role === 'admin') {
-    allItems.splice(7, 0, ...adminMenuItems);
+    allItems.push(...adminMenuItems);
   }
+  allItems.push(...settingItems);
+
 
   const isLoading = isUserLoading || isUserDataLoading;
 
