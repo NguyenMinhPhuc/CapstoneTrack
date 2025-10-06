@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -33,9 +33,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move } from 'lucide-react';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -47,6 +47,9 @@ import { Input } from './ui/input';
 import { AddStudentsByClassDialog } from './add-students-by-class-dialog';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { Checkbox } from './ui/checkbox';
+import { MoveRegistrationsDialog } from './move-registrations-dialog';
+
 
 interface StudentRegistrationTableProps {
   sessionId: string;
@@ -76,9 +79,16 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isAddByClassDialogOpen, setIsAddByClassDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  
+  useEffect(() => {
+    setSelectedRowIds([]);
+  }, [initialData]);
 
   const uniqueSupervisors = useMemo(() => {
     if (!initialData) return [];
@@ -129,6 +139,27 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
         });
   };
 
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+        setSelectedRowIds(filteredRegistrations?.map(s => s.id) || []);
+    } else {
+        setSelectedRowIds([]);
+    }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedRowIds(prev => [...prev, id]);
+    } else {
+        setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
+  };
+
+  const handleMoveFinished = () => {
+    setIsMoveDialogOpen(false);
+    setSelectedRowIds([]);
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -150,10 +181,30 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     );
   }
 
+  const isAllSelected = filteredRegistrations && selectedRowIds.length > 0 && selectedRowIds.length === filteredRegistrations.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredRegistrations || selectedRowIds.length < filteredRegistrations.length);
+
   return (
     <>
       <Card>
-        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
+        <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+           <div className="flex items-center gap-2">
+                 {selectedRowIds.length > 0 && (
+                    <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+                      <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                              <Move className="mr-2 h-4 w-4" />
+                              Chuyển đợt ({selectedRowIds.length})
+                          </Button>
+                      </DialogTrigger>
+                      <MoveRegistrationsDialog
+                          currentSessionId={sessionId}
+                          registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                          onFinished={handleMoveFinished}
+                      />
+                    </Dialog>
+                )}
+            </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
               <div className="flex w-full sm:w-auto gap-2">
                 <div className="relative w-full sm:w-auto">
@@ -240,6 +291,12 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
           <Table>
             <TableHeader>
               <TableRow>
+                 <TableHead className="w-[50px]">
+                    <Checkbox
+                        checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                        onCheckedChange={handleSelectAll}
+                    />
+                </TableHead>
                 <TableHead>STT</TableHead>
                 <TableHead>Tên sinh viên</TableHead>
                 <TableHead>MSSV</TableHead>
@@ -253,7 +310,13 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
             <TableBody>
               {filteredRegistrations && filteredRegistrations.length > 0 ? (
                 filteredRegistrations.map((reg, index) => (
-                  <TableRow key={reg.id}>
+                  <TableRow key={reg.id} data-state={selectedRowIds.includes(reg.id) && "selected"}>
+                    <TableCell>
+                        <Checkbox
+                            checked={selectedRowIds.includes(reg.id)}
+                            onCheckedChange={(checked) => handleRowSelect(reg.id, !!checked)}
+                        />
+                    </TableCell>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{reg.studentName}</TableCell>
                     <TableCell>{reg.studentId}</TableCell>
@@ -286,7 +349,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center">
+                  <TableCell colSpan={9} className="text-center">
                     Chưa có sinh viên nào được thêm vào đợt này.
                   </TableCell>
                 </TableRow>
