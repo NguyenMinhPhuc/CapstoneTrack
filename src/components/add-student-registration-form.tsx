@@ -28,7 +28,7 @@ import type { Student } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
-  studentId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
+  studentDocId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
   projectTitle: z.string().optional(),
   supervisorName: z.string().optional(),
 });
@@ -76,7 +76,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationsCollectionRef = collection(firestore, 'defenseRegistrations');
       
-    const selectedStudent = students.find(s => s.id === values.studentId);
+    const selectedStudent = students.find(s => s.id === values.studentDocId);
     if (!selectedStudent) {
       toast({
         variant: 'destructive',
@@ -88,9 +88,12 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     
     const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
     const newRegistrationData = {
-      ...values,
       sessionId: sessionId,
+      studentDocId: selectedStudent.id,
+      studentId: selectedStudent.studentId, // Correctly assign the student ID number
       studentName,
+      projectTitle: values.projectTitle,
+      supervisorName: values.supervisorName,
       registrationDate: serverTimestamp(),
     };
 
@@ -117,7 +120,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
         <FormField
           control={form.control}
-          name="studentId"
+          name="studentDocId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Sinh viên</FormLabel>

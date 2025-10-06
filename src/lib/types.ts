@@ -49,7 +49,8 @@ export type Student = {
 export type DefenseRegistration = {
   id: string;
   sessionId: string;
-  studentId: string;
+  studentDocId: string; // The doc ID from the 'students' collection (which is the user's UID)
+  studentId: string; // The official student ID number (e.g. 122001306)
   studentName: string;
   projectTitle?: string;
   supervisorName?: string;

@@ -24,7 +24,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning, Rocket } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 
 interface RegistrationData {
@@ -82,13 +82,14 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
         let successCount = 0;
         let errorCount = 0;
 
-        // 1. Fetch all students from Firestore once to create a lookup map
         const studentMap = new Map<string, Student>();
         try {
             const studentsSnapshot = await getDocs(collection(firestore, 'students'));
             studentsSnapshot.forEach(doc => {
                 const student = { id: doc.id, ...doc.data() } as Student;
-                studentMap.set(student.id, student); // Assuming student ID is the primary key for lookup
+                if (student.studentId) {
+                    studentMap.set(String(student.studentId), student);
+                }
             });
         } catch (e) {
              toast({
@@ -100,24 +101,23 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
             return;
         }
 
-        // 2. Process data and create a batch write
         const batch = writeBatch(firestore);
         const registrationsCollectionRef = collection(firestore, 'defenseRegistrations');
         
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
-            const studentId = row['StudentID'] || row['Mã SV']; // Flexible column name
+            const studentIdNumber = String(row['StudentID'] || row['Mã SV']);
             
-            if (!studentId) {
+            if (!studentIdNumber) {
                 console.warn(`Skipping row ${i + 2} due to missing StudentID.`);
                 errorCount++;
                 continue;
             }
             
-            const studentInfo = studentMap.get(String(studentId));
+            const studentInfo = studentMap.get(studentIdNumber);
 
             if (!studentInfo) {
-                console.warn(`Skipping row ${i + 2}: Student with ID "${studentId}" not found in the system.`);
+                console.warn(`Skipping row ${i + 2}: Student with ID "${studentIdNumber}" not found in the system.`);
                 errorCount++;
                 continue;
             }
@@ -125,7 +125,8 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
             const newRegistrationRef = doc(registrationsCollectionRef);
             const registrationData = {
                 sessionId: sessionId,
-                studentId: String(studentId),
+                studentDocId: studentInfo.id,
+                studentId: studentIdNumber, // The actual student ID number
                 studentName: `${studentInfo.firstName} ${studentInfo.lastName}`,
                 projectTitle: row['ProjectTitle'] || row['Tên đề tài'] || '',
                 supervisorName: row['SupervisorName'] || row['GVHD'] || '',
@@ -136,7 +137,6 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
             setImportProgress(((i + 1) / data.length) * 100);
         }
 
-        // 3. Commit the batch
         try {
             await batch.commit();
             toast({
