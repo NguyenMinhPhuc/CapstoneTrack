@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Supervisor } from '@/lib/types';
@@ -18,6 +18,8 @@ interface SupervisorSelectProps {
   value: string;
   onChange: (value: string) => void;
 }
+
+const NO_SUPERVISOR_VALUE = "__NONE__";
 
 export function SupervisorSelect({ value, onChange }: SupervisorSelectProps) {
   const firestore = useFirestore();
@@ -38,17 +40,21 @@ export function SupervisorSelect({ value, onChange }: SupervisorSelectProps) {
   }, [error, toast]);
 
   return (
-    <Select onValueChange={onChange} value={value} disabled={isLoading}>
+    <Select onValueChange={onChange} value={value || NO_SUPERVISOR_VALUE} disabled={isLoading}>
       <SelectTrigger>
         <SelectValue placeholder={isLoading ? "Đang tải..." : "Chọn giáo viên hướng dẫn"} />
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value="">Chưa có GVHD</SelectItem>
-        {supervisors?.map(supervisor => (
-          <SelectItem key={supervisor.id} value={`${supervisor.firstName} ${supervisor.lastName}`}>
-            {`${supervisor.firstName} ${supervisor.lastName}`}
-          </SelectItem>
-        ))}
+        <SelectItem value={NO_SUPERVISOR_VALUE}>Chưa có GVHD</SelectItem>
+        {supervisors?.map(supervisor => {
+            const fullName = `${supervisor.firstName} ${supervisor.lastName}`.trim();
+            if (!fullName) return null; // Don't render if name is empty
+            return (
+              <SelectItem key={supervisor.id} value={fullName}>
+                {fullName}
+              </SelectItem>
+            )
+        })}
       </SelectContent>
     </Select>
   );

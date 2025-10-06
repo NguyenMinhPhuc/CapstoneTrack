@@ -20,6 +20,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
 import { SupervisorSelect } from './supervisor-select';
 
+const NO_SUPERVISOR_VALUE = "__NONE__";
+
 const formSchema = z.object({
   projectTitle: z.string().optional(),
   supervisorName: z.string().optional(),
@@ -44,9 +46,12 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, `defenseRegistrations`, registration.id);
+    
+    const supervisorValue = values.supervisorName === NO_SUPERVISOR_VALUE ? '' : values.supervisorName;
+
     const updateData = {
       projectTitle: values.projectTitle,
-      supervisorName: values.supervisorName,
+      supervisorName: supervisorValue,
     };
 
     updateDoc(registrationDocRef, updateData)

@@ -28,6 +28,8 @@ import type { Student } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { SupervisorSelect } from './supervisor-select';
 
+const NO_SUPERVISOR_VALUE = "__NONE__";
+
 const formSchema = z.object({
   studentDocId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
   projectTitle: z.string().optional(),
@@ -97,13 +99,16 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     }
     
     const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
+    
+    const supervisorValue = values.supervisorName === NO_SUPERVISOR_VALUE ? '' : values.supervisorName;
+
     const newRegistrationData = {
       sessionId: sessionId,
       studentDocId: selectedStudent.id,
       studentId: selectedStudent.studentId, // Correctly assign the student ID number
       studentName,
       projectTitle: values.projectTitle,
-      supervisorName: values.supervisorName,
+      supervisorName: supervisorValue,
       registrationDate: serverTimestamp(),
     };
 
