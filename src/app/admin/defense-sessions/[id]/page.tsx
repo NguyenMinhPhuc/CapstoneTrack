@@ -1,10 +1,10 @@
 
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useDoc, useFirestore, useUser, useMemoFirebase, useCollection } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar';
 import { AppHeader } from '@/components/app-header';
@@ -12,8 +12,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, UserIcon, LinkIcon } from 'lucide-react';
-import { type GraduationDefenseSession } from '@/lib/types';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText } from 'lucide-react';
+import { type GraduationDefenseSession, type DefenseRegistration } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 
 export default function DefenseSessionDetailPage() {
@@ -37,6 +37,29 @@ export default function DefenseSessionDetailPage() {
   }, [user, firestore]);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  
+  const registrationsQuery = useMemoFirebase(
+    () => (sessionId ? query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', sessionId)) : null),
+    [firestore, sessionId]
+  );
+  
+  const { data: registrations, isLoading: areRegistrationsLoading } = useCollection<DefenseRegistration>(registrationsQuery);
+  
+  const stats = useMemo(() => {
+    if (!registrations) {
+      return { studentCount: 0, supervisorCount: 0, projectCount: 0 };
+    }
+    const studentCount = registrations.length;
+    const supervisorSet = new Set(registrations.map(r => r.supervisorName).filter(Boolean));
+    const projectCount = registrations.filter(r => r.projectTitle).length;
+    
+    return {
+      studentCount,
+      supervisorCount: supervisorSet.size,
+      projectCount,
+    };
+  }, [registrations]);
+
 
   useEffect(() => {
     const isLoading = isUserLoading || isUserDataLoading;
@@ -49,7 +72,7 @@ export default function DefenseSessionDetailPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading;
 
   if (isLoading || !user || !userData || userData.role !== 'admin') {
     return (
@@ -92,13 +115,18 @@ export default function DefenseSessionDetailPage() {
       <SidebarInset>
         <AppHeader />
         <main className="p-4 sm:p-6 lg:p-8 space-y-8">
-            <Card>
+             <Card>
                 <CardHeader>
-                    <CardTitle className="text-3xl">{session.name}</CardTitle>
-                    <CardDescription>{session.description || 'Không có mô tả.'}</CardDescription>
+                    <div className="flex items-start justify-between">
+                         <div>
+                            <CardTitle className="text-3xl">{session.name}</CardTitle>
+                            <CardDescription className="mt-1">{session.description || 'Không có mô tả.'}</CardDescription>
+                        </div>
+                        <Badge>{session.status}</Badge>
+                    </div>
                 </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
+                <CardContent className="space-y-6">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-sm">
                         <div className="flex items-center gap-3">
                             <CalendarIcon className="h-5 w-5 text-muted-foreground" />
                             <div>
@@ -120,15 +148,8 @@ export default function DefenseSessionDetailPage() {
                                 <p>{toDate(session.expectedReportDate) ? format(toDate(session.expectedReportDate)!, 'PPP') : 'N/A'}</p>
                             </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <UserIcon className="h-5 w-5 text-muted-foreground" />
-                            <div>
-                                <p className="font-semibold">Trạng thái</p>
-                                <Badge>{session.status}</Badge>
-                            </div>
-                        </div>
                          {session.zaloGroupLink && (
-                             <div className="flex items-center gap-3 md:col-span-2">
+                             <div className="flex items-center gap-3">
                                 <LinkIcon className="h-5 w-5 text-muted-foreground" />
                                 <div>
                                     <p className="font-semibold">Nhóm Zalo</p>
@@ -142,6 +163,39 @@ export default function DefenseSessionDetailPage() {
                 </CardContent>
             </Card>
 
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Số sinh viên</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.studentCount}</div>
+                  <p className="text-xs text-muted-foreground">Tổng số sinh viên đã đăng ký</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Số GVHD</CardTitle>
+                  <UserCheck className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.supervisorCount}</div>
+                   <p className="text-xs text-muted-foreground">Tổng số GVHD duy nhất</p>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Số đề tài</CardTitle>
+                  <FileText className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.projectCount}</div>
+                   <p className="text-xs text-muted-foreground">Tổng số đề tài đã được nhập</p>
+                </CardContent>
+              </Card>
+            </div>
+
             <StudentRegistrationTable sessionId={sessionId} />
 
         </main>
@@ -149,3 +203,4 @@ export default function DefenseSessionDetailPage() {
     </SidebarProvider>
   );
 }
+
