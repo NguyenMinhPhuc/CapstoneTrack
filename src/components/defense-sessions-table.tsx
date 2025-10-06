@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -48,7 +47,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { GraduationDefenseSession } from '@/lib/types';
@@ -93,6 +92,24 @@ export function DefenseSessionsTable() {
   );
 
   const { data: sessions, isLoading } = useCollection<GraduationDefenseSession>(sessionsCollectionRef);
+
+  const sessionStats = useMemo(() => {
+    const stats = {
+      total: 0,
+      upcoming: 0,
+      ongoing: 0,
+      completed: 0,
+    };
+    if (!sessions) return stats;
+
+    return sessions.reduce((acc, session) => {
+      acc.total++;
+      if (acc[session.status] !== undefined) {
+        acc[session.status]++;
+      }
+      return acc;
+    }, stats);
+  }, [sessions]);
 
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
@@ -156,28 +173,81 @@ export function DefenseSessionsTable() {
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <Skeleton className="h-8 w-1/4" />
-          <Skeleton className="h-4 w-2/4" />
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <div key={i} className="flex items-center space-x-4">
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-full" />
+       <div className="space-y-4">
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                {[...Array(4)].map((_, i) => (
+                    <Card key={i}>
+                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                           <Skeleton className="h-4 w-2/4" />
+                           <Skeleton className="h-6 w-6 rounded-sm" />
+                        </CardHeader>
+                        <CardContent>
+                           <Skeleton className="h-7 w-1/4 mb-2" />
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+            <Card>
+                <CardHeader>
+                <Skeleton className="h-8 w-1/4" />
+                <Skeleton className="h-4 w-2/4" />
+                </CardHeader>
+                <CardContent>
+                <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center space-x-4">
+                        <div className="flex-1 space-y-2">
+                        <Skeleton className="h-4 w-full" />
+                        </div>
+                    </div>
+                    ))}
                 </div>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+                </CardContent>
+            </Card>
+      </div>
     );
   }
 
   return (
-    <div>
+    <div className="space-y-4">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Tổng số đợt</CardTitle>
+                  <Package className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{sessionStats.total}</div>
+              </CardContent>
+          </Card>
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Sắp diễn ra</CardTitle>
+                  <CalendarClock className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{sessionStats.upcoming}</div>
+              </CardContent>
+          </Card>
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Đang thực hiện</CardTitle>
+                  <CalendarCheck className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{sessionStats.ongoing}</div>
+              </CardContent>
+          </Card>
+          <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Hoàn thành</CardTitle>
+                  <CalendarX className="h-4 w-4 text-muted-foreground" />
+              </CardHeader>
+              <CardContent>
+                  <div className="text-2xl font-bold">{sessionStats.completed}</div>
+              </CardContent>
+          </Card>
+      </div>
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
