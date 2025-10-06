@@ -17,6 +17,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { WithdrawnStudentsDialog } from '@/components/withdrawn-students-dialog';
 import { ExemptedStudentsDialog } from '@/components/exempted-students-dialog';
+import { ExportReportButton } from '@/components/export-report-button';
 
 
 export default function DefenseSessionDetailPage() {
@@ -189,6 +190,7 @@ export default function DefenseSessionDetailPage() {
                                 Quản lý Hội đồng
                             </Link>
                         </Button>
+                        <ExportReportButton sessionId={sessionId} session={session} />
                     </div>
                 </div>
             </CardHeader>
