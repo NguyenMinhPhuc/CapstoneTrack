@@ -41,11 +41,15 @@ import {
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -131,6 +135,24 @@ export function StudentManagementTable() {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleStatusChange = async (studentId: string, newStatus: Student['status']) => {
+    const studentDocRef = doc(firestore, 'students', studentId);
+    try {
+      await updateDoc(studentDocRef, { status: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Trạng thái sinh viên đã được cập nhật.`,
+      });
+    } catch (error) {
+      console.error("Error updating student status:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái sinh viên.',
+      });
+    }
+  };
+
   const confirmDelete = async () => {
     if (!studentToDelete) return;
 
@@ -160,7 +182,6 @@ export function StudentManagementTable() {
       <Card>
           <CardHeader>
               <Skeleton className="h-8 w-1/4" />
-              <Skeleton className="h-4 w-2/4" />
           </CardHeader>
           <CardContent>
               <div className="space-y-4">
@@ -292,6 +313,25 @@ export function StudentManagementTable() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditClick(student)}>Sửa</DropdownMenuItem>
+                       <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <span>Thay đổi trạng thái</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                          <DropdownMenuSubContent>
+                             <DropdownMenuItem onClick={() => handleStatusChange(student.id, 'studying')} disabled={student.status === 'studying'}>
+                              {statusLabel.studying}
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleStatusChange(student.id, 'reserved')} disabled={student.status === 'reserved'}>
+                              {statusLabel.reserved}
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusChange(student.id, 'dropped_out')} disabled={student.status === 'dropped_out'}>
+                              {statusLabel.dropped_out}
+                            </DropdownMenuItem>
+                          </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                      <DropdownMenuSeparator />
                       <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(student)}>Xóa</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
