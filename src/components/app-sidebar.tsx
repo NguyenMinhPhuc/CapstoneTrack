@@ -12,8 +12,6 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarSeparator,
-  SidebarFooter,
-  SidebarTrigger,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -26,7 +24,6 @@ import {
   Shield,
   Calendar,
   UserSquare,
-  ChevronsLeft,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -135,16 +132,6 @@ export function AppSidebar() {
             </SidebarMenu>
         )}
       </SidebarContent>
-       <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton as={SidebarTrigger} tooltip="Collapse">
-                <ChevronsLeft />
-                <span>Collapse</span>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
     </Sidebar>
   );
 }
