@@ -69,8 +69,8 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
         const userDocRef = doc(firestore, 'users', user.uid);
         const userData = {
             email: values.email,
-            role: 'supervisor',
-            status: 'active',
+            role: 'supervisor' as const,
+            status: 'active' as const,
             createdAt: serverTimestamp(),
         };
         batch.set(userDocRef, userData);
@@ -84,6 +84,7 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
         };
         batch.set(supervisorDocRef, supervisorData);
 
+        // Chain a .catch to the batch commit to handle Firestore permission errors
         batch.commit()
             .then(() => {
                 toast({
@@ -95,12 +96,13 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
             })
             .catch((error) => {
                 console.error("Error committing batch:", error);
+                // Create and emit a contextual error for debugging security rules
                 const contextualError = new FirestorePermissionError({
-                    path: 'batch operation', // Path is not specific to one doc in a batch
+                    path: 'batch write (users, supervisors)', // Describe the batch operation
                     operation: 'write',
                     requestResourceData: {
-                        user: userData,
-                        supervisor: supervisorData,
+                        user: { path: userDocRef.path, data: userData },
+                        supervisor: { path: supervisorDocRef.path, data: supervisorData },
                     },
                 });
                 errorEmitter.emit('permission-error', contextualError);
@@ -114,6 +116,7 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
             description: authError.code === 'auth/email-already-in-use' ? 'Email này đã được sử dụng.' : `Không thể tạo tài khoản: ${authError.message}`,
         });
     } finally {
+        // Ensure temporary user is signed out
         if (tempAuth.currentUser) {
             await signOut(tempAuth);
         }
