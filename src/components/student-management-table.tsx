@@ -52,11 +52,13 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
 import { AddStudentForm } from './add-student-form';
 import { EditStudentForm } from './edit-student-form';
+import { ImportStudentsDialog } from './import-students-dialog';
 
 export function StudentManagementTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
@@ -159,23 +161,34 @@ export function StudentManagementTable() {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="w-full sm:w-auto">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Thêm Sinh viên
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                        <DialogTitle>Thêm Sinh viên mới</DialogTitle>
-                        <DialogDescription>
-                            Điền thông tin chi tiết để tạo một hồ sơ sinh viên mới. Một tài khoản sẽ được tự động tạo.
-                        </DialogDescription>
-                        </DialogHeader>
-                        <AddStudentForm onFinished={() => setIsAddDialogOpen(false)} />
-                    </DialogContent>
-                </Dialog>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Nhập từ Excel
+                            </Button>
+                        </DialogTrigger>
+                        <ImportStudentsDialog onFinished={() => setIsImportDialogOpen(false)} />
+                    </Dialog>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Thêm Sinh viên
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                            <DialogTitle>Thêm Sinh viên mới</DialogTitle>
+                            <DialogDescription>
+                                Điền thông tin chi tiết để tạo một hồ sơ sinh viên mới. Một tài khoản sẽ được tự động tạo.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <AddStudentForm onFinished={() => setIsAddDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </div>
       </CardHeader>
@@ -185,6 +198,7 @@ export function StudentManagementTable() {
             <TableRow>
               <TableHead>Họ và Tên</TableHead>
               <TableHead>MSSV</TableHead>
+              <TableHead>Lớp</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
@@ -195,6 +209,7 @@ export function StudentManagementTable() {
               <TableRow key={student.id}>
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
+                <TableCell>{student.className}</TableCell>
                 <TableCell>{student.email}</TableCell>
                 <TableCell className="hidden md:table-cell">
                     {student.createdAt?.toDate && format(student.createdAt.toDate(), 'PPP')}

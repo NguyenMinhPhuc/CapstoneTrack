@@ -80,6 +80,10 @@
           "type": "number",
           "description": "Year the student enrolled.",
           "format": "number"
+        },
+        "className": {
+          "type": "string",
+          "description": "The class name of the student (e.g., '22SE111')."
         }
       },
       "required": [
@@ -233,7 +237,7 @@
     ]
   },
   "firestore": {
-    "rules": "rules_version = '2';\n\nservice cloud.firestore {\n  match /databases/{database}/documents {\n  \n    // Helper functions\n    function isUserAuthenticated() {\n      return request.auth != null;\n    }\n\n    function isAdmin() {\n      return isUserAuthenticated() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';\n    }\n\n    // User management\n    match /users/{userId} {\n      allow read, update: if isUserAuthenticated() && request.auth.uid == userId;\n      allow list, create, delete: if isAdmin();\n    }\n\n    match /students/{studentId} {\n        allow read: if isUserAuthenticated();\n        allow write: if isAdmin();\n    }\n    \n    match /supervisors/{supervisorId} {\n        allow read: if isUserAuthenticated();\n        allow write: if isAdmin();\n    }\n    \n    // Graduation Defense Sessions\n    match /graduationDefenseSessions/{sessionId} {\n      allow read: if isUserAuthenticated();\n      allow create, update, delete: if isAdmin();\n    }\n    \n    // Defense Registrations\n    match /defenseRegistrations/{registrationId} {\n      allow read: if isUserAuthenticated();\n      allow create, update, delete: if isAdmin();\n    }\n  }\n}",
+    "rules": "rules_version = '2';\n\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}",
     "/users/{userId}": {
       "schema": {
         "$ref": "#/entities/UserAccount"

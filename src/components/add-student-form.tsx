@@ -29,6 +29,7 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Email không hợp lệ.' }),
   major: z.string().optional(),
   enrollmentYear: z.coerce.number().optional(),
+  className: z.string().optional(),
 });
 
 interface AddStudentFormProps {
@@ -53,6 +54,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
       studentId: '',
       email: '',
       major: '',
+      className: '',
     },
   });
 
@@ -165,6 +167,19 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
               <FormMessage />
             </FormItem>
           )}
+        />
+        <FormField
+            control={form.control}
+            name="className"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Lớp</FormLabel>
+                <FormControl>
+                    <Input placeholder="22SE111" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
         />
          <FormField
             control={form.control}

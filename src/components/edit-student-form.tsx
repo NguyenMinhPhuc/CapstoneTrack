@@ -26,6 +26,7 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Email không hợp lệ.' }).readonly(), // Make email readonly
   major: z.string().optional(),
   enrollmentYear: z.coerce.number().optional(),
+  className: z.string().optional(),
 });
 
 interface EditStudentFormProps {
@@ -46,6 +47,7 @@ export function EditStudentForm({ student, onFinished }: EditStudentFormProps) {
       email: student.email || '',
       major: student.major || '',
       enrollmentYear: student.enrollmentYear || undefined,
+      className: student.className || '',
     },
   });
 
@@ -128,6 +130,19 @@ export function EditStudentForm({ student, onFinished }: EditStudentFormProps) {
               <FormMessage />
             </FormItem>
           )}
+        />
+         <FormField
+            control={form.control}
+            name="className"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Lớp</FormLabel>
+                <FormControl>
+                    <Input placeholder="22SE111" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
         />
         <FormField
             control={form.control}

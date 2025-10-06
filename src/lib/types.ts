@@ -46,6 +46,7 @@ export type Student = {
     email: string;
     major?: string;
     enrollmentYear?: number;
+    className?: string; // Add className field
     createdAt: any;
 }
 
