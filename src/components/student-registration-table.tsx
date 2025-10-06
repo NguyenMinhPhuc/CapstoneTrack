@@ -15,7 +15,6 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -31,8 +30,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
@@ -56,6 +58,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [supervisorFilter, setSupervisorFilter] = useState('all');
 
   const registrationsQuery = useMemoFirebase(
     () => query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', sessionId)),
@@ -64,15 +67,30 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
 
   const { data: registrations, isLoading } = useCollection<DefenseRegistration>(registrationsQuery);
 
+  const uniqueSupervisors = useMemo(() => {
+    if (!registrations) return [];
+    const supervisorSet = new Set<string>();
+    registrations.forEach(reg => {
+      if (reg.supervisorName) {
+        supervisorSet.add(reg.supervisorName);
+      }
+    });
+    return Array.from(supervisorSet).sort();
+  }, [registrations]);
+
   const filteredRegistrations = useMemo(() => {
     if (!registrations) return [];
     return registrations.filter(reg => {
       const term = searchTerm.toLowerCase();
       const nameMatch = reg.studentName.toLowerCase().includes(term);
       const idMatch = reg.studentId.toLowerCase().includes(term);
-      return nameMatch || idMatch;
+      const searchMatch = nameMatch || idMatch;
+
+      const supervisorMatch = supervisorFilter === 'all' || reg.supervisorName === supervisorFilter;
+
+      return searchMatch && supervisorMatch;
     });
-  }, [registrations, searchTerm]);
+  }, [registrations, searchTerm, supervisorFilter]);
 
   const handleEditClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
@@ -103,7 +121,6 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
       <Card>
         <CardHeader>
           <Skeleton className="h-8 w-1/4" />
-          <Skeleton className="h-4 w-2/4" />
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -126,20 +143,46 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div>
               <CardTitle>Danh sách Sinh viên Đăng ký</CardTitle>
-              <CardDescription>
-                Quản lý danh sách sinh viên tham gia đợt báo cáo này.
-              </CardDescription>
             </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-              <div className="relative w-full sm:w-auto">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                    type="search"
-                    placeholder="Tìm theo tên hoặc MSSV..."
-                    className="pl-8 w-full sm:w-64"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                />
+              <div className="flex w-full sm:w-auto gap-2">
+                <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                      type="search"
+                      placeholder="Tìm theo tên hoặc MSSV..."
+                      className="pl-8 w-full sm:w-64"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                 <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
+                            <ListFilter className="h-3.5 w-3.5" />
+                            <span className="sr-only sm:not-sr-only">Lọc GV</span>
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                         <DropdownMenuLabel>Lọc theo GVHD</DropdownMenuLabel>
+                         <DropdownMenuSeparator />
+                         <DropdownMenuCheckboxItem
+                            checked={supervisorFilter === 'all'}
+                            onCheckedChange={() => setSupervisorFilter('all')}
+                        >
+                            Tất cả GVHD
+                        </DropdownMenuCheckboxItem>
+                        {uniqueSupervisors.map(supervisor => (
+                            <DropdownMenuCheckboxItem
+                                key={supervisor}
+                                checked={supervisorFilter === supervisor}
+                                onCheckedChange={() => setSupervisorFilter(supervisor)}
+                            >
+                                {supervisor}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                    </DropdownMenuContent>
+                </DropdownMenu>
               </div>
               <div className="flex w-full sm:w-auto gap-2">
                   <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
