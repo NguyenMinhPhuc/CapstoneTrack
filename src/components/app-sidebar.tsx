@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -137,12 +138,10 @@ export function AppSidebar() {
        <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarTrigger asChild>
-              <SidebarMenuButton tooltip="Collapse">
+            <SidebarMenuButton as={SidebarTrigger} tooltip="Collapse">
                 <ChevronsLeft />
                 <span>Collapse</span>
-              </SidebarMenuButton>
-            </SidebarTrigger>
+            </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
