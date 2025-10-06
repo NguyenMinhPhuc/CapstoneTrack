@@ -1,3 +1,4 @@
+
 export type Application = {
   id: string;
   studentName: string;
