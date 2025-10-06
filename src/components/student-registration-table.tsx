@@ -33,7 +33,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
@@ -49,6 +49,7 @@ import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { MoveRegistrationsDialog } from './move-registrations-dialog';
+import { EditGroupRegistrationForm } from './edit-group-registration-form';
 
 
 interface StudentRegistrationTableProps {
@@ -80,6 +81,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
+  const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -155,8 +157,9 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     }
   };
 
-  const handleMoveFinished = () => {
+  const handleGroupActionFinished = () => {
     setIsMoveDialogOpen(false);
+    setIsEditGroupDialogOpen(false);
     setSelectedRowIds([]);
   };
 
@@ -190,19 +193,33 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
            <div className="flex items-center gap-2">
                  {selectedRowIds.length > 0 && (
-                    <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
-                      <DialogTrigger asChild>
-                          <Button variant="outline" size="sm">
-                              <Move className="mr-2 h-4 w-4" />
-                              Chuyển đợt ({selectedRowIds.length})
-                          </Button>
-                      </DialogTrigger>
-                      <MoveRegistrationsDialog
-                          currentSessionId={sessionId}
-                          registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
-                          onFinished={handleMoveFinished}
-                      />
-                    </Dialog>
+                    <>
+                        <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                                <Move className="mr-2 h-4 w-4" />
+                                Chuyển đợt ({selectedRowIds.length})
+                            </Button>
+                        </DialogTrigger>
+                        <MoveRegistrationsDialog
+                            currentSessionId={sessionId}
+                            registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                            onFinished={handleGroupActionFinished}
+                        />
+                        </Dialog>
+                         <Dialog open={isEditGroupDialogOpen} onOpenChange={setIsEditGroupDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm" disabled={selectedRowIds.length > 2}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Cập nhật đề tài ({selectedRowIds.length})
+                                </Button>
+                            </DialogTrigger>
+                             <EditGroupRegistrationForm
+                                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                                onFinished={handleGroupActionFinished}
+                            />
+                        </Dialog>
+                    </>
                 )}
             </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
