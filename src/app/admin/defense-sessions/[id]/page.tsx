@@ -258,7 +258,7 @@ export default function DefenseSessionDetailPage() {
               <UserCheck className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent className="flex-1 flex flex-col">
-              <ScrollArea className="flex-1 h-[160px]">
+              <ScrollArea className="flex-1 h-24">
                 <div className="space-y-4">
                   {stats.supervisorDetails.length > 0 ? stats.supervisorDetails.map(sv => (
                     <div key={sv.name} className="text-sm">
