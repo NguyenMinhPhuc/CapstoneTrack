@@ -186,6 +186,10 @@
           "type": "string",
           "description": "Unique identifier for the registration."
         },
+        "sessionId": {
+          "type": "string",
+          "description": "Reference to the GraduationDefenseSession this registration belongs to."
+        },
         "studentId": {
           "type": "string",
           "description": "Reference to the registered student."
@@ -210,6 +214,7 @@
       },
       "required": [
         "id",
+        "sessionId",
         "studentId",
         "studentName",
         "registrationDate"
@@ -247,11 +252,11 @@
       },
       "description": "Stores information about graduation defense sessions."
     },
-    "/graduationDefenseSessions/{sessionId}/registrations/{registrationId}": {
+    "/defenseRegistrations/{registrationId}": {
       "schema": {
         "$ref": "#/entities/DefenseRegistration"
       },
-      "description": "Stores student registrations for a specific defense session."
+      "description": "Stores student registrations for all defense sessions."
     }
   }
 }

@@ -47,6 +47,7 @@ export type Student = {
 
 export type DefenseRegistration = {
   id: string;
+  sessionId: string;
   studentId: string;
   studentName: string;
   projectTitle?: string;

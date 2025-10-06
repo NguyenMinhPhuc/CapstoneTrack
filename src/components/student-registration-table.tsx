@@ -34,7 +34,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Upload, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -57,12 +57,12 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const registrationsCollectionRef = useMemoFirebase(
-    () => collection(firestore, `graduationDefenseSessions/${sessionId}/registrations`),
+  const registrationsQuery = useMemoFirebase(
+    () => query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', sessionId)),
     [firestore, sessionId]
   );
 
-  const { data: registrations, isLoading } = useCollection<DefenseRegistration>(registrationsCollectionRef);
+  const { data: registrations, isLoading } = useCollection<DefenseRegistration>(registrationsQuery);
 
   const filteredRegistrations = useMemo(() => {
     if (!registrations) return [];
@@ -80,7 +80,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   };
 
   const handleDelete = async (registrationId: string) => {
-    const registrationDocRef = doc(firestore, `graduationDefenseSessions/${sessionId}/registrations`, registrationId);
+    const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
     
     deleteDoc(registrationDocRef)
         .then(() => {
@@ -237,7 +237,6 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
             </DialogHeader>
             {selectedRegistration && (
                 <EditStudentRegistrationForm
-                    sessionId={sessionId}
                     registration={selectedRegistration}
                     onFinished={() => setIsEditDialogOpen(false)}
                 />

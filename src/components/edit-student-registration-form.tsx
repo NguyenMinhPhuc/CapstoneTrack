@@ -25,12 +25,11 @@ const formSchema = z.object({
 });
 
 interface EditStudentRegistrationFormProps {
-  sessionId: string;
   registration: DefenseRegistration;
   onFinished: () => void;
 }
 
-export function EditStudentRegistrationForm({ sessionId, registration, onFinished }: EditStudentRegistrationFormProps) {
+export function EditStudentRegistrationForm({ registration, onFinished }: EditStudentRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -43,7 +42,7 @@ export function EditStudentRegistrationForm({ sessionId, registration, onFinishe
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const registrationDocRef = doc(firestore, `graduationDefenseSessions/${sessionId}/registrations`, registration.id);
+    const registrationDocRef = doc(firestore, `defenseRegistrations`, registration.id);
     const updateData = {
       projectTitle: values.projectTitle,
       supervisorName: values.supervisorName,
@@ -108,4 +107,3 @@ export function EditStudentRegistrationForm({ sessionId, registration, onFinishe
     </Form>
   );
 }
-

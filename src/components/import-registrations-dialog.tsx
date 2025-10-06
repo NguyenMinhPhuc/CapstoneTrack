@@ -24,7 +24,7 @@ import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning, Rocket } from 'lucide-react';
 import { useFirestore } from '@/firebase';
-import { collection, doc, writeBatch, getDocs, query, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, writeBatch, getDocs, serverTimestamp } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 
 interface RegistrationData {
@@ -102,7 +102,7 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
 
         // 2. Process data and create a batch write
         const batch = writeBatch(firestore);
-        const registrationsCollectionRef = collection(firestore, `graduationDefenseSessions/${sessionId}/registrations`);
+        const registrationsCollectionRef = collection(firestore, 'defenseRegistrations');
         
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
@@ -124,6 +124,7 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
 
             const newRegistrationRef = doc(registrationsCollectionRef);
             const registrationData = {
+                sessionId: sessionId,
                 studentId: String(studentId),
                 studentName: `${studentInfo.firstName} ${studentInfo.lastName}`,
                 projectTitle: row['ProjectTitle'] || row['Tên đề tài'] || '',

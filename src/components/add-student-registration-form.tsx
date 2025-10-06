@@ -74,7 +74,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const registrationsCollectionRef = collection(firestore, 'graduationDefenseSessions', sessionId, 'registrations');
+    const registrationsCollectionRef = collection(firestore, 'defenseRegistrations');
       
     const selectedStudent = students.find(s => s.id === values.studentId);
     if (!selectedStudent) {
@@ -89,6 +89,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
     const newRegistrationData = {
       ...values,
+      sessionId: sessionId,
       studentName,
       registrationDate: serverTimestamp(),
     };
