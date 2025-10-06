@@ -174,6 +174,7 @@ export function SupervisorManagementTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>Họ và Tên</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Khoa</TableHead>
@@ -183,8 +184,9 @@ export function SupervisorManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredSupervisors?.map((supervisor) => (
+            {filteredSupervisors?.map((supervisor, index) => (
               <TableRow key={supervisor.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{`${supervisor.firstName} ${supervisor.lastName}`}</TableCell>
                 <TableCell>{supervisor.email}</TableCell>
                 <TableCell>{supervisor.department}</TableCell>
