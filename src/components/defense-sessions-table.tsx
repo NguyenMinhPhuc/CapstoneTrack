@@ -41,6 +41,30 @@ import { format } from 'date-fns';
 import { AddDefenseSessionForm } from './add-defense-session-form';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
+import { Badge } from './ui/badge';
+
+type SessionStatus = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
+
+const getSessionStatus = (
+  startDate: Date,
+  expectedReportDate: Date
+): SessionStatus => {
+  const now = new Date();
+  if (now < startDate) {
+    return 'Sắp diễn ra';
+  } else if (now >= startDate && now <= expectedReportDate) {
+    return 'Đang thực hiện';
+  } else {
+    return 'Hoàn thành';
+  }
+};
+
+const statusVariant: Record<SessionStatus, 'secondary' | 'default' | 'outline'> = {
+  'Sắp diễn ra': 'secondary',
+  'Đang thực hiện': 'default',
+  'Hoàn thành': 'outline',
+};
+
 
 export function DefenseSessionsTable() {
   const firestore = useFirestore();
@@ -135,39 +159,49 @@ export function DefenseSessionsTable() {
                 <TableHead>Tên đợt</TableHead>
                 <TableHead>Ngày bắt đầu</TableHead>
                 <TableHead>Hạn đăng ký</TableHead>
-                <TableHead>Ngày báo cáo dự kiến</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSessions?.map((session, index) => (
-                <TableRow key={session.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell className="font-medium">{session.name}</TableCell>
-                  <TableCell>
-                    {session.startDate?.toDate && format(session.startDate.toDate(), 'PPP')}
-                  </TableCell>
-                   <TableCell>
-                    {session.registrationDeadline?.toDate && format(session.registrationDeadline.toDate(), 'PPP')}
-                  </TableCell>
-                  <TableCell>
-                    {session.expectedReportDate?.toDate && format(session.expectedReportDate.toDate(), 'PPP')}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem>Sửa</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive">Xóa</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredSessions?.map((session, index) => {
+                const status = session.startDate?.toDate && session.expectedReportDate?.toDate
+                  ? getSessionStatus(session.startDate.toDate(), session.expectedReportDate.toDate())
+                  : null;
+
+                return (
+                  <TableRow key={session.id}>
+                    <TableCell>{index + 1}</TableCell>
+                    <TableCell className="font-medium">{session.name}</TableCell>
+                    <TableCell>
+                      {session.startDate?.toDate && format(session.startDate.toDate(), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      {session.registrationDeadline?.toDate && format(session.registrationDeadline.toDate(), 'dd/MM/yyyy')}
+                    </TableCell>
+                    <TableCell>
+                      {status && (
+                        <Badge variant={statusVariant[status]}>
+                          {status}
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem>Sửa</DropdownMenuItem>
+                          <DropdownMenuItem className="text-destructive">Xóa</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
