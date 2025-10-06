@@ -13,13 +13,6 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -27,6 +20,11 @@ import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore
 import type { Student } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { SupervisorSelect } from './supervisor-select';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { cn } from '@/lib/utils';
+
 
 const NO_SUPERVISOR_VALUE = "__NONE__";
 
@@ -46,6 +44,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
   const firestore = useFirestore();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
+  const [comboboxOpen, setComboboxOpen] = useState(false);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -137,22 +136,62 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
           control={form.control}
           name="studentDocId"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col">
               <FormLabel>Sinh viên</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingStudents}>
-                <FormControl>
-                  <SelectTrigger>
-                    <SelectValue placeholder={isLoadingStudents ? "Đang tải sinh viên..." : "Chọn một sinh viên"} />
-                  </SelectTrigger>
-                </FormControl>
-                <SelectContent>
-                  {students.map(student => (
-                    <SelectItem key={student.id} value={student.id}>
-                      {`${student.firstName} ${student.lastName} (${student.studentId || 'Chưa có MSSV'})`}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      className={cn(
+                        "w-full justify-between",
+                        !field.value && "text-muted-foreground"
+                      )}
+                    >
+                      {field.value
+                        ? students.find(
+                            (student) => student.id === field.value
+                          )?.studentId
+                        : "Tìm sinh viên theo MSSV hoặc tên"}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                  <Command>
+                    <CommandInput placeholder="Tìm sinh viên..." />
+                    <CommandList>
+                      <CommandEmpty>Không tìm thấy sinh viên.</CommandEmpty>
+                      <CommandGroup>
+                        {students.map((student) => (
+                          <CommandItem
+                            value={`${student.studentId} ${student.firstName} ${student.lastName}`}
+                            key={student.id}
+                            onSelect={() => {
+                              form.setValue("studentDocId", student.id);
+                              setComboboxOpen(false);
+                            }}
+                          >
+                            <Check
+                              className={cn(
+                                "mr-2 h-4 w-4",
+                                student.id === field.value
+                                  ? "opacity-100"
+                                  : "opacity-0"
+                              )}
+                            />
+                            <div>
+                                <p className="font-medium">{student.firstName} {student.lastName}</p>
+                                <p className="text-sm text-muted-foreground">{student.studentId}</p>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}
