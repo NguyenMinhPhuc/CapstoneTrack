@@ -252,6 +252,10 @@
           "type": "string",
           "format": "uri",
           "description": "A URL link to the proof document for the exemption."
+        },
+        "subCommitteeId": {
+            "type": "string",
+            "description": "Reference to the DefenseSubCommittee this registration is assigned to."
         }
       },
       "required": [

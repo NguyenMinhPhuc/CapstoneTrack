@@ -34,10 +34,10 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw } from 'lucide-react';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge } from 'lucide-react';
+import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
+import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
@@ -52,6 +52,7 @@ import { MoveRegistrationsDialog } from './move-registrations-dialog';
 import { EditGroupRegistrationForm } from './edit-group-registration-form';
 import { SpecialExemptionForm } from './special-exemption-form';
 import { WithdrawRegistrationForm } from './withdraw-registration-form';
+import { AssignSubcommitteeDialog } from './assign-subcommittee-dialog';
 
 
 interface StudentRegistrationTableProps {
@@ -99,6 +100,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [isExemptionDialogOpen, setIsExemptionDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
+  const [isAssignSubcommitteeDialogOpen, setIsAssignSubcommitteeDialogOpen] = useState(false);
 
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
@@ -110,6 +112,17 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   useEffect(() => {
     setSelectedRowIds([]);
   }, [initialData]);
+
+  const subcommitteesCollectionRef = useMemoFirebase(
+    () => collection(firestore, `graduationDefenseSessions/${sessionId}/subCommittees`),
+    [firestore, sessionId]
+  );
+  const { data: subCommittees } = useCollection<DefenseSubCommittee>(subcommitteesCollectionRef);
+
+  const subCommitteeMap = useMemo(() => {
+    if (!subCommittees) return new Map();
+    return new Map(subCommittees.map(sc => [sc.id, sc.name]));
+  }, [subCommittees]);
 
   const uniqueSupervisors = useMemo(() => {
     if (!initialData) return [];
@@ -380,15 +393,20 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 </DropdownMenu>
               </div>
               <div className="flex w-full sm:w-auto gap-2">
-                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button variant="outline" className="w-full">
-                            <Upload className="mr-2 h-4 w-4" />
-                            Nhập từ Excel
-                        </Button>
-                    </DialogTrigger>
-                    <ImportRegistrationsDialog sessionId={sessionId} onFinished={() => setIsImportDialogOpen(false)} />
-                </Dialog>
+                  <Dialog open={isAssignSubcommitteeDialogOpen} onOpenChange={setIsAssignSubcommitteeDialogOpen}>
+                      <DialogTrigger asChild>
+                          <Button variant="outline" className="w-full">
+                              <GitMerge className="mr-2 h-4 w-4" />
+                              Phân công tự động
+                          </Button>
+                      </DialogTrigger>
+                      <AssignSubcommitteeDialog
+                          sessionId={sessionId}
+                          allRegistrations={initialData || []}
+                          subCommittees={subCommittees || []}
+                          onFinished={() => setIsAssignSubcommitteeDialogOpen(false)}
+                      />
+                  </Dialog>
                 <Dialog open={isAddByClassDialogOpen} onOpenChange={setIsAddByClassDialogOpen}>
                     <DialogTrigger asChild>
                         <Button variant="outline" className="w-full">
@@ -434,9 +452,9 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 <TableHead>STT</TableHead>
                 <TableHead>Tên sinh viên</TableHead>
                 <TableHead>MSSV</TableHead>
-                <TableHead>Trạng thái SV</TableHead>
                 <TableHead>Tên đề tài</TableHead>
                 <TableHead>GVHD</TableHead>
+                <TableHead>Tiểu ban</TableHead>
                 <TableHead>Trạng thái ĐK</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
@@ -454,13 +472,9 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{reg.studentName}</TableCell>
                     <TableCell>{reg.studentId}</TableCell>
-                    <TableCell>
-                        <Badge className={cn(studentStatusColorClass[reg.status])}>
-                            {studentStatusLabel[reg.status]}
-                        </Badge>
-                    </TableCell>
                     <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
+                    <TableCell>{reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) || 'N/A' : 'Chưa phân công'}</TableCell>
                     <TableCell>
                        <Badge variant={registrationStatusVariant[reg.registrationStatus]}>
                           {registrationStatusLabel[reg.registrationStatus]}
@@ -535,3 +549,5 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     </>
   );
 }
+
+    

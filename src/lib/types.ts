@@ -78,6 +78,7 @@ export type DefenseRegistration = {
   exemptionDecisionNumber?: string;
   exemptionDecisionDate?: any;
   exemptionProofLink?: string;
+  subCommitteeId?: string;
 }
 
 // Represents a student's registration for a specific graduation defense session.
