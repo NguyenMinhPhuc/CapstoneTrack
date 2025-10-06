@@ -33,9 +33,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuPortal,
-  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -319,7 +316,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         </Dialog>
                          <Button variant="outline" size="sm" onClick={() => handleRevertToReporting(selectedRowIds)}>
                             <RefreshCw className="mr-2 h-4 w-4" />
-                            Chuyển về 'Báo cáo' ({selectedRowIds.length})
+                            Về 'Báo cáo' ({selectedRowIds.length})
                         </Button>
                     </>
                 )}
