@@ -35,8 +35,10 @@ import {
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { GraduationDefenseSession } from '@/lib/types';
@@ -68,6 +70,7 @@ export function DefenseSessionsTable() {
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const sessionsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -78,10 +81,12 @@ export function DefenseSessionsTable() {
 
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
-    return sessions.filter(session =>
-      session.name.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  }, [sessions, searchTerm]);
+    return sessions.filter(session => {
+        const searchMatch = session.name.toLowerCase().includes(searchTerm.toLowerCase());
+        const statusMatch = statusFilter === 'all' || session.status === statusFilter;
+        return searchMatch && statusMatch;
+    });
+  }, [sessions, searchTerm, statusFilter]);
 
   const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
     const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionId);
@@ -136,15 +141,52 @@ export function DefenseSessionsTable() {
               </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Tìm kiếm theo tên..."
-                        className="pl-8 w-full sm:w-64"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex w-full sm:w-auto gap-2">
+                    <div className="relative w-full sm:w-auto">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Tìm kiếm theo tên..."
+                            className="pl-8 w-full sm:w-64"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-1 text-sm w-full sm:w-auto">
+                                <ListFilter className="h-3.5 w-3.5" />
+                                <span className="sr-only sm:not-sr-only">Lọc</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                             <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'all'}
+                                onCheckedChange={() => setStatusFilter('all')}
+                            >
+                                Tất cả trạng thái
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'upcoming'}
+                                onCheckedChange={() => setStatusFilter('upcoming')}
+                            >
+                                {statusLabel.upcoming}
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'ongoing'}
+                                onCheckedChange={() => setStatusFilter('ongoing')}
+                            >
+                                {statusLabel.ongoing}
+                            </DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'completed'}
+                                onCheckedChange={() => setStatusFilter('completed')}
+                            >
+                                {statusLabel.completed}
+                            </DropdownMenuCheckboxItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
