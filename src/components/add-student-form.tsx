@@ -21,6 +21,8 @@ import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth'
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import type { Student } from '@/lib/types';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -30,6 +32,9 @@ const formSchema = z.object({
   major: z.string().optional(),
   enrollmentYear: z.coerce.number().optional(),
   className: z.string().optional(),
+  status: z.enum(['studying', 'reserved', 'dropped_out'], {
+    required_error: 'Trạng thái là bắt buộc.',
+  }),
 });
 
 interface AddStudentFormProps {
@@ -55,6 +60,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
       email: '',
       major: '',
       className: '',
+      status: 'studying',
     },
   });
 
@@ -85,6 +91,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
         ...values,
         id: user.uid,
         userId: user.uid,
+        enrollmentYear: values.enrollmentYear || null,
         createdAt: serverTimestamp(),
       });
       
@@ -164,6 +171,28 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
               <FormControl>
                 <Input placeholder="email@example.com" {...field} />
               </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="status"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Trạng thái</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Chọn trạng thái" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="studying">Đang học</SelectItem>
+                  <SelectItem value="reserved">Bảo lưu</SelectItem>
+                  <SelectItem value="dropped_out">Đã nghỉ</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

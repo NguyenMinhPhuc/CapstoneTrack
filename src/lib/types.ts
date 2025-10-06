@@ -48,6 +48,7 @@ export type Student = {
     enrollmentYear?: number;
     className?: string; // Add className field
     createdAt: any;
+    status: 'studying' | 'reserved' | 'dropped_out';
 }
 
 export type DefenseRegistration = {

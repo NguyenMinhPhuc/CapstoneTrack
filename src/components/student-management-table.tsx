@@ -14,8 +14,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -56,6 +54,28 @@ import { Input } from './ui/input';
 import { AddStudentForm } from './add-student-form';
 import { EditStudentForm } from './edit-student-form';
 import { ImportStudentsDialog } from './import-students-dialog';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
+
+
+const statusLabel: Record<Student['status'], string> = {
+  studying: 'Đang học',
+  reserved: 'Bảo lưu',
+  dropped_out: 'Đã nghỉ',
+};
+
+const statusVariant: Record<Student['status'], 'default' | 'secondary' | 'destructive'> = {
+    studying: 'default',
+    reserved: 'secondary',
+    dropped_out: 'destructive',
+};
+
+const statusColorClass: Record<Student['status'], string> = {
+  studying: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
+  reserved: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700',
+  dropped_out: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
+};
+
 
 export function StudentManagementTable() {
   const firestore = useFirestore();
@@ -241,6 +261,7 @@ export function StudentManagementTable() {
               <TableHead>Họ và Tên</TableHead>
               <TableHead>MSSV</TableHead>
               <TableHead>Lớp</TableHead>
+              <TableHead>Trạng thái</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
@@ -253,6 +274,11 @@ export function StudentManagementTable() {
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className}</TableCell>
+                <TableCell>
+                    <Badge className={cn(statusColorClass[student.status])}>
+                        {statusLabel[student.status]}
+                    </Badge>
+                </TableCell>
                 <TableCell>{student.email}</TableCell>
                 <TableCell className="hidden md:table-cell">
                     {student.createdAt?.toDate && format(student.createdAt.toDate(), 'PPP')}
