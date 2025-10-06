@@ -1,3 +1,4 @@
+
 'use client';
 
 import {
@@ -28,7 +29,7 @@ interface WithdrawnStudentsDialogProps {
 
 export function WithdrawnStudentsDialog({ students, onFinished }: WithdrawnStudentsDialogProps) {
   return (
-    <DialogContent className="sm:max-w-lg">
+    <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>Danh sách sinh viên bỏ báo cáo</DialogTitle>
         <DialogDescription>
@@ -45,6 +46,7 @@ export function WithdrawnStudentsDialog({ students, onFinished }: WithdrawnStude
                   <TableHead>MSSV</TableHead>
                   <TableHead>Họ và Tên</TableHead>
                   <TableHead>Lớp</TableHead>
+                  <TableHead>Ghi chú</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -53,6 +55,7 @@ export function WithdrawnStudentsDialog({ students, onFinished }: WithdrawnStude
                     <TableCell>{student.studentId}</TableCell>
                     <TableCell>{student.studentName}</TableCell>
                     <TableCell>{student.className || 'N/A'}</TableCell>
+                    <TableCell>{student.statusNote || 'Không có'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
