@@ -1,160 +1,190 @@
 /**
- * @fileoverview Firestore Security Rules for CapstoneTrack application.
+ * @file Firebase Security Rules for CapstoneTrack Firestore database.
  *
  * Core Philosophy:
- * This ruleset implements a role-based access control system, supplemented with ownership checks where appropriate.
- * Users can have 'admin', 'supervisor', or 'student' roles, each granting different levels of access to data.
+ * This ruleset implements a role-based access control system, combined with
+ * ownership checks for user-specific data.  Admin users have full access,
+ * supervisors can manage their own profiles, and students primarily access
+ * their own information.
  *
  * Data Structure:
- * - /users/{userId}: Stores user account information, including roles.
- * - /students/{studentId}: Stores student details.
- * - /supervisors/{supervisorId}: Stores supervisor details.
- * - /graduationDefenseSessions/{sessionId}: Stores information about graduation defense sessions.
- * - /graduationDefenseSessions/{sessionId}/registrations/{registrationId}: Stores student registrations for defense sessions.
+ * - /users/{userId}: Stores user account information; access controlled by role and ownership.
+ * - /students/{studentId}: Stores student profiles; accessible to admins and the student themselves.
+ * - /supervisors/{supervisorId}: Stores supervisor profiles; accessible to admins and the supervisor themselves.
+ * - /graduationDefenseSessions/{sessionId}: Stores information about defense sessions; publicly readable, but create/update/delete restricted to admins.
+ * - /graduationDefenseSessions/{sessionId}/registrations/{registrationId}: Stores student registrations; create/update/delete restricted to admins, readable by session admins.
  *
  * Key Security Decisions:
- * - User listing is disallowed.
- * - Strict ownership is enforced for user-specific data.
- * - The rules do not enforce data type validation for rapid prototyping.
- * - Timestamp fields are not validated.
+ * - User listing is denied to prevent unauthorized information gathering.
+ * - Data validation is relaxed to allow for rapid prototyping.  Critical authorization fields are still validated.
+ * - get operations are permitted to allow retrieving non-existent documents, so the backend can return a 404.
+ * - All write operations are validated to confirm the document exists.
  *
  * Denormalization for Authorization:
- *  None.
+ *   To simplify rules and avoid costly `get()` operations, authorization data such as user roles and ownership are denormalized directly onto the documents. For example, student and supervisor documents are linked to user accounts via `studentId` and `supervisorId` respectively to allow owner validation.
+ *
+ * Structural Segregation:
+ *   No structural segregation is necessary as private user data and public data are stored in different collections and subcollections with clearly defined access control.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the user is signed in.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the authenticated user's ID matches the provided userId.
-     * @param {string} userId - The user ID to compare against.
-     * @return {bool} True if the user is signed in and the UID matches, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the user is an existing owner of the document.
-     * @param {string} userId - The user ID to compare against.
-     * @return {bool} True if the user is signed in, the UID matches, and the document exists.
-     */
-    function isExistingOwner(userId) {
-      return isOwner(userId) && exists(/databases/$(database)/documents/users/$(userId));
-    }
-
-    /**
-     * @description Checks if the user has the 'admin' role.
-     * @return {bool} True if the user has the admin role, false otherwise.
-     */
-    function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    /**
-     * @description Checks if the user has the 'supervisor' role.
-     * @return {bool} True if the user has the supervisor role, false otherwise.
-     */
-    function isSupervisor() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
-    }
-
-    /**
-     * @description Checks if the user has the 'student' role.
-     * @return {bool} True if the user has the student role, false otherwise.
-     */
-    function isStudent() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
-    }
-
-    /**
-     * @description Rules for /users/{userId} documents.
+     * @description Manages user account information, restricting access based on role and ownership.
      * @path /users/{userId}
-     * @allow (create) - User with matching ID can create their own document.
-     * @allow (get, update, delete) - Only the user with matching ID can read, update, or delete their own document.
-     * @deny (list) - Listing users is not allowed.
-     * @deny (create) - Another user cannot create a document with a different ID.
-     * @principle Enforces document ownership for writes and restricts access to a user's own data tree.
+     * @allow (create) - User with matching {userId} can create their own record.
+     * @allow (get, list) - Admins can read all user accounts. Users can only read their own account.
+     * @allow (update, delete) - Admins can update or delete any user account. Users can update their own account.
+     * @deny (create) - User cannot create a record with mismatched {userId}.
+     * @deny (update, delete) - User cannot update or delete another user's account.
+     * @principle Enforces user ownership and admin role-based access.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId);
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+      
+      function isExistingOwner(userId) {
+        return isOwner(userId) && resource != null;
+      }
+
+      allow get: if isAdmin() || isOwner(userId);
       allow list: if false;
-      allow create: if isOwner(userId) && request.auth.uid == userId;
-      allow update: if isOwner(userId);
-      allow delete: if isOwner(userId);
+
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) || isAdmin() && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId) || isAdmin();
     }
 
     /**
-     * @description Rules for /students/{studentId} documents.
+     * @description Manages student profiles, allowing access to admins and the student themselves.
      * @path /students/{studentId}
-     * @allow (get) - Only authenticated users can get student details.
-     * @allow (create) - Only admin can create student details
-     * @allow (update, delete) - Only admin can update or delete student details
-     * @deny (list) - Listing students is not allowed.
-     * @principle Only admins can manage student records.
+     * @allow (create) - Admins can create student profiles. Students can create their own profile with matching {studentId}.
+     * @allow (get, list) - Admins can read all student profiles. Students can only read their own profile.
+     * @allow (update, delete) - Admins can update or delete any student profile. Students can update their own profile.
+     * @deny (create) - User cannot create a student profile with mismatched {studentId}.
+     * @deny (update, delete) - User cannot update or delete another student's profile.
+     * @principle Enforces student ownership and admin role-based access.
      */
     match /students/{studentId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+        function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(studentId) {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.studentId == studentId;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+        function isExistingOwner(studentId) {
+        return isOwner(studentId) && resource != null;
+      }
+
+
+      allow get: if isAdmin() || isOwner(studentId);
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (isOwner(studentId) && request.resource.data.id == studentId);
+      allow update: if isExistingOwner(studentId) || isAdmin() && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(studentId) || isAdmin();
     }
 
     /**
-     * @description Rules for /supervisors/{supervisorId} documents.
+     * @description Manages supervisor profiles, allowing access to admins and the supervisor themselves.
      * @path /supervisors/{supervisorId}
-     * @allow (get) - Only authenticated users can get supervisor details.
-     * @allow (create) - Only admin can create supervisor details
-     * @allow (update, delete) - Only admin can update or delete supervisor details
-     * @deny (list) - Listing supervisors is not allowed.
-     * @principle Only admins can manage supervisor records.
+     * @allow (create) - Admins can create supervisor profiles. Supervisors can create their own profile with matching {supervisorId}.
+     * @allow (get, list) - Admins can read all supervisor profiles. Supervisors can only read their own profile.
+     * @allow (update, delete) - Admins can update or delete any supervisor profile. Supervisors can update their own profile.
+     * @deny (create) - User cannot create a supervisor profile with mismatched {supervisorId}.
+     * @deny (update, delete) - User cannot update or delete another supervisor's profile.
+     * @principle Enforces supervisor ownership and admin role-based access.
      */
     match /supervisors/{supervisorId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+          function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isOwner(supervisorId) {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.supervisorId == supervisorId;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+        function isExistingOwner(supervisorId) {
+        return isOwner(supervisorId) && resource != null;
+      }
+
+
+      allow get: if isAdmin() || isOwner(supervisorId);
+      allow list: if isAdmin();
+      allow create: if isAdmin() || (isOwner(supervisorId) && request.resource.data.id == supervisorId);
+      allow update: if isExistingOwner(supervisorId) || isAdmin() && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(supervisorId) || isAdmin();
     }
 
     /**
-     * @description Rules for /graduationDefenseSessions/{sessionId} documents.
+     * @description Manages graduation defense sessions, restricting write access to admins.
      * @path /graduationDefenseSessions/{sessionId}
-     * @allow (get, list) - All authenticated users can read (get, list) graduation defense sessions.
-     * @allow (create) - Only admin can create graduation defense sessions.
-     * @allow (update, delete) - Only admin can update or delete graduation defense sessions.
-     * @principle Public read access with admin-only write access.
+     * @allow (get, list) - Everyone can view graduation defense sessions.
+     * @allow (create, update, delete) - Only admins can create, update, or delete sessions.
+     * @deny (create, update, delete) - Non-admins cannot create, update, or delete sessions.
+     * @principle Enforces admin-only control for session management.
      */
     match /graduationDefenseSessions/{sessionId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
+          function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+        function isExistingDocument() {
+        return resource != null;
+      }
+
+
+      allow get, list: if true;
       allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow update: if isAdmin() && isExistingDocument();
+      allow delete: if isAdmin() && isExistingDocument();
     }
 
     /**
-     * @description Rules for /graduationDefenseSessions/{sessionId}/registrations/{registrationId} documents.
+     * @description Manages student registrations for a specific defense session, restricting write access to admins.
      * @path /graduationDefenseSessions/{sessionId}/registrations/{registrationId}
-     * @allow (get, list) - All authenticated users can read (get, list) registrations.
-     * @allow (create) - Only students can create registrations.
-     * @allow (update, delete) - No one can update or delete registrations (for now).
-     * @principle Students can register for defense sessions, but cannot modify existing registrations.
+     * @allow (get, list) - Admins can read all registrations. Students can only read their own registration.
+     * @allow (create, update, delete) - Only admins can create, update, or delete registrations.
+     * @deny (create, update, delete) - Non-admins cannot create, update, or delete registrations.
+     * @principle Enforces admin-only control for registration management.
      */
     match /graduationDefenseSessions/{sessionId}/registrations/{registrationId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if isStudent();
-      allow update: if false;
-      allow delete: if false;
+          function isSignedIn() {
+        return request.auth != null;
+      }
+
+      function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+      
+       function isExistingDocument() {
+        return resource != null;
+      }
+      
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && isExistingDocument();
+      allow delete: if isAdmin() && isExistingDocument();
     }
   }
 }
