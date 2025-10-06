@@ -1,0 +1,111 @@
+
+'use client';
+
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Button } from '@/components/ui/button';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { useToast } from '@/hooks/use-toast';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { doc, updateDoc } from 'firebase/firestore';
+import type { DefenseRegistration } from '@/lib/types';
+
+const formSchema = z.object({
+  projectTitle: z.string().optional(),
+  supervisorName: z.string().optional(),
+});
+
+interface EditStudentRegistrationFormProps {
+  sessionId: string;
+  registration: DefenseRegistration;
+  onFinished: () => void;
+}
+
+export function EditStudentRegistrationForm({ sessionId, registration, onFinished }: EditStudentRegistrationFormProps) {
+  const { toast } = useToast();
+  const firestore = useFirestore();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      projectTitle: registration.projectTitle || '',
+      supervisorName: registration.supervisorName || '',
+    },
+  });
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const registrationDocRef = doc(firestore, `graduationDefenseSessions/${sessionId}/registrations`, registration.id);
+    const updateData = {
+      projectTitle: values.projectTitle,
+      supervisorName: values.supervisorName,
+    };
+
+    updateDoc(registrationDocRef, updateData)
+      .then(() => {
+        toast({
+          title: 'Thành công',
+          description: `Đã cập nhật thông tin đăng ký cho sinh viên ${registration.studentName}.`,
+        });
+        onFinished();
+      })
+      .catch((error) => {
+        const contextualError = new FirestorePermissionError({
+          path: registrationDocRef.path,
+          operation: 'update',
+          requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <FormItem>
+            <FormLabel>Sinh viên</FormLabel>
+            <Input value={registration.studentName} disabled />
+        </FormItem>
+
+        <FormField
+          control={form.control}
+          name="projectTitle"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên đề tài (tùy chọn)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý..." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="supervisorName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên giáo viên hướng dẫn (tùy chọn)</FormLabel>
+              <FormControl>
+                <Input placeholder="Ví dụ: Nguyễn Văn B" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+          {form.formState.isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+        </Button>
+      </form>
+    </Form>
+  );
+}
+
