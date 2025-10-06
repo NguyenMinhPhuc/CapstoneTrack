@@ -133,6 +133,7 @@ export function AddStudentsByClassDialog({
                 projectTitle: '',
                 supervisorName: '',
                 registrationDate: serverTimestamp(),
+                registrationStatus: 'reporting',
             });
         }
     });

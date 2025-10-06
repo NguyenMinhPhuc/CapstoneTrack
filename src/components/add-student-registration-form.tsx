@@ -109,6 +109,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       projectTitle: values.projectTitle,
       supervisorName: supervisorValue,
       registrationDate: serverTimestamp(),
+      registrationStatus: 'reporting' as const,
     };
 
     addDoc(registrationsCollectionRef, newRegistrationData)

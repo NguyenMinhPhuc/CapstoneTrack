@@ -230,9 +230,14 @@
           "format": "date-time",
           "description": "Timestamp when the registration was created."
         },
-        "isSpeciallyExempted": {
-          "type": "boolean",
-          "description": "Indicates if the student is specially exempted from the defense."
+        "registrationStatus": {
+          "type": "string",
+          "description": "The registration status of the student for the defense.",
+          "enum": ["reporting", "exempted", "withdrawn"]
+        },
+        "statusNote": {
+            "type": "string",
+            "description": "A note explaining the reason for the 'withdrawn' status."
         },
         "exemptionDecisionNumber": {
           "type": "string",
@@ -255,7 +260,8 @@
         "studentDocId",
         "studentId",
         "studentName",
-        "registrationDate"
+        "registrationDate",
+        "registrationStatus"
       ]
     }
   },

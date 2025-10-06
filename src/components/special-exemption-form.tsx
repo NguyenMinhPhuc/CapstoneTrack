@@ -69,7 +69,7 @@ export function SpecialExemptionForm({ registrations, onFinished }: SpecialExemp
     
     const dataToUpdate = {
         ...values,
-        isSpeciallyExempted: true,
+        registrationStatus: 'exempted' as const,
     };
 
     registrations.forEach(reg => {

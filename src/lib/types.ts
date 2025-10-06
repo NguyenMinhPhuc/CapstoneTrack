@@ -73,7 +73,8 @@ export type DefenseRegistration = {
   projectTitle?: string;
   supervisorName?: string;
   registrationDate: any;
-  isSpeciallyExempted?: boolean;
+  registrationStatus: 'reporting' | 'exempted' | 'withdrawn';
+  statusNote?: string;
   exemptionDecisionNumber?: string;
   exemptionDecisionDate?: any;
   exemptionProofLink?: string;

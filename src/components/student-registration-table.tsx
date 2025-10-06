@@ -33,13 +33,15 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuPortal,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
-import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
 import { ImportRegistrationsDialog } from './import-registrations-dialog';
@@ -52,6 +54,7 @@ import { Checkbox } from './ui/checkbox';
 import { MoveRegistrationsDialog } from './move-registrations-dialog';
 import { EditGroupRegistrationForm } from './edit-group-registration-form';
 import { SpecialExemptionForm } from './special-exemption-form';
+import { WithdrawRegistrationForm } from './withdraw-registration-form';
 
 
 interface StudentRegistrationTableProps {
@@ -60,19 +63,32 @@ interface StudentRegistrationTableProps {
   isLoading: boolean;
 }
 
-const statusLabel: Record<Student['status'], string> = {
+const studentStatusLabel: Record<Student['status'], string> = {
   studying: 'Đang học',
   reserved: 'Bảo lưu',
   dropped_out: 'Đã nghỉ',
   graduated: 'Đã tốt nghiệp',
 };
 
-const statusColorClass: Record<Student['status'], string> = {
+const studentStatusColorClass: Record<Student['status'], string> = {
   studying: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
   reserved: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700',
   dropped_out: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
   graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
 };
+
+const registrationStatusLabel: Record<DefenseRegistration['registrationStatus'], string> = {
+    reporting: 'Báo cáo',
+    exempted: 'Đặc cách',
+    withdrawn: 'Bỏ báo cáo',
+};
+
+const registrationStatusVariant: Record<DefenseRegistration['registrationStatus'], 'default' | 'secondary' | 'destructive'> = {
+    reporting: 'default',
+    exempted: 'secondary',
+    withdrawn: 'destructive',
+};
+
 
 
 export function StudentRegistrationTable({ sessionId, initialData, isLoading }: StudentRegistrationTableProps) {
@@ -85,11 +101,13 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [isExemptionDialogOpen, setIsExemptionDialogOpen] = useState(false);
+  const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
 
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   
   useEffect(() => {
@@ -116,10 +134,11 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       const searchMatch = nameMatch || idMatch;
 
       const supervisorMatch = supervisorFilter === 'all' || reg.supervisorName === supervisorFilter;
+      const statusMatch = statusFilter === 'all' || reg.registrationStatus === statusFilter;
 
-      return searchMatch && supervisorMatch;
+      return searchMatch && supervisorMatch && statusMatch;
     });
-  }, [initialData, searchTerm, supervisorFilter]);
+  }, [initialData, searchTerm, supervisorFilter, statusFilter]);
 
   const handleEditClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
@@ -165,6 +184,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     setIsMoveDialogOpen(false);
     setIsEditGroupDialogOpen(false);
     setIsExemptionDialogOpen(false);
+    setIsWithdrawDialogOpen(false);
     setSelectedRowIds([]);
   };
 
@@ -236,6 +256,18 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 onFinished={handleGroupActionFinished}
                             />
                         </Dialog>
+                        <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="destructive" size="sm">
+                                    <XCircle className="mr-2 h-4 w-4" />
+                                    Bỏ báo cáo ({selectedRowIds.length})
+                                </Button>
+                            </DialogTrigger>
+                             <WithdrawRegistrationForm
+                                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                                onFinished={handleGroupActionFinished}
+                            />
+                        </Dialog>
                     </>
                 )}
             </div>
@@ -246,7 +278,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                   <Input
                       type="search"
                       placeholder="Tìm theo tên hoặc MSSV..."
-                      className="pl-8 w-full sm:w-64"
+                      className="pl-8 w-full sm:w-48"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -255,13 +287,13 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     <DropdownMenuTrigger asChild>
                         <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
                             <ListFilter className="h-3.5 w-3.5" />
-                            <span className="sr-only sm:not-sr-only">Lọc GV</span>
+                            <span className="sr-only sm:not-sr-only">Lọc</span>
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
-                         <DropdownMenuLabel>Lọc theo GVHD</DropdownMenuLabel>
-                         <DropdownMenuSeparator />
-                         <DropdownMenuCheckboxItem
+                        <DropdownMenuLabel>Lọc theo GVHD</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
                             checked={supervisorFilter === 'all'}
                             onCheckedChange={() => setSupervisorFilter('all')}
                         >
@@ -274,6 +306,24 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 onCheckedChange={() => setSupervisorFilter(supervisor)}
                             >
                                 {supervisor}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuLabel>Lọc theo trạng thái</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                            checked={statusFilter === 'all'}
+                            onCheckedChange={() => setStatusFilter('all')}
+                        >
+                            Tất cả
+                        </DropdownMenuCheckboxItem>
+                        {Object.entries(registrationStatusLabel).map(([key, label]) => (
+                             <DropdownMenuCheckboxItem
+                                key={key}
+                                checked={statusFilter === key}
+                                onCheckedChange={() => setStatusFilter(key)}
+                            >
+                                {label}
                             </DropdownMenuCheckboxItem>
                         ))}
                     </DropdownMenuContent>
@@ -337,7 +387,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 <TableHead>Trạng thái SV</TableHead>
                 <TableHead>Tên đề tài</TableHead>
                 <TableHead>GVHD</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead>Trạng thái ĐK</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
@@ -355,18 +405,16 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     <TableCell className="font-medium">{reg.studentName}</TableCell>
                     <TableCell>{reg.studentId}</TableCell>
                     <TableCell>
-                        <Badge className={cn(statusColorClass[reg.status])}>
-                            {statusLabel[reg.status]}
+                        <Badge className={cn(studentStatusColorClass[reg.status])}>
+                            {studentStatusLabel[reg.status]}
                         </Badge>
                     </TableCell>
                     <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
                     <TableCell>
-                        {reg.isSpeciallyExempted ? (
-                            <Badge variant="secondary" className="border-primary text-primary">Đặc cách</Badge>
-                        ) : (
-                            <Badge variant="outline">Báo cáo</Badge>
-                        )}
+                       <Badge variant={registrationStatusVariant[reg.registrationStatus]}>
+                          {registrationStatusLabel[reg.registrationStatus]}
+                        </Badge>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -377,6 +425,20 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditClick(reg)}>Sửa</DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                           <DropdownMenuItem onClick={() => {
+                                setIsExemptionDialogOpen(true);
+                                setSelectedRowIds([reg.id]);
+                           }}>
+                                Xét đặc cách
+                           </DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => {
+                                setIsWithdrawDialogOpen(true);
+                                setSelectedRowIds([reg.id]);
+                           }}>
+                                Bỏ báo cáo
+                           </DropdownMenuItem>
+                          <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(reg.id)}>
                             Xóa
                           </DropdownMenuItem>
