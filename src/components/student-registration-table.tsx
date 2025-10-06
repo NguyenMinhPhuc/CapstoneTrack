@@ -34,14 +34,13 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
-import { ImportRegistrationsDialog } from './import-registrations-dialog';
 import { EditStudentRegistrationForm } from './edit-student-registration-form';
 import { Input } from './ui/input';
 import { AddStudentsByClassDialog } from './add-students-by-class-dialog';
@@ -53,6 +52,7 @@ import { EditGroupRegistrationForm } from './edit-group-registration-form';
 import { SpecialExemptionForm } from './special-exemption-form';
 import { WithdrawRegistrationForm } from './withdraw-registration-form';
 import { AssignSubcommitteeDialog } from './assign-subcommittee-dialog';
+import { AssignSubcommitteeManualDialog } from './assign-subcommittee-manual-dialog';
 
 
 interface StudentRegistrationTableProps {
@@ -94,13 +94,13 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isAddByClassDialogOpen, setIsAddByClassDialogOpen] = useState(false);
-  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
   const [isExemptionDialogOpen, setIsExemptionDialogOpen] = useState(false);
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [isAssignSubcommitteeDialogOpen, setIsAssignSubcommitteeDialogOpen] = useState(false);
+  const [isAssignManualDialogOpen, setIsAssignManualDialogOpen] = useState(false);
 
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
@@ -244,6 +244,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     setIsEditGroupDialogOpen(false);
     setIsExemptionDialogOpen(false);
     setIsWithdrawDialogOpen(false);
+    setIsAssignManualDialogOpen(false);
     setSelectedRowIds([]);
   };
 
@@ -278,6 +279,19 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
            <div className="flex flex-wrap items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
+                        <Dialog open={isAssignManualDialogOpen} onOpenChange={setIsAssignManualDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <GitMerge className="mr-2 h-4 w-4" />
+                                    Phân công thủ công ({selectedRowIds.length})
+                                </Button>
+                            </DialogTrigger>
+                            <AssignSubcommitteeManualDialog
+                                registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                                subCommittees={subCommittees || []}
+                                onFinished={handleGroupActionFinished}
+                             />
+                        </Dialog>
                         <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm">
@@ -549,5 +563,3 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     </>
   );
 }
-
-    
