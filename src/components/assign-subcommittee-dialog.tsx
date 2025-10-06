@@ -15,7 +15,7 @@ import { doc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, DefenseSubCommittee } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { GitMerge, Users, ListTree } from 'lucide-react';
+import { GitMerge, Users, ListTree, FolderGit2 } from 'lucide-react';
 import { Progress } from './ui/progress';
 
 interface AssignSubcommitteeDialogProps {
@@ -36,9 +36,24 @@ export function AssignSubcommitteeDialog({
   const [isAssigning, setIsAssigning] = useState(false);
   const [progress, setProgress] = useState(0);
 
-  const unassignedRegistrations = useMemo(() => {
-    return allRegistrations.filter(reg => !reg.subCommitteeId && reg.registrationStatus === 'reporting');
+  const projectGroups = useMemo(() => {
+    const unassigned = allRegistrations.filter(reg => !reg.subCommitteeId && reg.registrationStatus === 'reporting');
+    const groups = new Map<string, DefenseRegistration[]>();
+    
+    unassigned.forEach(reg => {
+      // Treat registrations with empty project titles as individual projects.
+      // Use registration ID to ensure uniqueness for each individual "project".
+      const projectKey = reg.projectTitle || `_individual_${reg.id}`;
+      
+      if (!groups.has(projectKey)) {
+        groups.set(projectKey, []);
+      }
+      groups.get(projectKey)!.push(reg);
+    });
+
+    return Array.from(groups.values());
   }, [allRegistrations]);
+
 
   const handleAssign = async () => {
     if (subCommittees.length === 0) {
@@ -49,7 +64,7 @@ export function AssignSubcommitteeDialog({
       });
       return;
     }
-    if (unassignedRegistrations.length === 0) {
+    if (projectGroups.length === 0) {
         toast({
             variant: 'destructive',
             title: 'Không có sinh viên nào',
@@ -62,13 +77,16 @@ export function AssignSubcommitteeDialog({
 
     const batch = writeBatch(firestore);
     
-    // Simple round-robin assignment
-    unassignedRegistrations.forEach((registration, index) => {
+    // Distribute project groups (not individual students) in a round-robin fashion
+    projectGroups.forEach((projectGroup, index) => {
       const subCommitteeIndex = index % subCommittees.length;
       const subCommitteeId = subCommittees[subCommitteeIndex].id;
       
-      const registrationRef = doc(firestore, 'defenseRegistrations', registration.id);
-      batch.update(registrationRef, { subCommitteeId: subCommitteeId });
+      // Assign all students in the project group to the same subcommittee
+      projectGroup.forEach(registration => {
+        const registrationRef = doc(firestore, 'defenseRegistrations', registration.id);
+        batch.update(registrationRef, { subCommitteeId: subCommitteeId });
+      });
     });
 
     try {
@@ -76,7 +94,7 @@ export function AssignSubcommitteeDialog({
        setProgress(100);
       toast({
         title: 'Thành công',
-        description: `Đã phân công ${unassignedRegistrations.length} sinh viên vào ${subCommittees.length} tiểu ban.`,
+        description: `Đã phân công ${projectGroups.length} đề tài vào ${subCommittees.length} tiểu ban.`,
       });
       onFinished();
     } catch (error) {
@@ -102,7 +120,7 @@ export function AssignSubcommitteeDialog({
       <DialogHeader>
         <DialogTitle>Phân công Tiểu ban Tự động</DialogTitle>
         <DialogDescription>
-          Hệ thống sẽ tự động chia đều các sinh viên chưa được phân công vào các tiểu ban hiện có.
+          Hệ thống sẽ tự động chia đều các đề tài chưa được phân công vào các tiểu ban hiện có. Các sinh viên cùng đề tài sẽ được xếp vào cùng một tiểu ban.
         </DialogDescription>
       </DialogHeader>
 
@@ -110,10 +128,10 @@ export function AssignSubcommitteeDialog({
         {subCommittees.length > 0 ? (
             <div className="grid gap-4">
                 <div className="flex items-center gap-4 p-4 rounded-lg border">
-                    <Users className="h-6 w-6 text-muted-foreground" />
+                    <FolderGit2 className="h-6 w-6 text-muted-foreground" />
                     <div>
-                        <p className="font-semibold">{unassignedRegistrations.length}</p>
-                        <p className="text-sm text-muted-foreground">Sinh viên chưa phân công</p>
+                        <p className="font-semibold">{projectGroups.length}</p>
+                        <p className="text-sm text-muted-foreground">Đề tài chưa phân công</p>
                     </div>
                 </div>
                  <div className="flex items-center gap-4 p-4 rounded-lg border">
@@ -140,12 +158,10 @@ export function AssignSubcommitteeDialog({
         <Button variant="outline" onClick={onFinished} disabled={isAssigning}>
           Đóng
         </Button>
-        <Button onClick={handleAssign} disabled={isAssigning || subCommittees.length === 0 || unassignedRegistrations.length === 0}>
+        <Button onClick={handleAssign} disabled={isAssigning || subCommittees.length === 0 || projectGroups.length === 0}>
           {isAssigning ? 'Đang phân công...' : 'Bắt đầu phân công'}
         </Button>
       </DialogFooter>
     </DialogContent>
   );
 }
-
-    
