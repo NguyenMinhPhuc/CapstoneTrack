@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
@@ -42,6 +42,7 @@ import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
 import { ImportRegistrationsDialog } from './import-registrations-dialog';
 import { EditStudentRegistrationForm } from './edit-student-registration-form';
+import { Input } from './ui/input';
 
 interface StudentRegistrationTableProps {
   sessionId: string;
@@ -54,6 +55,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const registrationsCollectionRef = useMemoFirebase(
     () => collection(firestore, `graduationDefenseSessions/${sessionId}/registrations`),
@@ -61,6 +63,16 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   );
 
   const { data: registrations, isLoading } = useCollection<DefenseRegistration>(registrationsCollectionRef);
+
+  const filteredRegistrations = useMemo(() => {
+    if (!registrations) return [];
+    return registrations.filter(reg => {
+      const term = searchTerm.toLowerCase();
+      const nameMatch = reg.studentName.toLowerCase().includes(term);
+      const idMatch = reg.studentId.toLowerCase().includes(term);
+      return nameMatch || idMatch;
+    });
+  }, [registrations, searchTerm]);
 
   const handleEditClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
@@ -118,36 +130,48 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
               Quản lý danh sách sinh viên tham gia đợt báo cáo này.
             </CardDescription>
           </div>
-          <div className="flex w-full sm:w-auto gap-2">
-              <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline" className="w-full">
-                        <Upload className="mr-2 h-4 w-4" />
-                        Nhập từ Excel
-                    </Button>
-                </DialogTrigger>
-                <ImportRegistrationsDialog sessionId={sessionId} onFinished={() => setIsImportDialogOpen(false)} />
-            </Dialog>
-              <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                  <Button className="w-full">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Thêm Sinh viên
-                  </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                  <DialogTitle>Thêm sinh viên vào đợt</DialogTitle>
-                  <DialogDescription>
-                      Chọn sinh viên và điền thông tin đề tài (nếu có).
-                  </DialogDescription>
-                  </DialogHeader>
-                  <AddStudentRegistrationForm
-                  sessionId={sessionId}
-                  onFinished={() => setIsAddDialogOpen(false)}
-                  />
-              </DialogContent>
-              </Dialog>
+          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Tìm theo tên hoặc MSSV..."
+                    className="pl-8 w-full sm:w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="flex w-full sm:w-auto gap-2">
+                  <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                            <Upload className="mr-2 h-4 w-4" />
+                            Nhập từ Excel
+                        </Button>
+                    </DialogTrigger>
+                    <ImportRegistrationsDialog sessionId={sessionId} onFinished={() => setIsImportDialogOpen(false)} />
+                </Dialog>
+                  <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                      <Button className="w-full">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Thêm Sinh viên
+                      </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-md">
+                      <DialogHeader>
+                      <DialogTitle>Thêm sinh viên vào đợt</DialogTitle>
+                      <DialogDescription>
+                          Chọn sinh viên và điền thông tin đề tài (nếu có).
+                      </DialogDescription>
+                      </DialogHeader>
+                      <AddStudentRegistrationForm
+                      sessionId={sessionId}
+                      onFinished={() => setIsAddDialogOpen(false)}
+                      />
+                  </DialogContent>
+                  </Dialog>
+              </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -156,6 +180,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
               <TableRow>
                 <TableHead>STT</TableHead>
                 <TableHead>Tên sinh viên</TableHead>
+                <TableHead>MSSV</TableHead>
                 <TableHead>Tên đề tài</TableHead>
                 <TableHead>GVHD</TableHead>
                 <TableHead>Ngày đăng ký</TableHead>
@@ -163,11 +188,12 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
               </TableRow>
             </TableHeader>
             <TableBody>
-              {registrations && registrations.length > 0 ? (
-                registrations.map((reg, index) => (
+              {filteredRegistrations && filteredRegistrations.length > 0 ? (
+                filteredRegistrations.map((reg, index) => (
                   <TableRow key={reg.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{reg.studentName}</TableCell>
+                    <TableCell>{reg.studentId}</TableCell>
                     <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
                     <TableCell>
@@ -192,7 +218,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center">
+                  <TableCell colSpan={7} className="text-center">
                     Chưa có sinh viên nào được thêm vào đợt này.
                   </TableCell>
                 </TableRow>
