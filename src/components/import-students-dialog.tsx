@@ -44,6 +44,36 @@ const getSecondaryApp = () => {
     return existingApp || initializeApp(firebaseConfig, secondaryAppName);
 };
 
+const mapStatus = (status: string): 'studying' | 'reserved' | 'dropped_out' => {
+    const lowerStatus = status?.toLowerCase();
+    if (lowerStatus?.includes('đang học')) return 'studying';
+    if (lowerStatus?.includes('bảo lưu')) return 'reserved';
+    if (lowerStatus?.includes('thôi học') || lowerStatus?.includes('đã nghỉ')) return 'dropped_out';
+    return 'studying'; // Default status
+}
+
+const getYearFromDate = (date: any): number | null => {
+    if (!date) return null;
+    if (date instanceof Date) {
+        return date.getFullYear();
+    }
+    if (typeof date === 'string' || typeof date === 'number') {
+        const parsedDate = new Date(date);
+        if (!isNaN(parsedDate.getTime())) {
+            return parsedDate.getFullYear();
+        }
+    }
+    // Handle Excel's numeric date format
+    if (typeof date === 'number' && date > 1) {
+        const excelEpoch = new Date(1899, 11, 30);
+        const jsDate = new Date(excelEpoch.getTime() + date * 86400000);
+        if (!isNaN(jsDate.getTime())) {
+            return jsDate.getFullYear();
+        }
+    }
+    return null;
+}
+
 export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) {
     const [data, setData] = useState<StudentData[]>([]);
     const [headers, setHeaders] = useState<string[]>([]);
@@ -62,7 +92,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
         const reader = new FileReader();
         reader.onload = (event) => {
             try {
-                const workbook = XLSX.read(event.target?.result, { type: 'binary' });
+                const workbook = XLSX.read(event.target?.result, { type: 'binary', cellDates: true });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
                 const jsonData: StudentData[] = XLSX.utils.sheet_to_json(sheet);
@@ -98,7 +128,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
             const row = data[i];
             const batch = writeBatch(firestore);
             
-            const studentIdValue = row['StudentID'] || row['Mã SV'];
+            const studentIdValue = row['Mã SV'];
             const email = row['Email'] || (studentIdValue ? `${studentIdValue}@lhu.edu.vn` : undefined);
             const password = String(row['Password'] || '123456');
             
@@ -132,9 +162,10 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                     studentId: String(studentIdValue),
                     firstName: row['HoSV'] || '',
                     lastName: row['TenSV'] || '',
-                    major: row['Major'] || row['Chuyên ngành'] || '',
-                    enrollmentYear: row['EnrollmentYear'] || row['Năm nhập học'] || null,
-                    className: row['Lop'] || row['Class'] || '',
+                    major: row['Ngành'] || '',
+                    enrollmentYear: getYearFromDate(row['Ngày nhập học']) || null,
+                    className: row['Lop'] || '',
+                    status: mapStatus(row['Tình trạng']),
                     createdAt: serverTimestamp(),
                 };
                 batch.set(studentDocRef, studentData);
@@ -177,7 +208,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
             <DialogHeader className="p-6 pb-0">
                 <DialogTitle>Nhập sinh viên từ Excel</DialogTitle>
                 <DialogDescription>
-                    Tải lên tệp Excel để tạo hàng loạt tài khoản và hồ sơ sinh viên. Các cột bắt buộc: 'StudentID' (hoặc 'Mã SV'), 'HoSV', 'TenSV'. Cột 'Email' là tùy chọn (sẽ tự tạo nếu trống).
+                    Tải lên tệp Excel để tạo hàng loạt tài khoản và hồ sơ sinh viên. Các cột được khuyến nghị: 'Mã SV', 'HoSV', 'TenSV', 'Lop', 'Ngành', 'Ngày nhập học', 'Tình trạng', 'Email'.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 px-6 space-y-4 overflow-y-auto">
@@ -210,7 +241,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                                     {data.slice(0, 10).map((row, index) => ( // Preview first 10 rows
                                         <TableRow key={index}>
                                             {headers.map((header) => (
-                                                <TableCell key={header}>{String(row[header])}</TableCell>
+                                                <TableCell key={header}>{String(row[header] instanceof Date ? row[header].toLocaleDateString() : row[header] ?? '')}</TableCell>
                                             ))}
                                         </TableRow>
                                     ))}
@@ -243,3 +274,4 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
         </DialogContent>
     );
 }
+
