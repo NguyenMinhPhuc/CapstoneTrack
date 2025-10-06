@@ -351,6 +351,7 @@ export function StudentManagementTable() {
                     onCheckedChange={handleSelectAll}
                 />
               </TableHead>
+              <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>Họ và Tên</TableHead>
               <TableHead>MSSV</TableHead>
               <TableHead>Lớp</TableHead>
@@ -361,7 +362,7 @@ export function StudentManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents?.map((student) => (
+            {filteredStudents?.map((student, index) => (
               <TableRow key={student.id} data-state={selectedRowIds.includes(student.id) && "selected"}>
                 <TableCell>
                      <Checkbox
@@ -369,6 +370,7 @@ export function StudentManagementTable() {
                         onCheckedChange={(checked) => handleRowSelect(student.id, !!checked)}
                      />
                 </TableCell>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
