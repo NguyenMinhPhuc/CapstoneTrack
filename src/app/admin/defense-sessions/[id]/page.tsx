@@ -16,6 +16,7 @@ import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { WithdrawnStudentsDialog } from '@/components/withdrawn-students-dialog';
+import { ExemptedStudentsDialog } from '@/components/exempted-students-dialog';
 
 
 export default function DefenseSessionDetailPage() {
@@ -24,6 +25,7 @@ export default function DefenseSessionDetailPage() {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const [isWithdrawnDialogOpen, setIsWithdrawnDialogOpen] = useState(false);
+  const [isExemptedDialogOpen, setIsExemptedDialogOpen] = useState(false);
   
   const sessionId = params.id as string;
 
@@ -81,6 +83,7 @@ export default function DefenseSessionDetailPage() {
           withdrawnCount: 0,
           supervisorDetails: [],
           withdrawnStudents: [],
+          exemptedStudents: [],
        };
     }
     const studentCount = combinedRegistrationData.length;
@@ -88,6 +91,7 @@ export default function DefenseSessionDetailPage() {
     const exemptedCount = combinedRegistrationData.filter(r => r.registrationStatus === 'exempted').length;
     const withdrawnCount = combinedRegistrationData.filter(r => r.registrationStatus === 'withdrawn').length;
     const withdrawnStudents = combinedRegistrationData.filter(r => r.registrationStatus === 'withdrawn');
+    const exemptedStudents = combinedRegistrationData.filter(r => r.registrationStatus === 'exempted');
 
     const supervisorMap = new Map<string, { projects: Set<string>, studentCount: number }>();
     combinedRegistrationData.forEach(reg => {
@@ -121,6 +125,7 @@ export default function DefenseSessionDetailPage() {
       withdrawnCount,
       supervisorDetails,
       withdrawnStudents,
+      exemptedStudents,
     };
   }, [combinedRegistrationData]);
 
@@ -242,13 +247,21 @@ export default function DefenseSessionDetailPage() {
                         </div>
                         <span className="font-semibold">{stats.reportingCount}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Star className="h-4 w-4 text-yellow-500" />
-                            <span>Đặc cách</span>
-                        </div>
-                        <span className="font-semibold">{stats.exemptedCount}</span>
-                    </div>
+                    <Dialog open={isExemptedDialogOpen} onOpenChange={setIsExemptedDialogOpen}>
+                        <DialogTrigger asChild>
+                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                <div className="flex items-center gap-2">
+                                    <Star className="h-4 w-4 text-yellow-500" />
+                                    <span>Đặc cách</span>
+                                </div>
+                                <span className="font-semibold">{stats.exemptedCount}</span>
+                            </div>
+                        </DialogTrigger>
+                        <ExemptedStudentsDialog
+                            students={stats.exemptedStudents}
+                            onFinished={() => setIsExemptedDialogOpen(false)}
+                        />
+                    </Dialog>
                     <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
                         <DialogTrigger asChild>
                             <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
