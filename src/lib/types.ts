@@ -39,11 +39,14 @@ export type GraduationDefenseSession = {
 
 export type Student = {
     id: string; // This is the Firebase Auth UID
+    userId: string; // This is also the Firebase Auth UID, for relation
     studentId: string; // This is the official Student ID (e.g., 122001306)
     firstName: string;
     lastName: string;
     email: string;
-    // Add other student-specific fields as needed
+    major?: string;
+    enrollmentYear?: number;
+    createdAt: any;
 }
 
 export type DefenseRegistration = {

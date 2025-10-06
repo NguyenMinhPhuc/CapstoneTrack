@@ -43,11 +43,9 @@ export function AppSidebar() {
     { href: "/", label: "Dashboard", icon: LayoutDashboard },
     { type: "separator", label: "Internship" },
     { href: "/internship/applications", label: "Applications", icon: Briefcase },
-    { href: "/internship/students", label: "Students", icon: Users },
     { href: "/internship/reports", label: "Reports", icon: BarChart3 },
     { type: "separator", label: "Graduation" },
     { href: "/graduation/projects", label: "Projects", icon: FileText },
-    { href: "/graduation/students", label: "Students", icon: Users },
     { href: "/graduation/reports", label: "Reports", icon: BarChart3 },
     { type: "separator" },
     { href: "/settings", label: "Settings", icon: Settings },
@@ -56,12 +54,13 @@ export function AppSidebar() {
   const adminMenuItems = [
     { type: "separator", label: "Admin" },
     { href: "/admin/users", label: "User Management", icon: Shield },
+    { href: "/admin/students", label: "Student Management", icon: Users },
     { href: "/admin/defense-sessions", label: "Defense Sessions", icon: Calendar },
   ];
   
   const allItems = [...menuItems];
   if (userData?.role === 'admin') {
-    allItems.splice(9, 0, ...adminMenuItems);
+    allItems.splice(7, 0, ...adminMenuItems);
   }
 
   const isLoading = isUserLoading || isUserDataLoading;
