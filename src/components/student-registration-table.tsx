@@ -34,7 +34,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
@@ -45,6 +45,7 @@ import { AddStudentRegistrationForm } from './add-student-registration-form';
 import { ImportRegistrationsDialog } from './import-registrations-dialog';
 import { EditStudentRegistrationForm } from './edit-student-registration-form';
 import { Input } from './ui/input';
+import { AddStudentsByClassDialog } from './add-students-by-class-dialog';
 
 interface StudentRegistrationTableProps {
   sessionId: string;
@@ -54,6 +55,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isAddByClassDialogOpen, setIsAddByClassDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
@@ -193,6 +195,15 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                         </Button>
                     </DialogTrigger>
                     <ImportRegistrationsDialog sessionId={sessionId} onFinished={() => setIsImportDialogOpen(false)} />
+                </Dialog>
+                <Dialog open={isAddByClassDialogOpen} onOpenChange={setIsAddByClassDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                            <Users className="mr-2 h-4 w-4" />
+                            Thêm theo lớp
+                        </Button>
+                    </DialogTrigger>
+                    <AddStudentsByClassDialog sessionId={sessionId} existingRegistrations={registrations || []} onFinished={() => setIsAddByClassDialogOpen(false)} />
                 </Dialog>
                   <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
