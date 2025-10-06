@@ -95,6 +95,7 @@ export type DefenseSessionRegistration = {
 // Combined type for the student registration table
 export type StudentWithRegistrationDetails = DefenseRegistration & {
   status: Student['status'];
+  className?: string; // Add className
 };
 
 export type DefenseCouncilMember = {

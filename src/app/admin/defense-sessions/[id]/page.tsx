@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase, useCollection } from '@/firebase';
 import { collection, doc, query, where, getDocs } from 'firebase/firestore';
@@ -15,12 +14,16 @@ import { StudentRegistrationTable } from '@/components/student-registration-tabl
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Dialog, DialogTrigger } from '@/components/ui/dialog';
+import { WithdrawnStudentsDialog } from '@/components/withdrawn-students-dialog';
+
 
 export default function DefenseSessionDetailPage() {
   const router = useRouter();
   const params = useParams();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const [isWithdrawnDialogOpen, setIsWithdrawnDialogOpen] = useState(false);
   
   const sessionId = params.id as string;
 
@@ -62,12 +65,13 @@ export default function DefenseSessionDetailPage() {
       return {
         ...reg,
         status: studentData?.status || 'studying', // Default to 'studying' if not found
+        className: studentData?.className || '', // Add className
       };
     });
   }, [registrations, allStudents]);
 
   const stats = useMemo(() => {
-    if (!registrations) {
+    if (!combinedRegistrationData) {
       return { 
           studentCount: 0, 
           supervisorCount: 0, 
@@ -76,15 +80,17 @@ export default function DefenseSessionDetailPage() {
           exemptedCount: 0,
           withdrawnCount: 0,
           supervisorDetails: [],
+          withdrawnStudents: [],
        };
     }
-    const studentCount = registrations.length;
-    const reportingCount = registrations.filter(r => r.registrationStatus === 'reporting').length;
-    const exemptedCount = registrations.filter(r => r.registrationStatus === 'exempted').length;
-    const withdrawnCount = registrations.filter(r => r.registrationStatus === 'withdrawn').length;
+    const studentCount = combinedRegistrationData.length;
+    const reportingCount = combinedRegistrationData.filter(r => r.registrationStatus === 'reporting').length;
+    const exemptedCount = combinedRegistrationData.filter(r => r.registrationStatus === 'exempted').length;
+    const withdrawnCount = combinedRegistrationData.filter(r => r.registrationStatus === 'withdrawn').length;
+    const withdrawnStudents = combinedRegistrationData.filter(r => r.registrationStatus === 'withdrawn');
 
     const supervisorMap = new Map<string, { projects: Set<string>, studentCount: number }>();
-    registrations.forEach(reg => {
+    combinedRegistrationData.forEach(reg => {
         if (reg.supervisorName) {
             if (!supervisorMap.has(reg.supervisorName)) {
                 supervisorMap.set(reg.supervisorName, { projects: new Set(), studentCount: 0 });
@@ -103,7 +109,7 @@ export default function DefenseSessionDetailPage() {
         studentCount: data.studentCount,
     }));
     
-    const projectCount = new Set(registrations.filter(r => r.projectTitle).map(r => r.projectTitle)).size;
+    const projectCount = new Set(combinedRegistrationData.filter(r => r.projectTitle).map(r => r.projectTitle)).size;
 
 
     return {
@@ -114,8 +120,9 @@ export default function DefenseSessionDetailPage() {
       exemptedCount,
       withdrawnCount,
       supervisorDetails,
+      withdrawnStudents,
     };
-  }, [registrations]);
+  }, [combinedRegistrationData]);
 
 
   useEffect(() => {
@@ -242,13 +249,21 @@ export default function DefenseSessionDetailPage() {
                         </div>
                         <span className="font-semibold">{stats.exemptedCount}</span>
                     </div>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <XCircle className="h-4 w-4 text-red-500" />
-                            <span>Bỏ báo cáo</span>
-                        </div>
-                        <span className="font-semibold">{stats.withdrawnCount}</span>
-                    </div>
+                    <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
+                        <DialogTrigger asChild>
+                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                <div className="flex items-center gap-2">
+                                    <XCircle className="h-4 w-4 text-red-500" />
+                                    <span>Bỏ báo cáo</span>
+                                </div>
+                                <span className="font-semibold">{stats.withdrawnCount}</span>
+                            </div>
+                        </DialogTrigger>
+                        <WithdrawnStudentsDialog
+                            students={stats.withdrawnStudents}
+                            onFinished={() => setIsWithdrawnDialogOpen(false)}
+                        />
+                    </Dialog>
                 </div>
             </CardContent>
           </Card>
