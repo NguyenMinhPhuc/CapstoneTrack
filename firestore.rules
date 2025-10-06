@@ -3,139 +3,122 @@ service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the user is signed in.
-     * @returns {boolean} True if the user is signed in, false otherwise.
-     */
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    /**
-     * @description Checks if the user is the owner of the document.
-     * @param {string} userId - The user ID to compare against the request's auth UID.
-     * @returns {boolean} True if the user is the owner, false otherwise.
-     */
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    /**
-     * @description Checks if the user is an existing owner of the document.
-     * @param {string} userId - The user ID to compare against the request's auth UID.
-     * @param {string} resourceData - The resource.data to check against.
-     * @returns {boolean} True if the user is the owner and the resource exists, false otherwise.
-     */
-    function isExistingOwner(userId) {
-        return isOwner(userId) && exists(resource);
-    }
-
-    /**
-     * @description Checks if the user has the admin role.
-     * @returns {boolean} True if the user has the admin role, false otherwise.
-     */
-    function isAdmin() {
-      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-    }
-
-    /**
-     * @description Checks if the user has the supervisor role.
-     * @returns {boolean} True if the user has the supervisor role, false otherwise.
-     */
-    function isSupervisor() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
-    }
-
-    /**
-     * @description Checks if the user has the student role.
-     * @returns {boolean} True if the user has the student role, false otherwise.
-     */
-    function isStudent() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'student';
-    }
-
-    /**
-     * @description Rules for user accounts.
+     * @description Restricts access to user account information to the owning user and admins.
      * @path /users/{userId}
-     * @allow (create) User with ID 'user123' can create their own account.
-     * @allow (get) Admin can get any user account.
-     * @deny (create) User with ID 'user123' cannot create an account with ID 'user456'.
-     * @deny (update) Non-owner cannot update user account.
-     * @principle Enforces document ownership for writes, admin access for reads.
+     * @allow (get, create, update, delete) if the user is the owner or an admin.
+     * @deny (get, create, update, delete) if the user is not the owner or an admin.
+     * @principle Enforces user-level data isolation and admin override.
      */
     match /users/{userId} {
-      allow get: if isOwner(userId) || isAdmin();
+      function isOwner(userId) {
+        return request.auth.uid == userId;
+      }
+
+      function isAdmin() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
       allow list: if false;
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      allow update: if isExistingOwner(userId);
-      allow delete: if isExistingOwner(userId);
+      allow create: if isSignedIn() && isOwner(userId);
+      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow delete: if isSignedIn() && (isOwner(userId) || isAdmin());
     }
 
     /**
-     * @description Rules for students.
+     * @description Allows public read access to student profiles, but restricts writes to the owner.
      * @path /students/{studentId}
-     * @allow (create) Admin can create a student.
-     * @allow (get) Admin can get any student.
-     * @deny (create) Non-admin cannot create a student.
-     * @deny (update) Non-admin cannot update a student.
-     * @principle Restricts access to student data based on ownership and admin role.
+     * @allow (get, list) everyone.
+     * @allow (create, update, delete) if the user is the owner.
+     * @deny (create, update, delete) if the user is not the owner.
+     * @principle Public read access with owner-only writes.
      */
     match /students/{studentId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isOwner(studentId) {
+        return request.auth.uid == resource.data.ownerId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
     }
 
     /**
-     * @description Rules for supervisors.
+     * @description Allows public read access to supervisor profiles, but restricts writes to the owner.
      * @path /supervisors/{supervisorId}
-     * @allow (create) Admin can create a supervisor.
-     * @allow (get) Admin can get any supervisor.
-     * @deny (create) Non-admin cannot create a supervisor.
-     * @deny (update) Non-admin cannot update a supervisor.
-     * @principle Restricts access to supervisor data based on ownership and admin role.
+     * @allow (get, list) everyone.
+     * @allow (create, update, delete) if the user is the owner.
+     * @deny (create, update, delete) if the user is not the owner.
+     * @principle Public read access with owner-only writes.
      */
     match /supervisors/{supervisorId} {
-      allow get: if isAdmin();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isOwner(supervisorId) {
+        return request.auth.uid == resource.data.ownerId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
     }
 
     /**
-     * @description Rules for graduation defense sessions.
+     * @description Allows public read access to graduation defense session information, but restricts writes to the owner.
      * @path /graduationDefenseSessions/{sessionId}
-     * @allow (get) Any authenticated user can read session information.
-     * @allow (create) Admin can create a session.
-     * @deny (create) Non-admin cannot create a session.
-     * @deny (update) Non-admin cannot update a session.
-     * @principle Allows public read access but restricts write access to admins.
+     * @allow (get, list) everyone.
+     * @allow (create, update, delete) if the user is the owner.
+     * @deny (create, update, delete) if the user is not the owner.
+     * @principle Public read access with owner-only writes.
      */
     match /graduationDefenseSessions/{sessionId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isOwner(sessionId) {
+        return request.auth.uid == resource.data.ownerId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
     }
 
     /**
-     * @description Rules for defense registrations within a session.
+     * @description Allows public read access to defense registration information, but restricts writes to the owner.
      * @path /graduationDefenseSessions/{sessionId}/registrations/{registrationId}
-     * @allow (create) Student can create a registration.
-     * @allow (get) Any authenticated user can read registration information.
-     * @deny (create) Non-student cannot create a registration.
-     * @deny (update) Non-admin cannot update a registration.
-     * @principle Restricts registration creation to students, allows public read access, and restricts modification to admins.
+     * @allow (get, list) everyone.
+     * @allow (create, update, delete) if the user is the owner.
+     * @deny (create, update, delete) if the user is not the owner.
+     * @principle Public read access with owner-only writes.
      */
     match /graduationDefenseSessions/{sessionId}/registrations/{registrationId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isStudent();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      function isOwner(registrationId) {
+        return request.auth.uid == resource.data.ownerId;
+      }
+
+      function isSignedIn() {
+        return request.auth != null;
+      }
+
+      allow get, list: if true;
+      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
+      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
     }
   }
 }
