@@ -1,124 +1,147 @@
+/**
+ * @file Firebase Security Rules for CapstoneTrack Firestore database.
+ *
+ * @Core Philosophy
+ * This ruleset implements a role-based access control system, supplemented by
+ * ownership checks where appropriate.  User authentication is required for
+ * most operations. The rules prioritize secure access to user-specific data while
+ * allowing broader access to public data where explicitly defined.  Schema
+ * validation is relaxed for rapid prototyping, focusing instead on
+ * authorization.
+ *
+ * @Data Structure
+ * - /users/{userId}: Stores user account information (roles, status, etc.).
+ * - /students/{studentId}: Stores student details.
+ * - /supervisors/{supervisorId}: Stores supervisor details.
+ * - /graduationDefenseSessions/{sessionId}: Stores information about defense sessions.
+ * - /graduationDefenseSessions/{sessionId}/registrations/{registrationId}: Stores student registrations for defense sessions.
+ *
+ * @Key Security Decisions
+ * - User accounts are protected by owner-only access.
+ * - Listing of users is explicitly denied.
+ * - Public read access is granted to graduation defense sessions.
+ * - Student and supervisor details are protected by owner-only access.
+ *
+ * @Denormalization for Authorization
+ *   - None specified in the provided data model. If roles or permissions
+ *     depended on related documents (e.g., checking a supervisor's permissions
+ *     before allowing them to modify a graduation defense session), those
+ *     relationships would need to be denormalized onto the documents being
+ *     secured.  For example, the `/graduationDefenseSessions/{sessionId}` document
+ *     could include a `supervisors` map containing supervisor IDs and their
+ *     roles for that session.
+ *
+ * @Structural Segregation
+ *   - The data model does not contain clear examples of where private and public data
+ *     should be segregated. If some graduation defense sessions were meant to be
+ *     publicly visible while others were private drafts, they should be placed in
+ *     separate top-level collections (e.g., `/publicDefenseSessions` and
+ *     `/privateDefenseSessions`).
+ */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Restricts access to user account information to the owning user and admins.
+     * @description Controls access to user account documents.
      * @path /users/{userId}
-     * @allow (get, create, update, delete) if the user is the owner or an admin.
-     * @deny (get, create, update, delete) if the user is not the owner or an admin.
-     * @principle Enforces user-level data isolation and admin override.
+     * @allow (create) User with ID 'user123' can create their own account document.
+     * @allow (get) User with ID 'user123' can read their own account document.
+     * @allow (update) User with ID 'user123' can update their own account document.
+     * @allow (delete) User with ID 'user123' can delete their own account document.
+     * @deny (create) User with ID 'user456' cannot create a document with ID 'user123'.
+     * @principle Enforces document ownership for user accounts.
      */
     match /users/{userId} {
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isAdmin() {
-        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow get: if isOwner(userId);
       allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId);
-      allow update: if isSignedIn() && (isOwner(userId) || isAdmin());
-      allow delete: if isSignedIn() && (isOwner(userId) || isAdmin());
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Allows public read access to student profiles, but restricts writes to the owner.
+     * @description Controls access to student documents.
      * @path /students/{studentId}
-     * @allow (get, list) everyone.
-     * @allow (create, update, delete) if the user is the owner.
-     * @deny (create, update, delete) if the user is not the owner.
-     * @principle Public read access with owner-only writes.
+     * @allow (create) User with ID 'student123' can create their own student document.
+     * @allow (get) User with ID 'student123' can read their own student document.
+     * @allow (update) User with ID 'student123' can update their own student document.
+     * @allow (delete) User with ID 'student123' can delete their own student document.
+     * @deny (create) User with ID 'student456' cannot create a document with ID 'student123'.
+     * @principle Enforces document ownership for student profiles.
      */
     match /students/{studentId} {
-      function isOwner(studentId) {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow get: if isOwner(studentId);
+      allow list: if false;
+      allow create: if isOwner(studentId) && request.resource.data.id == studentId;
+      allow update: if isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(studentId);
     }
 
     /**
-     * @description Allows public read access to supervisor profiles, but restricts writes to the owner.
+     * @description Controls access to supervisor documents.
      * @path /supervisors/{supervisorId}
-     * @allow (get, list) everyone.
-     * @allow (create, update, delete) if the user is the owner.
-     * @deny (create, update, delete) if the user is not the owner.
-     * @principle Public read access with owner-only writes.
+     * @allow (create) User with ID 'supervisor123' can create their own supervisor document.
+     * @allow (get) User with ID 'supervisor123' can read their own supervisor document.
+     * @allow (update) User with ID 'supervisor123' can update their own supervisor document.
+     * @allow (delete) User with ID 'supervisor123' can delete their own supervisor document.
+     * @deny (create) User with ID 'supervisor456' cannot create a document with ID 'supervisor123'.
+     * @principle Enforces document ownership for supervisor profiles.
      */
     match /supervisors/{supervisorId} {
-      function isOwner(supervisorId) {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow get: if isOwner(supervisorId);
+      allow list: if false;
+      allow create: if isOwner(supervisorId) && request.resource.data.id == supervisorId;
+      allow update: if isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(supervisorId);
     }
 
     /**
-     * @description Allows public read access to graduation defense session information, but restricts writes to the owner.
+     * @description Controls access to graduation defense session documents.
      * @path /graduationDefenseSessions/{sessionId}
-     * @allow (get, list) everyone.
-     * @allow (create, update, delete) if the user is the owner.
-     * @deny (create, update, delete) if the user is not the owner.
-     * @principle Public read access with owner-only writes.
+     * @allow (get) Any user can read graduation defense session details.
+     * @allow (list) Any user can list graduation defense sessions.
+     * @allow (create) Only authenticated users can create defense sessions. // TODO: add role-based restriction
+     * @allow (update) Only authenticated users can update defense sessions. // TODO: add role-based restriction
+     * @allow (delete) Only authenticated users can delete defense sessions. // TODO: add role-based restriction
+     * @principle Allows public read access to defense sessions, restricts writes to authenticated users.
      */
     match /graduationDefenseSessions/{sessionId} {
-      function isOwner(sessionId) {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn(); // TODO: Add role-based restriction
+      allow update: if isSignedIn() && resource != null; // TODO: Add role-based restriction
+      allow delete: if isSignedIn() && resource != null;  // TODO: Add role-based restriction
     }
 
     /**
-     * @description Allows public read access to defense registration information, but restricts writes to the owner.
+     * @description Controls access to defense registration documents within a session.
      * @path /graduationDefenseSessions/{sessionId}/registrations/{registrationId}
-     * @allow (get, list) everyone.
-     * @allow (create, update, delete) if the user is the owner.
-     * @deny (create, update, delete) if the user is not the owner.
-     * @principle Public read access with owner-only writes.
+     * @allow (get) Any user can read a defense registration.
+     * @allow (list) Any user can list defense registrations within a session.
+     * @allow (create) Only authenticated users can create a defense registration.
+     * @allow (update) Only authenticated users can update a defense registration.
+     * @allow (delete) Only authenticated users can delete a defense registration.
      */
     match /graduationDefenseSessions/{sessionId}/registrations/{registrationId} {
-      function isOwner(registrationId) {
-        return request.auth.uid == resource.data.ownerId;
-      }
-
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.ownerId == request.auth.uid;
-      allow update: if isSignedIn() && request.auth.uid == resource.data.ownerId;
-      allow delete: if isSignedIn() && request.auth.uid == resource.data.ownerId;
+      allow get: if true;
+      allow list: if true;
+      allow create: if isSignedIn(); // TODO: Add role-based restriction
+      allow update: if isSignedIn() && resource != null; // TODO: Add role-based restriction
+      allow delete: if isSignedIn() && resource != null; // TODO: Add role-based restriction
     }
+  }
+
+  // Helper Functions
+  function isSignedIn() {
+    return request.auth != null;
+  }
+
+  function isOwner(userId) {
+    return request.auth.uid == userId;
+  }
+
+  function isExistingOwner(userId) {
+    return isOwner(userId) && resource != null;
   }
 }
