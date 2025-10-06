@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -33,7 +34,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload, Search, ListFilter, Users, Move, Edit, Star } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student } from '@/lib/types';
@@ -50,6 +51,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { MoveRegistrationsDialog } from './move-registrations-dialog';
 import { EditGroupRegistrationForm } from './edit-group-registration-form';
+import { SpecialExemptionForm } from './special-exemption-form';
 
 
 interface StudentRegistrationTableProps {
@@ -82,6 +84,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
   const [isEditGroupDialogOpen, setIsEditGroupDialogOpen] = useState(false);
+  const [isExemptionDialogOpen, setIsExemptionDialogOpen] = useState(false);
+
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -160,6 +164,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const handleGroupActionFinished = () => {
     setIsMoveDialogOpen(false);
     setIsEditGroupDialogOpen(false);
+    setIsExemptionDialogOpen(false);
     setSelectedRowIds([]);
   };
 
@@ -191,21 +196,21 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     <>
       <Card>
         <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-           <div className="flex items-center gap-2">
+           <div className="flex flex-wrap items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
                         <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
-                        <DialogTrigger asChild>
-                            <Button variant="outline" size="sm">
-                                <Move className="mr-2 h-4 w-4" />
-                                Chuyển đợt ({selectedRowIds.length})
-                            </Button>
-                        </DialogTrigger>
-                        <MoveRegistrationsDialog
-                            currentSessionId={sessionId}
-                            registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
-                            onFinished={handleGroupActionFinished}
-                        />
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Move className="mr-2 h-4 w-4" />
+                                    Chuyển đợt ({selectedRowIds.length})
+                                </Button>
+                            </DialogTrigger>
+                            <MoveRegistrationsDialog
+                                currentSessionId={sessionId}
+                                registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                                onFinished={handleGroupActionFinished}
+                            />
                         </Dialog>
                          <Dialog open={isEditGroupDialogOpen} onOpenChange={setIsEditGroupDialogOpen}>
                             <DialogTrigger asChild>
@@ -215,6 +220,18 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 </Button>
                             </DialogTrigger>
                              <EditGroupRegistrationForm
+                                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                                onFinished={handleGroupActionFinished}
+                            />
+                        </Dialog>
+                        <Dialog open={isExemptionDialogOpen} onOpenChange={setIsExemptionDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Star className="mr-2 h-4 w-4" />
+                                    Xét đặc cách ({selectedRowIds.length})
+                                </Button>
+                            </DialogTrigger>
+                             <SpecialExemptionForm
                                 registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
                                 onFinished={handleGroupActionFinished}
                             />
@@ -317,10 +334,10 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 <TableHead>STT</TableHead>
                 <TableHead>Tên sinh viên</TableHead>
                 <TableHead>MSSV</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead>Trạng thái SV</TableHead>
                 <TableHead>Tên đề tài</TableHead>
                 <TableHead>GVHD</TableHead>
-                <TableHead>Ngày đăng ký</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
@@ -345,7 +362,11 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
                     <TableCell>
-                      {reg.registrationDate?.toDate && format(reg.registrationDate.toDate(), 'dd/MM/yyyy')}
+                        {reg.isSpeciallyExempted ? (
+                            <Badge variant="secondary" className="border-primary text-primary">Đặc cách</Badge>
+                        ) : (
+                            <Badge variant="outline">Báo cáo</Badge>
+                        )}
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>

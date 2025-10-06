@@ -73,6 +73,10 @@ export type DefenseRegistration = {
   projectTitle?: string;
   supervisorName?: string;
   registrationDate: any;
+  isSpeciallyExempted?: boolean;
+  exemptionDecisionNumber?: string;
+  exemptionDecisionDate?: any;
+  exemptionProofLink?: string;
 }
 
 // Represents a student's registration for a specific graduation defense session.

@@ -203,7 +203,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DefenseSessionRegistration",
       "type": "object",
-      "description": "Represents a student's registration for a specific defense session.",
+      "description": "Represents a student's registration for a specific defense session, including special exemption status.",
       "properties": {
         "id": {
           "type": "string",
@@ -213,30 +213,48 @@
           "type": "string",
           "description": "Reference to the GraduationDefenseSession this registration belongs to."
         },
+        "studentDocId": {
+          "type": "string",
+          "description": "Reference to the student's document ID in the 'students' collection."
+        },
         "studentId": {
           "type": "string",
-          "description": "Reference to the registered student's document ID."
+          "description": "The official student ID number (e.g., 122001306)."
         },
         "studentName": {
           "type": "string",
           "description": "Full name of the student for display purposes."
         },
-        "studentIdentifier": {
-          "type": "string",
-          "description": "The official student ID number (e.g., 122001306)."
-        },
         "registrationDate": {
           "type": "string",
           "format": "date-time",
           "description": "Timestamp when the registration was created."
+        },
+        "isSpeciallyExempted": {
+          "type": "boolean",
+          "description": "Indicates if the student is specially exempted from the defense."
+        },
+        "exemptionDecisionNumber": {
+          "type": "string",
+          "description": "The official number of the exemption decision document."
+        },
+        "exemptionDecisionDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date when the exemption decision was made."
+        },
+        "exemptionProofLink": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL link to the proof document for the exemption."
         }
       },
       "required": [
         "id",
         "sessionId",
+        "studentDocId",
         "studentId",
         "studentName",
-        "studentIdentifier",
         "registrationDate"
       ]
     }
