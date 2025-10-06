@@ -92,7 +92,7 @@ export function DefenseSessionsTable() {
                   Tạo Đợt mới
                 </Button>
               </DialogTrigger>
-              <DialogContent className="sm:max-w-[425px]">
+              <DialogContent className="sm:max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Tạo Đợt báo cáo mới</DialogTitle>
                   <DialogDescription>
@@ -110,8 +110,8 @@ export function DefenseSessionsTable() {
               <TableRow>
                 <TableHead>Tên đợt</TableHead>
                 <TableHead>Ngày bắt đầu</TableHead>
+                <TableHead>Hạn đăng ký</TableHead>
                 <TableHead>Ngày báo cáo dự kiến</TableHead>
-                <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
@@ -122,11 +122,11 @@ export function DefenseSessionsTable() {
                   <TableCell>
                     {session.startDate?.toDate && format(session.startDate.toDate(), 'PPP')}
                   </TableCell>
+                   <TableCell>
+                    {session.registrationDeadline?.toDate && format(session.registrationDeadline.toDate(), 'PPP')}
+                  </TableCell>
                   <TableCell>
                     {session.expectedReportDate?.toDate && format(session.expectedReportDate.toDate(), 'PPP')}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell">
-                    {session.createdAt?.toDate && format(session.createdAt.toDate(), 'PPP')}
                   </TableCell>
                   <TableCell className="text-right">
                     <DropdownMenu>

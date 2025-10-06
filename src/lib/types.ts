@@ -28,6 +28,8 @@ export type GraduationDefenseSession = {
   name: string;
   startDate: any;
   expectedReportDate: any;
+  registrationDeadline: any;
   description?: string;
+  zaloGroupLink?: string;
   createdAt: any;
 }

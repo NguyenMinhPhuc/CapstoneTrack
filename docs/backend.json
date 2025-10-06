@@ -143,16 +143,26 @@
           "description": "The expected date for the final defense reports.",
           "format": "date"
         },
+        "registrationDeadline": {
+          "type": "string",
+          "description": "The deadline for students to register for this defense session.",
+          "format": "date"
+        },
         "description": {
           "type": "string",
           "description": "A brief description of the session."
+        },
+        "zaloGroupLink": {
+          "type": "string",
+          "description": "URL link to the Zalo group for this session."
         }
       },
       "required": [
         "id",
         "name",
         "startDate",
-        "expectedReportDate"
+        "expectedReportDate",
+        "registrationDeadline"
       ]
     }
   },
