@@ -33,7 +33,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
@@ -61,20 +61,21 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
 
   const handleDelete = async (registrationId: string) => {
     const registrationDocRef = doc(firestore, `graduationDefenseSessions/${sessionId}/registrations`, registrationId);
-    try {
-      await deleteDoc(registrationDocRef);
-      toast({
-        title: 'Thành công',
-        description: 'Đã xóa sinh viên khỏi đợt báo cáo.',
-      });
-    } catch (error) {
-      console.error("Error deleting registration:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể xóa đăng ký của sinh viên.',
-      });
-    }
+    
+    deleteDoc(registrationDocRef)
+        .then(() => {
+            toast({
+                title: 'Thành công',
+                description: 'Đã xóa sinh viên khỏi đợt báo cáo.',
+            });
+        })
+        .catch(error => {
+            const contextualError = new FirestorePermissionError({
+                path: registrationDocRef.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
   };
 
   if (isLoading) {

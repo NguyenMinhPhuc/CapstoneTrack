@@ -22,8 +22,8 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
@@ -74,40 +74,41 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      const registrationsCollectionRef = collection(firestore, 'graduationDefenseSessions', sessionId, 'registrations');
+    const registrationsCollectionRef = collection(firestore, 'graduationDefenseSessions', sessionId, 'registrations');
       
-      const selectedStudent = students.find(s => s.id === values.studentId);
-      if (!selectedStudent) {
-        toast({
-          variant: 'destructive',
-          title: 'Lỗi',
-          description: 'Không tìm thấy thông tin sinh viên đã chọn.',
-        });
-        return;
-      }
-      
-      const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
-
-      await addDoc(registrationsCollectionRef, {
-        ...values,
-        studentName,
-        registrationDate: serverTimestamp(),
-      });
-
-      toast({
-        title: 'Thành công',
-        description: `Đã thêm sinh viên ${studentName} vào đợt báo cáo.`,
-      });
-      onFinished();
-    } catch (error: any) {
-      console.error("Error adding student registration:", error);
+    const selectedStudent = students.find(s => s.id === values.studentId);
+    if (!selectedStudent) {
       toast({
         variant: 'destructive',
-        title: 'Ôi! Đã xảy ra lỗi.',
-        description: error.message || 'Không thể thêm sinh viên vào đợt báo cáo.',
+        title: 'Lỗi',
+        description: 'Không tìm thấy thông tin sinh viên đã chọn.',
       });
+      return;
     }
+    
+    const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
+    const newRegistrationData = {
+      ...values,
+      studentName,
+      registrationDate: serverTimestamp(),
+    };
+
+    addDoc(registrationsCollectionRef, newRegistrationData)
+      .then(() => {
+        toast({
+          title: 'Thành công',
+          description: `Đã thêm sinh viên ${studentName} vào đợt báo cáo.`,
+        });
+        onFinished();
+      })
+      .catch((error) => {
+        const contextualError = new FirestorePermissionError({
+          path: registrationsCollectionRef.path,
+          operation: 'create',
+          requestResourceData: newRegistrationData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   }
 
   return (

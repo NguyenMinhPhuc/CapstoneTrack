@@ -18,7 +18,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -51,27 +51,29 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      const collectionRef = collection(firestore, 'graduationDefenseSessions');
-      await addDoc(collectionRef, {
-        ...values,
-        status: 'upcoming', // Default status for a new session
-        createdAt: serverTimestamp(),
+    const collectionRef = collection(firestore, 'graduationDefenseSessions');
+    const newSessionData = {
+      ...values,
+      status: 'upcoming', // Default status for a new session
+      createdAt: serverTimestamp(),
+    };
+    
+    addDoc(collectionRef, newSessionData)
+      .then(() => {
+        toast({
+          title: 'Thành công',
+          description: `Đợt báo cáo "${values.name}" đã được tạo.`,
+        });
+        onFinished();
+      })
+      .catch((error) => {
+        const contextualError = new FirestorePermissionError({
+          path: collectionRef.path,
+          operation: 'create',
+          requestResourceData: newSessionData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
       });
-
-      toast({
-        title: 'Thành công',
-        description: `Đợt báo cáo "${values.name}" đã được tạo.`,
-      });
-      onFinished();
-    } catch (error: any) {
-      console.error("Error creating defense session:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Ôi! Đã xảy ra lỗi.',
-        description: error.message || 'Không thể tạo đợt báo cáo.',
-      });
-    }
   }
 
   return (

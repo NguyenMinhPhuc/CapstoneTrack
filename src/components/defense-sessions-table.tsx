@@ -50,7 +50,7 @@ import {
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { GraduationDefenseSession } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
@@ -135,41 +135,46 @@ export function DefenseSessionsTable() {
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
     const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionToDelete.id);
-    try {
-      await deleteDoc(sessionDocRef);
-      toast({
-        title: 'Thành công',
-        description: `Đợt báo cáo "${sessionToDelete.name}" đã được xóa.`,
-      });
-    } catch (error) {
-       console.error("Error deleting session:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể xóa đợt báo cáo.',
-      });
-    } finally {
-        setIsDeleteDialogOpen(false);
-        setSessionToDelete(null);
-    }
+    
+    deleteDoc(sessionDocRef)
+        .then(() => {
+            toast({
+                title: 'Thành công',
+                description: `Đợt báo cáo "${sessionToDelete.name}" đã được xóa.`,
+            });
+        })
+        .catch(error => {
+            const contextualError = new FirestorePermissionError({
+              path: sessionDocRef.path,
+              operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        })
+        .finally(() => {
+            setIsDeleteDialogOpen(false);
+            setSessionToDelete(null);
+        });
   };
 
   const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
     const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionId);
-    try {
-      await updateDoc(sessionDocRef, { status: newStatus });
-      toast({
-        title: 'Thành công',
-        description: `Trạng thái đợt báo cáo đã được cập nhật.`,
+    const updateData = { status: newStatus };
+    
+    updateDoc(sessionDocRef, updateData)
+      .then(() => {
+        toast({
+          title: 'Thành công',
+          description: `Trạng thái đợt báo cáo đã được cập nhật.`,
+        });
+      })
+      .catch(error => {
+        const contextualError = new FirestorePermissionError({
+          path: sessionDocRef.path,
+          operation: 'update',
+          requestResourceData: updateData,
+        });
+        errorEmitter.emit('permission-error', contextualError);
       });
-    } catch (error) {
-      console.error("Error updating session status:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không thể cập nhật trạng thái.',
-      });
-    }
   };
 
 
