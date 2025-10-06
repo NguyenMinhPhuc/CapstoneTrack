@@ -68,6 +68,7 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
 
         const userDocRef = doc(firestore, 'users', user.uid);
         const userData = {
+            id: user.uid,
             email: values.email,
             role: 'supervisor' as const,
             status: 'active' as const,

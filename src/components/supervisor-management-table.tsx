@@ -42,7 +42,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { Supervisor } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -93,10 +93,12 @@ export function SupervisorManagementTable() {
   const confirmDelete = async () => {
     if (!supervisorToDelete) return;
     
-    // Note: This only deletes the 'supervisor' profile doc.
-    // The associated Firebase Auth user account is not deleted.
     try {
-      await deleteDoc(doc(firestore, 'supervisors', supervisorToDelete.id));
+      const batch = writeBatch(firestore);
+      batch.delete(doc(firestore, 'supervisors', supervisorToDelete.id));
+      batch.delete(doc(firestore, 'users', supervisorToDelete.id)); // Also delete from users collection
+      await batch.commit();
+
       toast({
         title: 'Thành công',
         description: `Hồ sơ giáo viên ${supervisorToDelete.firstName} ${supervisorToDelete.lastName} đã được xóa.`,
@@ -232,7 +234,7 @@ export function SupervisorManagementTable() {
             <AlertDialogHeader>
             <AlertDialogTitle>Bạn có chắc chắn không?</AlertDialogTitle>
             <AlertDialogDescription>
-                Hành động này không thể được hoàn tác. Thao tác này sẽ xóa hồ sơ giáo viên. Lưu ý: tài khoản đăng nhập của giáo viên sẽ không bị xóa.
+                Hành động này không thể được hoàn tác. Thao tác này sẽ xóa vĩnh viễn hồ sơ và tài khoản của giáo viên này.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

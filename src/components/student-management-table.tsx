@@ -47,9 +47,9 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -60,6 +60,7 @@ import { EditStudentForm } from './edit-student-form';
 import { ImportStudentsDialog } from './import-students-dialog';
 import { Badge } from './ui/badge';
 import { cn } from '@/lib/utils';
+import { Checkbox } from './ui/checkbox';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -92,6 +93,8 @@ export function StudentManagementTable() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('all');
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+
 
   const studentsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'students'),
@@ -154,26 +157,66 @@ export function StudentManagementTable() {
   };
 
   const confirmDelete = async () => {
-    if (!studentToDelete) return;
+    if (selectedRowIds.length > 0) {
+        // Batch delete
+        const batch = writeBatch(firestore);
+        selectedRowIds.forEach(id => {
+            batch.delete(doc(firestore, 'students', id));
+            batch.delete(doc(firestore, 'users', id)); // Also delete from users collection
+        });
+        try {
+            await batch.commit();
+            toast({
+                title: 'Thành công',
+                description: `${selectedRowIds.length} sinh viên đã được xóa.`,
+            });
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: `Không thể xóa sinh viên: ${error.message}`,
+            });
+        } finally {
+            setSelectedRowIds([]);
+            setIsDeleteDialogOpen(false);
+        }
+    } else if (studentToDelete) {
+        // Single delete
+        try {
+            const batch = writeBatch(firestore);
+            batch.delete(doc(firestore, 'students', studentToDelete.id));
+            batch.delete(doc(firestore, 'users', studentToDelete.id)); // Also delete from users collection
+            await batch.commit();
+            toast({
+                title: 'Thành công',
+                description: `Hồ sơ sinh viên ${studentToDelete.firstName} ${studentToDelete.lastName} đã được xóa.`,
+            });
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: `Không thể xóa hồ sơ sinh viên: ${error.message}`,
+            });
+        } finally {
+            setIsDeleteDialogOpen(false);
+            setStudentToDelete(null);
+        }
+    }
+  };
 
-    // Note: This only deletes the 'student' profile doc.
-    // It does NOT delete the associated Firebase Auth user account.
-    // A more robust solution would involve a Cloud Function to handle this.
-    try {
-      await deleteDoc(doc(firestore, 'students', studentToDelete.id));
-      toast({
-        title: 'Thành công',
-        description: `Hồ sơ sinh viên ${studentToDelete.firstName} ${studentToDelete.lastName} đã được xóa.`,
-      });
-    } catch (error: any) {
-       toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: `Không thể xóa hồ sơ sinh viên: ${error.message}`,
-      });
-    } finally {
-        setIsDeleteDialogOpen(false);
-        setStudentToDelete(null);
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+        if (checked === true) {
+            setSelectedRowIds(filteredStudents?.map(s => s.id) || []);
+        } else {
+            setSelectedRowIds([]);
+        }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedRowIds(prev => [...prev, id]);
+    } else {
+        setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
     }
   };
 
@@ -198,11 +241,22 @@ export function StudentManagementTable() {
     )
   }
 
+  const isAllSelected = filteredStudents && selectedRowIds.length === filteredStudents.length;
+  const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredStudents?.length ?? 0);
+
   return (
     <div className="space-y-4">
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex-1">
+                 {selectedRowIds.length > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Xóa ({selectedRowIds.length}) mục đã chọn
+                    </Button>
+                )}
+            </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 <div className="flex w-full sm:w-auto gap-2">
                     <div className="relative w-full sm:w-auto">
@@ -278,7 +332,12 @@ export function StudentManagementTable() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>STT</TableHead>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                    checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                    onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead>Họ và Tên</TableHead>
               <TableHead>MSSV</TableHead>
               <TableHead>Lớp</TableHead>
@@ -289,9 +348,14 @@ export function StudentManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents?.map((student, index) => (
-              <TableRow key={student.id}>
-                <TableCell>{index + 1}</TableCell>
+            {filteredStudents?.map((student) => (
+              <TableRow key={student.id} data-state={selectedRowIds.includes(student.id) && "selected"}>
+                <TableCell>
+                     <Checkbox
+                        checked={selectedRowIds.includes(student.id)}
+                        onCheckedChange={(checked) => handleRowSelect(student.id, !!checked)}
+                     />
+                </TableCell>
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className}</TableCell>
@@ -365,11 +429,11 @@ export function StudentManagementTable() {
             <AlertDialogHeader>
             <AlertDialogTitle>Bạn có chắc chắn không?</AlertDialogTitle>
             <AlertDialogDescription>
-                Hành động này không thể được hoàn tác. Thao tác này sẽ xóa hồ sơ sinh viên. Lưu ý: tài khoản đăng nhập của sinh viên sẽ không bị xóa.
+                Hành động này không thể được hoàn tác. Thao tác này sẽ xóa vĩnh viễn hồ sơ và tài khoản của {studentToDelete ? `sinh viên ${studentToDelete.firstName} ${studentToDelete.lastName}` : `${selectedRowIds.length} sinh viên đã chọn`}.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => setStudentToDelete(null)}>Hủy</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Tiếp tục</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
@@ -377,3 +441,4 @@ export function StudentManagementTable() {
     </div>
   );
 }
+

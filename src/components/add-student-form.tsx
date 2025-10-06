@@ -79,6 +79,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
       // 2. Create 'users' collection document
       const userDocRef = doc(firestore, 'users', user.uid);
       batch.set(userDocRef, {
+        id: user.uid,
         email: values.email,
         role: 'student',
         status: 'active',
