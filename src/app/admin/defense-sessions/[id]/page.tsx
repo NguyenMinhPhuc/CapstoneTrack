@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useDoc, useFirestore, useUser, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
@@ -38,24 +38,40 @@ export default function DefenseSessionDetailPage() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  if (isUserLoading || isUserDataLoading || isSessionLoading) {
-    return (
-      <div className="p-8">
-        <Skeleton className="h-10 w-1/3 mb-4" />
-        <Skeleton className="h-6 w-1/2 mb-8" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-            <Skeleton className="h-24 w-full" />
-        </div>
-        <Skeleton className="h-96 w-full mt-8" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    const isLoading = isUserLoading || isUserDataLoading;
+    if (isLoading) return;
 
-  if (!user || userData?.role !== 'admin') {
-    router.push('/');
-    return null;
+    if (!user) {
+      router.push('/login');
+    } else if (userData?.role !== 'admin') {
+      router.push('/');
+    }
+  }, [user, userData, isUserLoading, isUserDataLoading, router]);
+
+  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading;
+
+  if (isLoading || !user || userData?.role !== 'admin') {
+    return (
+      <SidebarProvider defaultOpen>
+        <AppSidebar />
+        <SidebarInset>
+          <AppHeader />
+          <main className="p-4 sm:p-6 lg:p-8">
+            <div className="p-8">
+              <Skeleton className="h-10 w-1/3 mb-4" />
+              <Skeleton className="h-6 w-1/2 mb-8" />
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
+                  <Skeleton className="h-24 w-full" />
+              </div>
+              <Skeleton className="h-96 w-full mt-8" />
+            </div>
+          </main>
+        </SidebarInset>
+      </SidebarProvider>
+    );
   }
   
   if (!session) {
@@ -119,8 +135,8 @@ export default function DefenseSessionDetailPage() {
                                     <a href={session.zaloGroupLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
                                         {session.zaloGroupLink}
                                     </a>
-                                </div>
-                            </div>
+                                 </div>
+                             </div>
                          )}
                     </div>
                 </CardContent>
