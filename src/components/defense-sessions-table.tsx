@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { GraduationDefenseSession } from '@/lib/types';
@@ -40,11 +40,13 @@ import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { AddDefenseSessionForm } from './add-defense-session-form';
 import { useToast } from '@/hooks/use-toast';
+import { Input } from './ui/input';
 
 export function DefenseSessionsTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const sessionsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -52,6 +54,14 @@ export function DefenseSessionsTable() {
   );
 
   const { data: sessions, isLoading } = useCollection<GraduationDefenseSession>(sessionsCollectionRef);
+
+  const filteredSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter(session =>
+      session.name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+  }, [sessions, searchTerm]);
+
 
   if (isLoading) {
     return (
@@ -86,23 +96,35 @@ export function DefenseSessionsTable() {
                 Tạo và quản lý các đợt tổ chức báo cáo tốt nghiệp.
               </CardDescription>
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-              <DialogTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Tạo Đợt mới
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Tạo Đợt báo cáo mới</DialogTitle>
-                  <DialogDescription>
-                    Điền thông tin chi tiết để tạo một đợt báo cáo mới.
-                  </DialogDescription>
-                </DialogHeader>
-                <AddDefenseSessionForm onFinished={() => setIsAddDialogOpen(false)} />
-              </DialogContent>
-            </Dialog>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Tìm kiếm theo tên..."
+                        className="pl-8 w-full sm:w-64"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <DialogTrigger asChild>
+                    <Button className="w-full sm:w-auto">
+                    <PlusCircle className="mr-2 h-4 w-4" />
+                    Tạo Đợt mới
+                    </Button>
+                </DialogTrigger>
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                    <DialogTitle>Tạo Đợt báo cáo mới</DialogTitle>
+                    <DialogDescription>
+                        Điền thông tin chi tiết để tạo một đợt báo cáo mới.
+                    </DialogDescription>
+                    </DialogHeader>
+                    <AddDefenseSessionForm onFinished={() => setIsAddDialogOpen(false)} />
+                </DialogContent>
+                </Dialog>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -118,7 +140,7 @@ export function DefenseSessionsTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sessions?.map((session, index) => (
+              {filteredSessions?.map((session, index) => (
                 <TableRow key={session.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{session.name}</TableCell>
