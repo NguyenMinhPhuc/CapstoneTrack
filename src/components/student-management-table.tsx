@@ -237,6 +237,7 @@ export function StudentManagementTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>STT</TableHead>
               <TableHead>Họ và Tên</TableHead>
               <TableHead>MSSV</TableHead>
               <TableHead>Lớp</TableHead>
@@ -246,8 +247,9 @@ export function StudentManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStudents?.map((student) => (
+            {filteredStudents?.map((student, index) => (
               <TableRow key={student.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className}</TableCell>
