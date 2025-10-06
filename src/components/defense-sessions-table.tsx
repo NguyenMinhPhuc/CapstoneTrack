@@ -48,6 +48,7 @@ import { AddDefenseSessionForm } from './add-defense-session-form';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
+import { EditDefenseSessionForm } from './edit-defense-session-form';
 
 type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
@@ -69,6 +70,8 @@ export function DefenseSessionsTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [selectedSession, setSelectedSession] = useState<GraduationDefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
@@ -87,6 +90,11 @@ export function DefenseSessionsTable() {
         return searchMatch && statusMatch;
     });
   }, [sessions, searchTerm, statusFilter]);
+  
+  const handleEditClick = (session: GraduationDefenseSession) => {
+    setSelectedSession(session);
+    setIsEditDialogOpen(true);
+  };
 
   const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
     const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionId);
@@ -247,7 +255,7 @@ export function DefenseSessionsTable() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem>Sửa</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleEditClick(session)}>Sửa</DropdownMenuItem>
                            <DropdownMenuSub>
                             <DropdownMenuSubTrigger>
                               <span>Thay đổi trạng thái</span>
@@ -277,6 +285,22 @@ export function DefenseSessionsTable() {
           </Table>
         </CardContent>
       </Card>
+       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Chỉnh sửa Đợt báo cáo</DialogTitle>
+            <DialogDescription>
+              Cập nhật thông tin cho đợt báo cáo. Nhấp vào "Lưu thay đổi" khi hoàn tất.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSession && (
+            <EditDefenseSessionForm
+              session={selectedSession}
+              onFinished={() => setIsEditDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
