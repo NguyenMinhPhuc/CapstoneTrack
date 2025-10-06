@@ -99,14 +99,14 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
             
-            const studentId = row['StudentID'] || row['Mã SV'];
-            const email = row['Email'] || (studentId ? `${studentId}@lhu.edu.vn` : '');
+            const studentIdValue = row['StudentID'] || row['Mã SV'];
+            const email = row['Email'] || (studentIdValue ? `${studentIdValue}@lhu.edu.vn` : '');
             const password = row['Password'] || '123456'; // Default password
             const role = row['Role']?.toLowerCase() || 'student'; // Default role
             const firstName = row['HoSV'] || '';
             const lastName = row['TenSV'] || '';
 
-            if (!email || !studentId) {
+            if (!email || !studentIdValue) {
                 errorCount++;
                 console.warn(`Skipping row ${i + 2} due to missing email or StudentID.`);
                 continue;
@@ -134,12 +134,12 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                     createdAt: serverTimestamp(),
                     firstName: firstName,
                     lastName: lastName,
-                    studentId: String(studentId || ''), // Ensure studentId is always a string
+                    studentId: String(studentIdValue || ''), // Ensure studentId is always a string
                 };
 
                  // Clean up the object to remove any fields that were not in the excel, but are in the row object due to sheet_to_json
                 Object.keys(dataToSet).forEach(key => {
-                    if (dataToSet[key] === undefined) {
+                    if (dataToSet[key] === undefined || key === 'StudentID') {
                         delete dataToSet[key];
                     }
                 });
@@ -248,3 +248,5 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
         </DialogContent>
     );
 }
+
+    

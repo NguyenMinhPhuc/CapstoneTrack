@@ -184,3 +184,5 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     </Form>
   );
 }
+
+    
