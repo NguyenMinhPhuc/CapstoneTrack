@@ -6,7 +6,6 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import {
-  Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
@@ -30,8 +29,6 @@ import type { Student } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 
 interface AssignClassDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
   studentIds: string[];
   allStudents: Student[];
   onFinished: () => void;
@@ -42,8 +39,6 @@ const formSchema = z.object({
 });
 
 export function AssignClassDialog({
-  isOpen,
-  onOpenChange,
   studentIds,
   allStudents,
   onFinished,
@@ -99,7 +94,6 @@ export function AssignClassDialog({
   }
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Xếp lớp cho sinh viên</DialogTitle>
@@ -155,6 +149,5 @@ export function AssignClassDialog({
           </div>
         )}
       </DialogContent>
-    </Dialog>
   );
 }

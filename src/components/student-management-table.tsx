@@ -265,18 +265,38 @@ export function StudentManagementTable() {
             <div className="flex items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
-                        <Button variant="outline" size="sm" onClick={() => setIsAssignClassDialogOpen(true)}>
-                            <Users className="mr-2 h-4 w-4" />
-                            Xếp lớp ({selectedRowIds.length})
-                        </Button>
-                        <Button variant="outline" size="sm" onClick={() => setIsAddToSessionDialogOpen(true)}>
-                            <FilePlus2 className="mr-2 h-4 w-4" />
-                            Thêm vào đợt ({selectedRowIds.length})
-                        </Button>
-                        <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
-                            <Trash2 className="mr-2 h-4 w-4" />
-                            Xóa ({selectedRowIds.length})
-                        </Button>
+                      <Dialog open={isAssignClassDialogOpen} onOpenChange={setIsAssignClassDialogOpen}>
+                          <DialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                  <Users className="mr-2 h-4 w-4" />
+                                  Xếp lớp ({selectedRowIds.length})
+                              </Button>
+                          </DialogTrigger>
+                          <AssignClassDialog
+                              studentIds={selectedRowIds}
+                              allStudents={students || []}
+                              onFinished={handleDialogFinished}
+                          />
+                      </Dialog>
+
+                      <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
+                          <DialogTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                  <FilePlus2 className="mr-2 h-4 w-4" />
+                                  Thêm vào đợt ({selectedRowIds.length})
+                              </Button>
+                          </DialogTrigger>
+                          <AddStudentsToSessionDialog
+                              studentIds={selectedRowIds}
+                              allStudents={students || []}
+                              onFinished={handleDialogFinished}
+                          />
+                      </Dialog>
+
+                      <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                          <Trash2 className="mr-2 h-4 w-4" />
+                          Xóa ({selectedRowIds.length})
+                      </Button>
                     </>
                 )}
             </div>
@@ -435,26 +455,6 @@ export function StudentManagementTable() {
       </CardContent>
     </Card>
     
-    {isAssignClassDialogOpen && (
-        <AssignClassDialog
-            isOpen={isAssignClassDialogOpen}
-            onOpenChange={setIsAssignClassDialogOpen}
-            studentIds={selectedRowIds}
-            allStudents={students || []}
-            onFinished={handleDialogFinished}
-        />
-    )}
-
-    {isAddToSessionDialogOpen && (
-        <AddStudentsToSessionDialog
-            isOpen={isAddToSessionDialogOpen}
-            onOpenChange={setIsAddToSessionDialogOpen}
-            studentIds={selectedRowIds}
-            allStudents={students || []}
-            onFinished={handleDialogFinished}
-        />
-    )}
-
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>

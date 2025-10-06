@@ -27,16 +27,12 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
 
 interface AddStudentsToSessionDialogProps {
-  isOpen: boolean;
-  onOpenChange: (isOpen: boolean) => void;
   studentIds: string[];
   allStudents: Student[];
   onFinished: () => void;
 }
 
 export function AddStudentsToSessionDialog({
-  isOpen,
-  onOpenChange,
   studentIds,
   allStudents,
   onFinished,
@@ -146,7 +142,7 @@ export function AddStudentsToSessionDialog({
       </div>
 
       <DialogFooter>
-        <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
+        <Button variant="outline" onClick={onFinished} disabled={isSubmitting}>
           Hủy
         </Button>
         <Button onClick={handleSubmit} disabled={isSubmitting || studentsToAdd.length === 0 || !selectedSession}>
