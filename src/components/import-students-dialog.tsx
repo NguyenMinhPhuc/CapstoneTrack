@@ -101,12 +101,31 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                 const workbook = XLSX.read(event.target?.result, { type: 'binary' });
                 const sheetName = workbook.SheetNames[0];
                 const sheet = workbook.Sheets[sheetName];
-                const jsonData: StudentData[] = XLSX.utils.sheet_to_json(sheet);
+                
+                // Convert to array of arrays, which is more robust
+                const aoa: any[][] = XLSX.utils.sheet_to_json(sheet, { header: 1 });
 
+                if (aoa.length < 2) {
+                    toast({ variant: 'destructive', title: 'Tệp không hợp lệ', description: 'Tệp Excel phải có ít nhất một dòng tiêu đề và một dòng dữ liệu.' });
+                    return;
+                }
+                
+                const headerRow = aoa[0];
+                const dataRows = aoa.slice(1);
+                
+                const jsonData = dataRows.map(row => {
+                    const rowData: StudentData = {};
+                    headerRow.forEach((header, index) => {
+                        rowData[header] = row[index];
+                    });
+                    return rowData;
+                });
+                
                 if (jsonData.length > 0) {
                     setHeaders(Object.keys(jsonData[0]));
                     setData(jsonData);
                 }
+
             } catch (error) {
                 console.error("Error reading Excel file:", error);
                 toast({
@@ -133,9 +152,15 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
             
-            const studentIdValue = row['Mã SV'];
-            const email = row['Email'] || (studentIdValue ? `${studentIdValue}@lhu.edu.vn` : undefined);
-            const password = String(row['Password'] || '123456');
+            // Trim keys to handle potential whitespace issues from Excel headers
+            const trimmedRow = Object.keys(row).reduce((acc, key) => {
+                acc[key.trim()] = row[key];
+                return acc;
+            }, {} as {[key: string]: any});
+
+            const studentIdValue = trimmedRow['Mã SV'];
+            const email = trimmedRow['Email'] || (studentIdValue ? `${studentIdValue}@lhu.edu.vn` : undefined);
+            const password = String(trimmedRow['Password'] || '123456');
             
             if (!email || !studentIdValue) {
                 errorCount++;
@@ -170,12 +195,12 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                     userId: user.uid,
                     email: email,
                     studentId: String(studentIdValue),
-                    firstName: row['HoSV'] || '',
-                    lastName: row['TenSV'] || '',
-                    major: row['Ngành'] || '',
-                    enrollmentYear: getYearFromDate(row['Ngày nhập học']) || null,
-                    className: row['Lop'] || '',
-                    status: mapStatus(row['Tình trạng']),
+                    firstName: trimmedRow['HoSV'] || '',
+                    lastName: trimmedRow['TenSV'] || '',
+                    major: trimmedRow['Ngành'] || '',
+                    enrollmentYear: getYearFromDate(trimmedRow['Ngày nhập học']) || null,
+                    className: trimmedRow['Lop'] || '',
+                    status: mapStatus(trimmedRow['Tình trạng'] || ''),
                     createdAt: serverTimestamp(),
                 };
                 batch.set(studentDocRef, studentData);
@@ -292,5 +317,7 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
         </DialogContent>
     );
 }
+
+    
 
     
