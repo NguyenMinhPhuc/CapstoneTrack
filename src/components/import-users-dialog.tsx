@@ -100,11 +100,11 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
             const row = data[i];
             
             const studentId = row['StudentID'] || row['Mã SV'];
-            const email = row['Email'] || `${studentId}@lhu.edu.vn`;
+            const email = row['Email'] || (studentId ? `${studentId}@lhu.edu.vn` : '');
             const password = row['Password'] || '123456'; // Default password
             const role = row['Role']?.toLowerCase() || 'student'; // Default role
-            const firstName = row['HoSV'];
-            const lastName = row['TenSV'];
+            const firstName = row['HoSV'] || '';
+            const lastName = row['TenSV'] || '';
 
             if (!email || !studentId) {
                 errorCount++;
@@ -127,14 +127,14 @@ export function ImportUsersDialog({ onFinished }: ImportUsersDialogProps) {
                 });
 
                 // 3. Create doc in role-specific collection
-                const dataToSet = {
+                 const dataToSet: any = {
                     ...row,
                     email: email,
                     userId: user.uid,
                     createdAt: serverTimestamp(),
                     firstName: firstName,
                     lastName: lastName,
-                    studentId: String(studentId), // Ensure studentId is stored
+                    studentId: String(studentId || ''), // Ensure studentId is always a string
                 };
 
                  // Clean up the object to remove any fields that were not in the excel, but are in the row object due to sheet_to_json

@@ -85,6 +85,15 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       });
       return;
     }
+
+    if (!selectedStudent.studentId) {
+        toast({
+            variant: 'destructive',
+            title: 'Thiếu thông tin',
+            description: `Sinh viên ${selectedStudent.firstName} ${selectedStudent.lastName} chưa có Mã số sinh viên. Vui lòng cập nhật hồ sơ sinh viên trước.`,
+        });
+        return;
+    }
     
     const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
     const newRegistrationData = {
@@ -133,7 +142,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
                 <SelectContent>
                   {students.map(student => (
                     <SelectItem key={student.id} value={student.id}>
-                      {`${student.firstName} ${student.lastName} (${student.studentId})`}
+                      {`${student.firstName} ${student.lastName} (${student.studentId || 'Chưa có MSSV'})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
