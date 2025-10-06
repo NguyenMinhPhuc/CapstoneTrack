@@ -47,8 +47,14 @@ export function SupervisorSelect({ value, onChange }: SupervisorSelectProps) {
       <SelectContent>
         <SelectItem value={NO_SUPERVISOR_VALUE}>Chưa có GVHD</SelectItem>
         {supervisors?.map(supervisor => {
+            // Ensure supervisor has a valid name before rendering
+            if (!supervisor.firstName || !supervisor.lastName) {
+              return null;
+            }
             const fullName = `${supervisor.firstName} ${supervisor.lastName}`.trim();
-            if (!fullName) return null; // Don't render if name is empty
+            // Also check if the combined name is not empty
+            if (!fullName) return null;
+            
             return (
               <SelectItem key={supervisor.id} value={fullName}>
                 {fullName}
