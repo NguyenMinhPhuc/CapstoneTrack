@@ -161,13 +161,7 @@ export function StudentManagementTable() {
     <div className="space-y-4">
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-                <CardTitle>Danh sách Sinh viên</CardTitle>
-                <CardDescription>
-                  Quản lý thông tin tất cả sinh viên trong hệ thống.
-                </CardDescription>
-            </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 <div className="flex w-full sm:w-auto gap-2">
                     <div className="relative w-full sm:w-auto">
