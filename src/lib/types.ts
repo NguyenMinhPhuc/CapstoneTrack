@@ -1,4 +1,5 @@
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -34,4 +35,21 @@ export type GraduationDefenseSession = {
   zaloGroupLink?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
+}
+
+export type Student = {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    // Add other student-specific fields as needed
+}
+
+export type DefenseRegistration = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  projectTitle: string;
+  supervisorName?: string;
+  registrationDate: any;
 }

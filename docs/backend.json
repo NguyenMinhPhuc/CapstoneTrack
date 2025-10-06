@@ -175,6 +175,46 @@
         "registrationDeadline",
         "status"
       ]
+    },
+    "DefenseRegistration": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "DefenseRegistration",
+      "type": "object",
+      "description": "Represents a student's registration for a specific graduation defense session.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the registration."
+        },
+        "studentId": {
+          "type": "string",
+          "description": "Reference to the registered student."
+        },
+        "studentName": {
+          "type": "string",
+          "description": "Full name of the student for display purposes."
+        },
+        "projectTitle": {
+          "type": "string",
+          "description": "The title of the student's capstone project."
+        },
+        "supervisorName": {
+          "type": "string",
+          "description": "Name of the project supervisor."
+        },
+        "registrationDate": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Timestamp when the registration was created."
+        }
+      },
+      "required": [
+        "id",
+        "studentId",
+        "studentName",
+        "projectTitle",
+        "registrationDate"
+      ]
     }
   },
   "auth": {
@@ -207,6 +247,12 @@
         "$ref": "#/entities/GraduationDefenseSession"
       },
       "description": "Stores information about graduation defense sessions."
+    },
+    "/graduationDefenseSessions/{sessionId}/registrations/{registrationId}": {
+      "schema": {
+        "$ref": "#/entities/DefenseRegistration"
+      },
+      "description": "Stores student registrations for a specific defense session."
     }
   }
 }

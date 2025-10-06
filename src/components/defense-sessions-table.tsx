@@ -1,6 +1,8 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
+import Link from 'next/link';
 import {
   Table,
   TableBody,
@@ -342,7 +344,11 @@ export function DefenseSessionsTable() {
                 return (
                   <TableRow key={session.id}>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell className="font-medium">{session.name}</TableCell>
+                    <TableCell className="font-medium">
+                      <Link href={`/admin/defense-sessions/${session.id}`} className="hover:underline">
+                        {session.name}
+                      </Link>
+                    </TableCell>
                     <TableCell>
                       {session.startDate?.toDate && format(session.startDate.toDate(), 'dd/MM/yyyy')}
                     </TableCell>
