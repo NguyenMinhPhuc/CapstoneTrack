@@ -28,7 +28,7 @@ const formSchema = z.object({
   major: z.string().optional(),
   enrollmentYear: z.coerce.number().optional(),
   className: z.string().optional(),
-  status: z.enum(['studying', 'reserved', 'dropped_out'], {
+  status: z.enum(['studying', 'reserved', 'dropped_out', 'graduated'], {
     required_error: 'Trạng thái là bắt buộc.',
   }),
 });
@@ -158,6 +158,7 @@ export function EditStudentForm({ student, onFinished }: EditStudentFormProps) {
                   <SelectItem value="studying">Đang học</SelectItem>
                   <SelectItem value="reserved">Bảo lưu</SelectItem>
                   <SelectItem value="dropped_out">Đã nghỉ</SelectItem>
+                  <SelectItem value="graduated">Đã tốt nghiệp</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

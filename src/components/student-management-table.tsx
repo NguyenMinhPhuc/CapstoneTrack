@@ -68,18 +68,21 @@ const statusLabel: Record<Student['status'], string> = {
   studying: 'Đang học',
   reserved: 'Bảo lưu',
   dropped_out: 'Đã nghỉ',
+  graduated: 'Đã tốt nghiệp',
 };
 
-const statusVariant: Record<Student['status'], 'default' | 'secondary' | 'destructive'> = {
+const statusVariant: Record<Student['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
     studying: 'default',
     reserved: 'secondary',
     dropped_out: 'destructive',
+    graduated: 'outline',
 };
 
 const statusColorClass: Record<Student['status'], string> = {
   studying: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
   reserved: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700',
   dropped_out: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
+  graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
 };
 
 
@@ -176,7 +179,7 @@ export function StudentManagementTable() {
             toast({
                 variant: 'destructive',
                 title: 'Lỗi',
-                description: `Không thể xóa sinh viên: ${error.message}`,
+                description: `Không thể xóa sinh viên: ${'error.message'}`,
             });
         } finally {
             setSelectedRowIds([]);
@@ -197,7 +200,7 @@ export function StudentManagementTable() {
             toast({
                 variant: 'destructive',
                 title: 'Lỗi',
-                description: `Không thể xóa hồ sơ sinh viên: ${error.message}`,
+                description: `Không thể xóa hồ sơ sinh viên: ${'error.message'}`,
             });
         } finally {
             setIsDeleteDialogOpen(false);
@@ -406,6 +409,9 @@ export function StudentManagementTable() {
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => handleStatusChange(student.id, 'dropped_out')} disabled={student.status === 'dropped_out'}>
                               {statusLabel.dropped_out}
+                            </DropdownMenuItem>
+                             <DropdownMenuItem onClick={() => handleStatusChange(student.id, 'graduated')} disabled={student.status === 'graduated'}>
+                              {statusLabel.graduated}
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
                         </DropdownMenuPortal>

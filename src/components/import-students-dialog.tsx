@@ -44,11 +44,12 @@ const getSecondaryApp = () => {
     return existingApp || initializeApp(firebaseConfig, secondaryAppName);
 };
 
-const mapStatus = (status: string | undefined): 'studying' | 'reserved' | 'dropped_out' => {
+const mapStatus = (status: string | undefined): 'studying' | 'reserved' | 'dropped_out' | 'graduated' => {
     const lowerStatus = status?.toLowerCase() || '';
     if (lowerStatus.includes('đang học')) return 'studying';
     if (lowerStatus.includes('bảo lưu')) return 'reserved';
     if (lowerStatus.includes('thôi học') || lowerStatus.includes('đã nghỉ')) return 'dropped_out';
+    if (lowerStatus.includes('tốt nghiệp')) return 'graduated';
     return 'studying'; // Default status
 }
 

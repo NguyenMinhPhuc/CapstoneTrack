@@ -96,7 +96,7 @@
         "status": {
             "type": "string",
             "description": "The academic status of the student.",
-            "enum": ["studying", "reserved", "dropped_out"]
+            "enum": ["studying", "reserved", "dropped_out", "graduated"]
         }
       },
       "required": [

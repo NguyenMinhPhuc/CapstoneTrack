@@ -50,7 +50,7 @@ export type Student = {
     phone?: string;
     CCCD?: string;
     createdAt: any;
-    status: 'studying' | 'reserved' | 'dropped_out';
+    status: 'studying' | 'reserved' | 'dropped_out' | 'graduated';
 }
 
 export type Supervisor = {
