@@ -47,7 +47,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -409,9 +409,29 @@ export function StudentManagementTable() {
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
                 <TableCell>
-                    <Badge className={cn(statusColorClass[student.status])}>
-                        {statusLabel[student.status]}
-                    </Badge>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                         <Button
+                            variant="outline"
+                            className={cn("text-xs h-7 gap-1", statusColorClass[student.status])}
+                            size="sm"
+                         >
+                            <span>{statusLabel[student.status]}</span>
+                            <ChevronDown className="h-3.5 w-3.5" />
+                         </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                         {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map((status) => (
+                            <DropdownMenuItem
+                              key={status}
+                              onClick={() => handleStatusChange(student.id, status)}
+                              disabled={student.status === status}
+                            >
+                              {statusLabel[status]}
+                            </DropdownMenuItem>
+                         ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                 </TableCell>
                 <TableCell>{student.email}</TableCell>
                 <TableCell className="hidden md:table-cell">
@@ -493,5 +513,7 @@ export function StudentManagementTable() {
     </div>
   );
 }
+
+    
 
     
