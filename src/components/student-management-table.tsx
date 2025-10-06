@@ -41,8 +41,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -64,6 +67,7 @@ export function StudentManagementTable() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [classFilter, setClassFilter] = useState('all');
 
   const studentsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'students'),
@@ -72,6 +76,17 @@ export function StudentManagementTable() {
   
   const { data: students, isLoading } = useCollection<Student>(studentsCollectionRef);
 
+  const uniqueClasses = useMemo(() => {
+    if (!students) return [];
+    const classSet = new Set<string>();
+    students.forEach(student => {
+        if (student.className) {
+            classSet.add(student.className);
+        }
+    });
+    return Array.from(classSet).sort();
+  }, [students]);
+
   const filteredStudents = useMemo(() => {
     if (!students) return [];
     return students.filter(student => {
@@ -79,9 +94,12 @@ export function StudentManagementTable() {
       const nameMatch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(term);
       const idMatch = student.studentId?.toLowerCase().includes(term);
       const emailMatch = student.email?.toLowerCase().includes(term);
-      return nameMatch || idMatch || emailMatch;
+      
+      const classMatch = classFilter === 'all' || student.className === classFilter;
+
+      return (nameMatch || idMatch || emailMatch) && classMatch;
     });
-  }, [students, searchTerm]);
+  }, [students, searchTerm, classFilter]);
   
   const handleEditClick = (student: Student) => {
     setSelectedStudent(student);
@@ -151,15 +169,44 @@ export function StudentManagementTable() {
                 </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                <div className="relative w-full sm:w-auto">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Tìm kiếm theo tên, MSSV, email..."
-                        className="pl-8 w-full sm:w-64"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex w-full sm:w-auto gap-2">
+                    <div className="relative w-full sm:w-auto">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input
+                            type="search"
+                            placeholder="Tìm kiếm theo tên, MSSV, email..."
+                            className="pl-8 w-full sm:w-64"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
+                                <ListFilter className="h-3.5 w-3.5" />
+                                <span className="sr-only sm:not-sr-only">Lọc theo lớp</span>
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                             <DropdownMenuLabel>Lọc theo lớp</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem
+                                checked={classFilter === 'all'}
+                                onCheckedChange={() => setClassFilter('all')}
+                            >
+                                Tất cả các lớp
+                            </DropdownMenuCheckboxItem>
+                            {uniqueClasses.map(className => (
+                                <DropdownMenuCheckboxItem
+                                    key={className}
+                                    checked={classFilter === className}
+                                    onCheckedChange={() => setClassFilter(className)}
+                                >
+                                    {className}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
