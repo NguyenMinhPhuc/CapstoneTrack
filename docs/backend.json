@@ -212,7 +212,6 @@
         "id",
         "studentId",
         "studentName",
-        "projectTitle",
         "registrationDate"
       ]
     }

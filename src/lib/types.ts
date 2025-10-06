@@ -49,7 +49,7 @@ export type DefenseRegistration = {
   id: string;
   studentId: string;
   studentName: string;
-  projectTitle: string;
+  projectTitle?: string;
   supervisorName?: string;
   registrationDate: any;
 }

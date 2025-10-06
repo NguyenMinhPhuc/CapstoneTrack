@@ -24,12 +24,12 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
-import type { Student, SystemUser } from '@/lib/types';
+import type { Student } from '@/lib/types';
 import { useEffect, useState } from 'react';
 
 const formSchema = z.object({
   studentId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
-  projectTitle: z.string().min(1, { message: 'Tên đề tài là bắt buộc.' }),
+  projectTitle: z.string().optional(),
   supervisorName: z.string().optional(),
 });
 
@@ -128,7 +128,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
                 <SelectContent>
                   {students.map(student => (
                     <SelectItem key={student.id} value={student.id}>
-                      {`${student.firstName} ${student.lastName} (${student.email})`}
+                      {`${student.firstName} ${student.lastName} (${student.id})`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -142,7 +142,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
           name="projectTitle"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên đề tài</FormLabel>
+              <FormLabel>Tên đề tài (tùy chọn)</FormLabel>
               <FormControl>
                 <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý..." {...field} />
               </FormControl>
@@ -155,7 +155,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
           name="supervisorName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên giáo viên hướng dẫn</FormLabel>
+              <FormLabel>Tên giáo viên hướng dẫn (tùy chọn)</FormLabel>
               <FormControl>
                 <Input placeholder="Ví dụ: Nguyễn Văn B" {...field} />
               </FormControl>

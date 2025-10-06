@@ -32,7 +32,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Upload } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
@@ -40,6 +40,7 @@ import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
+import { ImportRegistrationsDialog } from './import-registrations-dialog';
 
 interface StudentRegistrationTableProps {
   sessionId: string;
@@ -49,6 +50,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
 
   const registrationsCollectionRef = useMemoFirebase(
     () => collection(firestore, `graduationDefenseSessions/${sessionId}/registrations`),
@@ -99,33 +101,44 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
 
   return (
     <Card>
-      <CardHeader className="flex flex-row items-center justify-between">
+      <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <CardTitle>Danh sách Sinh viên Đăng ký</CardTitle>
           <CardDescription>
             Quản lý danh sách sinh viên tham gia đợt báo cáo này.
           </CardDescription>
         </div>
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Thêm Sinh viên
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
-            <DialogHeader>
-              <DialogTitle>Thêm sinh viên vào đợt</DialogTitle>
-              <DialogDescription>
-                Chọn sinh viên và điền thông tin đề tài.
-              </DialogDescription>
-            </DialogHeader>
-            <AddStudentRegistrationForm
-              sessionId={sessionId}
-              onFinished={() => setIsAddDialogOpen(false)}
-            />
-          </DialogContent>
-        </Dialog>
+        <div className="flex w-full sm:w-auto gap-2">
+            <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+              <DialogTrigger asChild>
+                  <Button variant="outline" className="w-full">
+                      <Upload className="mr-2 h-4 w-4" />
+                      Nhập từ Excel
+                  </Button>
+              </DialogTrigger>
+              <ImportRegistrationsDialog sessionId={sessionId} onFinished={() => setIsImportDialogOpen(false)} />
+          </Dialog>
+            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+                <Button className="w-full">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Thêm Sinh viên
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                <DialogTitle>Thêm sinh viên vào đợt</DialogTitle>
+                <DialogDescription>
+                    Chọn sinh viên và điền thông tin đề tài (nếu có).
+                </DialogDescription>
+                </DialogHeader>
+                <AddStudentRegistrationForm
+                sessionId={sessionId}
+                onFinished={() => setIsAddDialogOpen(false)}
+                />
+            </DialogContent>
+            </Dialog>
+        </div>
       </CardHeader>
       <CardContent>
         <Table>
@@ -145,8 +158,8 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                 <TableRow key={reg.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{reg.studentName}</TableCell>
-                  <TableCell>{reg.projectTitle}</TableCell>
-                  <TableCell>{reg.supervisorName || 'N/A'}</TableCell>
+                  <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
+                  <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
                   <TableCell>
                     {reg.registrationDate?.toDate && format(reg.registrationDate.toDate(), 'dd/MM/yyyy')}
                   </TableCell>
@@ -158,6 +171,7 @@ export function StudentRegistrationTable({ sessionId }: StudentRegistrationTable
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem>Sửa</DropdownMenuItem>
                         <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(reg.id)}>
                           Xóa
                         </DropdownMenuItem>
