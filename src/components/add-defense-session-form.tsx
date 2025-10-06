@@ -55,6 +55,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       const collectionRef = collection(firestore, 'graduationDefenseSessions');
       await addDoc(collectionRef, {
         ...values,
+        status: 'upcoming', // Default status for a new session
         createdAt: serverTimestamp(),
       });
 

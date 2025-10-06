@@ -156,6 +156,15 @@
         "zaloGroupLink": {
           "type": "string",
           "description": "URL link to the Zalo group for this session."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the defense session.",
+          "enum": [
+            "upcoming",
+            "ongoing",
+            "completed"
+          ]
         }
       },
       "required": [
@@ -163,7 +172,8 @@
         "name",
         "startDate",
         "expectedReportDate",
-        "registrationDeadline"
+        "registrationDeadline",
+        "status"
       ]
     }
   },

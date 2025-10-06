@@ -33,4 +33,5 @@ export type GraduationDefenseSession = {
   description?: string;
   zaloGroupLink?: string;
   createdAt: any;
+  status: 'upcoming' | 'ongoing' | 'completed';
 }

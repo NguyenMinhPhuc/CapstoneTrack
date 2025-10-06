@@ -30,11 +30,15 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuPortal,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
+import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { GraduationDefenseSession } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -43,26 +47,19 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 
-type SessionStatus = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
+type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
+type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
 
-const getSessionStatus = (
-  startDate: Date,
-  expectedReportDate: Date
-): SessionStatus => {
-  const now = new Date();
-  if (now < startDate) {
-    return 'Sắp diễn ra';
-  } else if (now >= startDate && now <= expectedReportDate) {
-    return 'Đang thực hiện';
-  } else {
-    return 'Hoàn thành';
-  }
+const statusLabel: Record<SessionStatus, SessionStatusLabel> = {
+  upcoming: 'Sắp diễn ra',
+  ongoing: 'Đang thực hiện',
+  completed: 'Hoàn thành',
 };
 
 const statusVariant: Record<SessionStatus, 'secondary' | 'default' | 'outline'> = {
-  'Sắp diễn ra': 'secondary',
-  'Đang thực hiện': 'default',
-  'Hoàn thành': 'outline',
+  upcoming: 'secondary',
+  ongoing: 'default',
+  completed: 'outline',
 };
 
 
@@ -85,6 +82,24 @@ export function DefenseSessionsTable() {
       session.name.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [sessions, searchTerm]);
+
+  const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
+    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionId);
+    try {
+      await updateDoc(sessionDocRef, { status: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Trạng thái đợt báo cáo đã được cập nhật.`,
+      });
+    } catch (error) {
+      console.error("Error updating session status:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái.',
+      });
+    }
+  };
 
 
   if (isLoading) {
@@ -165,10 +180,6 @@ export function DefenseSessionsTable() {
             </TableHeader>
             <TableBody>
               {filteredSessions?.map((session, index) => {
-                const status = session.startDate?.toDate && session.expectedReportDate?.toDate
-                  ? getSessionStatus(session.startDate.toDate(), session.expectedReportDate.toDate())
-                  : null;
-
                 return (
                   <TableRow key={session.id}>
                     <TableCell>{index + 1}</TableCell>
@@ -180,9 +191,9 @@ export function DefenseSessionsTable() {
                       {session.registrationDeadline?.toDate && format(session.registrationDeadline.toDate(), 'dd/MM/yyyy')}
                     </TableCell>
                     <TableCell>
-                      {status && (
-                        <Badge variant={statusVariant[status]}>
-                          {status}
+                      {session.status && (
+                        <Badge variant={statusVariant[session.status]}>
+                          {statusLabel[session.status]}
                         </Badge>
                       )}
                     </TableCell>
@@ -195,6 +206,24 @@ export function DefenseSessionsTable() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem>Sửa</DropdownMenuItem>
+                           <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                              <span>Thay đổi trạng thái</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                              <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleStatusChange(session.id, 'upcoming')} disabled={session.status === 'upcoming'}>
+                                  {statusLabel.upcoming}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(session.id, 'ongoing')} disabled={session.status === 'ongoing'}>
+                                  {statusLabel.ongoing}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleStatusChange(session.id, 'completed')} disabled={session.status === 'completed'}>
+                                  {statusLabel.completed}
+                                </DropdownMenuItem>
+                              </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                          </DropdownMenuSub>
                           <DropdownMenuItem className="text-destructive">Xóa</DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
