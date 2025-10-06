@@ -106,7 +106,7 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
         
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
-            const studentIdNumber = String(row['StudentID'] || row['Mã SV']);
+            const studentIdNumber = String(row['StudentID'] || row['Mã SV'] || '');
             
             if (!studentIdNumber) {
                 console.warn(`Skipping row ${i + 2} due to missing StudentID.`);
