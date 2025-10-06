@@ -27,12 +27,29 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
 import { Skeleton } from './ui/skeleton';
+import { Badge } from './ui/badge';
+import { cn } from '@/lib/utils';
 
 interface AddStudentsByClassDialogProps {
   sessionId: string;
   existingRegistrations: DefenseRegistration[];
   onFinished: () => void;
 }
+
+const statusLabel: Record<Student['status'], string> = {
+  studying: 'Đang học',
+  reserved: 'Bảo lưu',
+  dropped_out: 'Đã nghỉ',
+  graduated: 'Đã tốt nghiệp',
+};
+
+const statusColorClass: Record<Student['status'], string> = {
+  studying: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
+  reserved: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700',
+  dropped_out: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
+  graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
+};
+
 
 export function AddStudentsByClassDialog({
   sessionId,
@@ -185,17 +202,22 @@ export function AddStudentsByClassDialog({
                     </Label>
                 </div>
                 <ScrollArea className="h-64 rounded-md border p-2">
-                    <div className="space-y-2">
+                    <div className="space-y-1">
                     {studentsInSelectedClass.map(student => (
-                        <div key={student.id} className="flex items-center space-x-2">
+                        <div key={student.id} className="flex items-center space-x-3 p-1 rounded-md hover:bg-muted/50">
                         <Checkbox
                             id={student.id}
                             onCheckedChange={checked => handleStudentSelect(student.id, !!checked)}
                             checked={selectedStudentIds.includes(student.id)}
                         />
-                        <Label htmlFor={student.id} className="w-full cursor-pointer">
-                            {student.firstName} {student.lastName} ({student.studentId})
-                        </Label>
+                        <div className="flex items-center justify-between w-full">
+                            <Label htmlFor={student.id} className="cursor-pointer">
+                                {student.firstName} {student.lastName} ({student.studentId})
+                            </Label>
+                            <Badge className={cn('text-xs', statusColorClass[student.status])} variant="outline">
+                                {statusLabel[student.status]}
+                            </Badge>
+                        </div>
                         </div>
                     ))}
                     </div>
