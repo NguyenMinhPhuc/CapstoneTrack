@@ -24,6 +24,7 @@ import {
   Shield,
   Calendar,
   UserSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -57,6 +58,7 @@ export function AppSidebar() {
     { href: "/admin/students", label: "Student Management", icon: Users },
     { href: "/admin/supervisors", label: "Supervisor Management", icon: UserSquare },
     { href: "/admin/defense-sessions", label: "Defense Sessions", icon: Calendar },
+    { href: "/admin/rubrics", label: "Rubric Management", icon: ClipboardCheck },
   ];
   
   const settingItems = [

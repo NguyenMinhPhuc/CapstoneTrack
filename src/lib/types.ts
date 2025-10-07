@@ -119,4 +119,16 @@ export type DefenseSubCommittee = {
     members: SubCommitteeMember[];
 }
 
-    
+export type RubricCriterion = {
+    id: string;
+    name: string;
+    description?: string;
+    maxScore: number;
+}
+
+export type Rubric = {
+    id: string;
+    name: string;
+    description?: string;
+    criteria: RubricCriterion[];
+}
