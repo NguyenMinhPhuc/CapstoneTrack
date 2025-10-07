@@ -4,7 +4,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, getDocs, limit } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -45,39 +45,51 @@ export default function ReportSubmissionPage() {
     const findActiveRegistration = async () => {
         setIsLoadingRegistration(true);
         try {
+            // 1. Find all ongoing sessions
             const ongoingSessionsQuery = query(
                 collection(firestore, 'graduationDefenseSessions'),
-                where('status', '==', 'ongoing'),
-                limit(1)
+                where('status', '==', 'ongoing')
             );
             const ongoingSessionsSnapshot = await getDocs(ongoingSessionsQuery);
 
             if (ongoingSessionsSnapshot.empty) {
                 setActiveRegistration(null);
+                setSessionName('');
                 setIsLoadingRegistration(false);
                 return;
             }
 
-            const ongoingSession = ongoingSessionsSnapshot.docs[0].data() as GraduationDefenseSession;
-            setSessionName(ongoingSession.name);
+            const ongoingSessionIds = ongoingSessionsSnapshot.docs.map(doc => doc.id);
+            const ongoingSessionsMap = new Map(ongoingSessionsSnapshot.docs.map(doc => [doc.id, doc.data() as GraduationDefenseSession]));
 
+            // 2. Find the user's registration in ANY of the ongoing sessions
             const registrationQuery = query(
                 collection(firestore, 'defenseRegistrations'),
-                where('sessionId', '==', ongoingSession.id),
-                where('studentDocId', '==', user.uid),
-                limit(1)
+                where('sessionId', 'in', ongoingSessionIds),
+                where('studentDocId', '==', user.uid)
             );
             const registrationSnapshot = await getDocs(registrationQuery);
 
             if (!registrationSnapshot.empty) {
-                const regDoc = registrationSnapshot.docs[0];
-                setActiveRegistration({ id: regDoc.id, ...regDoc.data() } as DefenseRegistration);
+                const regDoc = registrationSnapshot.docs[0]; // A student should only be in one active session at a time
+                const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
+                
+                setActiveRegistration(registrationData);
+
+                // Set the session name for display
+                const sessionData = ongoingSessionsMap.get(registrationData.sessionId);
+                if (sessionData) {
+                    setSessionName(sessionData.name);
+                }
+
             } else {
                 setActiveRegistration(null);
+                setSessionName('');
             }
         } catch (error) {
             console.error("Error finding active registration:", error);
             setActiveRegistration(null);
+            setSessionName('');
         } finally {
             setIsLoadingRegistration(false);
         }
