@@ -25,10 +25,14 @@ import {
   Calendar,
   UserSquare,
   ClipboardCheck,
+  ChevronDown,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
+import { Button } from "./ui/button";
+import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -42,44 +46,32 @@ export function AppSidebar() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
 
-  const menuItems = [
-    { href: "/", label: "Dashboard", icon: LayoutDashboard },
-    { type: "separator", label: "Internship" },
-    { href: "/internship/applications", label: "Applications", icon: Briefcase },
-    { href: "/internship/reports", label: "Reports", icon: BarChart3 },
-    { type: "separator", label: "Graduation" },
-    { href: "/graduation/projects", label: "Projects", icon: FileText },
-    { href: "/graduation/reports", label: "Reports", icon: BarChart3 },
-  ];
-
-  const adminMenuItems = [
-    { type: "separator", label: "Admin" },
-    { href: "/admin/users", label: "User Management", icon: Shield },
-    { href: "/admin/students", label: "Student Management", icon: Users },
-    { href: "/admin/supervisors", label: "Supervisor Management", icon: UserSquare },
-    { href: "/admin/defense-sessions", label: "Defense Sessions", icon: Calendar },
-    { href: "/admin/rubrics", label: "Rubric Management", icon: ClipboardCheck },
-  ];
-  
-  const settingItems = [
-      { type: "separator" },
-      { href: "/settings", label: "Settings", icon: Settings },
-  ]
-  
-  const allItems = [...menuItems];
-  if (userData?.role === 'admin') {
-    allItems.push(...adminMenuItems);
-  }
-  allItems.push(...settingItems);
-
-
-  const isLoading = isUserLoading || isUserDataLoading;
-
   const isActive = (href: string) => {
     if (href === '/') {
         return pathname === href;
     }
     return pathname.startsWith(href);
+  }
+
+  const isLoading = isUserLoading || isUserDataLoading;
+
+  if (isLoading) {
+      return (
+          <Sidebar variant="inset" collapsible="icon">
+              <SidebarHeader>
+                 <SidebarGroup className="p-0">
+                    <SidebarMenuButton asChild size="lg" className="group-data-[collapsible=icon]:!p-2">
+                        <Link href="/"><GraduationCap className="text-primary" /><span className="font-headline font-semibold text-lg">CapstoneTrack</span></Link>
+                    </SidebarMenuButton>
+                </SidebarGroup>
+              </SidebarHeader>
+              <SidebarContent>
+                  <div className="p-2 space-y-2">
+                      {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
+                  </div>
+              </SidebarContent>
+          </Sidebar>
+      )
   }
 
   return (
@@ -101,38 +93,89 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarHeader>
       <SidebarContent>
-        {isLoading ? (
-            <div className="p-2 space-y-2">
-                {[...Array(8)].map((_, i) => <Skeleton key={i} className="h-8 w-full" />)}
-            </div>
-        ) : (
-            <SidebarMenu>
-            {allItems.map((item, index) => {
-                if (item.type === 'separator') {
-                return (
-                    <div key={index} className="px-4 py-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden">{item.label}</p>
-                    <SidebarSeparator className="group-data-[collapsible=icon]:block hidden my-2"/>
-                    </div>
-                );
-                }
-                return (
-                <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href)}
-                    tooltip={item.label}
-                    >
-                    <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                    </Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                )
-            })}
-            </SidebarMenu>
-        )}
+        <SidebarMenu>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/")} tooltip="Dashboard">
+                    <Link href="/"><LayoutDashboard /><span>Dashboard</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            
+            {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
+              <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/grading")} tooltip="Chấm điểm">
+                      <Link href="/grading"><ClipboardCheck /><span>Chấm điểm</span></Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
+
+            <div className="px-2 py-2"><SidebarSeparator /></div>
+            
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/internship/applications")} tooltip="Applications">
+                    <Link href="#"><Briefcase /><span>Internship</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/graduation/projects")} tooltip="Projects">
+                    <Link href="#"><FileText /><span>Graduation</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+
+             {userData?.role === 'admin' && (
+                <>
+                <div className="px-2 py-2"><SidebarSeparator /></div>
+                 <Collapsible asChild>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Admin</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/users")} tooltip="User Management">
+                                        <Link href="/admin/users"><Shield /><span>User Management</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/students")} tooltip="Student Management">
+                                        <Link href="/admin/students"><Users /><span>Student Management</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/supervisors")} tooltip="Supervisor Management">
+                                        <Link href="/admin/supervisors"><UserSquare /><span>Supervisor Management</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/defense-sessions")} tooltip="Defense Sessions">
+                                        <Link href="/admin/defense-sessions"><Calendar /><span>Defense Sessions</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/rubrics")} tooltip="Rubric Management">
+                                        <Link href="/admin/rubrics"><ClipboardCheck /><span>Rubric Management</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
+                </>
+             )}
+            
+            <div className="flex-1" />
+
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/settings")} tooltip="Settings">
+                    <Link href="#"><Settings /><span>Settings</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarContent>
     </Sidebar>
   );
