@@ -356,5 +356,3 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     </Card>
   );
 }
-
-    
