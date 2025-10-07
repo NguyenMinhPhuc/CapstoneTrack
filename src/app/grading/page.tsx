@@ -51,7 +51,8 @@ export default function GradingPage() {
   const supervisorId = (userData.role === 'supervisor' || userData.role === 'admin') ? user.uid : undefined;
 
   return (
-    <main className="p-4 sm:p-6 lg:p-8">
+    <main className="p-4 sm:p-6 lg:p-8 space-y-6">
+      <h1 className="text-2xl font-bold">Nghiệp vụ Chấm điểm</h1>
       {supervisorId ? (
          <GradingDashboard supervisorId={supervisorId} userRole={userData.role} />
       ) : (

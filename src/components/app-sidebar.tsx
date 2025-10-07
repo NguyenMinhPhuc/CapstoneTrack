@@ -116,8 +116,8 @@ export function AppSidebar() {
             
             {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
               <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/grading")} tooltip="Chấm điểm">
-                      <Link href="/grading"><ClipboardCheck /><span>Chấm điểm</span></Link>
+                  <SidebarMenuButton asChild isActive={isActive("/grading")} tooltip="Nghiệp vụ Chấm điểm">
+                      <Link href="/grading"><ClipboardCheck /><span>Nghiệp vụ Chấm điểm</span></Link>
                   </SidebarMenuButton>
               </SidebarMenuItem>
             )}
