@@ -15,6 +15,8 @@ import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
 import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+
 
 interface CouncilGradingDashboardProps {
   supervisorId: string;
@@ -132,24 +134,32 @@ function SubcommitteeGradingView({
     if (studentsInSubcommittee.length === 0) {
         return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào được phân công vào tiểu ban này.</p>;
     }
+    
+    if (projectGroups.length === 0 && internshipStudents.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào trong tiểu ban này ở trạng thái "Báo cáo".</p>;
+    }
+
 
     const InternshipInfo = ({ student }: { student: DefenseRegistration }) => (
-        <div className="pl-6 mt-2">
-            <h6 className="font-semibold text-sm flex items-center gap-2"><Briefcase className="h-4 w-4 text-primary"/>Thông tin Thực tập</h6>
+        <div className="mt-2 space-y-3 text-xs">
+             <div className="flex items-start gap-2">
+                <Users className="h-3 w-3 mt-0.5 text-muted-foreground"/>
+                 <p className="font-medium">{student.studentName} ({student.studentId})</p>
+            </div>
             {student.internship_companyName ? (
-                <div className="space-y-3 pl-6 mt-2 text-xs">
+                <>
                     <div className="flex items-start gap-2">
                         <Building className="h-3 w-3 mt-0.5 text-muted-foreground"/>
                         <div>
-                            <p className="font-medium text-muted-foreground">{student.internship_companyName}</p>
+                            <p className="font-medium">{student.internship_companyName}</p>
                             <p className="text-muted-foreground">{student.internship_companyAddress}</p>
                         </div>
                     </div>
                     <div className="flex items-start gap-2">
                         <UserCircle className="h-3 w-3 mt-0.5 text-muted-foreground"/>
                         <div>
-                            <p className="text-muted-foreground">{student.internship_companySupervisorName || 'N/A'}</p>
-                            <p className="text-muted-foreground">{student.internship_companySupervisorPhone || 'N/A'}</p>
+                            <p>{student.internship_companySupervisorName || 'N/A'}</p>
+                            <p>{student.internship_companySupervisorPhone || 'N/A'}</p>
                         </div>
                     </div>
                      {student.internship_reportLink && (
@@ -160,7 +170,7 @@ function SubcommitteeGradingView({
                             </a>
                         </div>
                     )}
-                </div>
+                </>
             ) : (
                 <p className="text-xs text-muted-foreground pl-6 mt-1">Chưa có thông tin thực tập.</p>
             )}
@@ -171,103 +181,121 @@ function SubcommitteeGradingView({
     return (
         <>
             <CardContent>
-                <Accordion type="multiple" className="w-full space-y-4">
-                    {projectGroups.map((group) => {
-                        const gradEvaluation = getEvaluationForGroup(group);
+                 <Tabs defaultValue="graduation" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="graduation" disabled={projectGroups.length === 0}>
+                             <GraduationCap className="mr-2 h-4 w-4"/>
+                            Tốt nghiệp ({projectGroups.length})
+                        </TabsTrigger>
+                        <TabsTrigger value="internship" disabled={internshipStudents.length === 0}>
+                            <Briefcase className="mr-2 h-4 w-4"/>
+                            Thực tập ({internshipStudents.length})
+                        </TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="graduation" className="pt-4">
+                        <Accordion type="multiple" className="w-full space-y-4">
+                            {projectGroups.map((group) => {
+                                const gradEvaluation = getEvaluationForGroup(group);
 
-                        return (
-                            <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
-                                <div className="flex items-center py-4">
-                                    <AccordionTrigger className="hover:no-underline flex-1 p-0">
-                                        <div className="text-left">
-                                            <h4 className="font-semibold text-base">
-                                                {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
-                                            </h4>
+                                return (
+                                    <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
+                                        <div className="flex items-center py-4">
+                                            <AccordionTrigger className="hover:no-underline flex-1 p-0">
+                                                <div className="text-left">
+                                                    <h4 className="font-semibold text-base">
+                                                        {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                                                    </h4>
+                                                </div>
+                                            </AccordionTrigger>
+                                            <div className="ml-auto pl-4 flex items-center gap-2">
+                                                {gradEvaluation && (
+                                                    <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
+                                                        {gradEvaluation.totalScore.toFixed(2)}
+                                                    </Badge>
+                                                )}
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    disabled={!councilGraduationRubric}
+                                                    onClick={() => handleGradeGraduationClick(group)}
+                                                >
+                                                    <GraduationCap className="mr-2 h-4 w-4"/>
+                                                    {gradEvaluation ? 'Sửa điểm' : 'Chấm điểm'}
+                                                </Button>
+                                            </div>
                                         </div>
-                                    </AccordionTrigger>
-                                    <div className="ml-auto pl-4 flex items-center gap-2">
-                                        {gradEvaluation && (
-                                            <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
-                                                {gradEvaluation.totalScore.toFixed(2)}
-                                            </Badge>
-                                        )}
-                                        <Button 
-                                            variant="outline" 
-                                            size="sm"
-                                            disabled={!councilGraduationRubric}
-                                            onClick={() => handleGradeGraduationClick(group)}
-                                        >
-                                            <GraduationCap className="mr-2 h-4 w-4"/>
-                                            {gradEvaluation ? 'Sửa điểm TN' : 'Chấm TN'}
-                                        </Button>
-                                    </div>
-                                </div>
-                                <AccordionContent>
-                                    <div className="space-y-4 pt-2 border-t">
-                                        {group.students.map((student, index) => {
-                                            const internEvaluation = getEvaluationForInternship(student);
-                                            return (
-                                                <div key={student.id} className={index > 0 ? 'border-t mt-4 pt-4' : ''}>
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2 text-sm">
-                                                            <Users className="h-4 w-4 text-muted-foreground" />
-                                                            <span>{student.studentName} ({student.studentId})</span>
+                                        <AccordionContent>
+                                            <div className="space-y-4 pt-2 border-t">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <Users className="h-4 w-4" />
+                                                        <span>{group.students.map(s => s.studentName).join(', ')}</span>
+                                                    </div>
+                                                </div>
+                                                <Separator className="my-4"/>
+                                                <div>
+                                                    <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
+                                                    <div className="space-y-4 pl-6">
+                                                        <div className="space-y-2">
+                                                            <h6 className="font-medium flex items-center gap-2 text-sm"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h6>
+                                                            <p className="text-sm text-muted-foreground">{group.summary || 'Chưa có thông tin.'}</p>
                                                         </div>
-                                                        {student.internshipStatus === 'reporting' && (
-                                                            <div className="flex items-center gap-2">
-                                                                {internEvaluation && (
-                                                                    <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
-                                                                        {internEvaluation.totalScore.toFixed(2)}
-                                                                    </Badge>
-                                                                )}
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    size="sm"
-                                                                    disabled={!councilInternshipRubric}
-                                                                    onClick={() => handleGradeInternshipClick(student)}
-                                                                >
-                                                                    <Briefcase className="mr-2 h-4 w-4"/>
-                                                                    {internEvaluation ? 'Sửa điểm TT' : 'Chấm TT'}
-                                                                </Button>
+                                                        <div className="space-y-2">
+                                                            <h6 className="font-medium flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h6>
+                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.objectives || 'Chưa có thông tin.'}</p>
+                                                        </div>
+                                                        <div className="space-y-2">
+                                                            <h6 className="font-medium flex items-center gap-2 text-sm"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h6>
+                                                            <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.expectedResults || 'Chưa có thông tin.'}</p>
+                                                        </div>
+                                                        {group.reportLink && (
+                                                            <div className="space-y-2">
+                                                                <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h6>
+                                                                <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                                                    {group.reportLink}
+                                                                </a>
                                                             </div>
                                                         )}
                                                     </div>
-                                                    {student.internshipStatus === 'reporting' && <InternshipInfo student={student} />}
                                                 </div>
-                                            )
-                                        })}
-                                        <Separator className="my-4"/>
-                                        <div>
-                                            <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
-                                            <div className="space-y-4 pl-6">
-                                                <div className="space-y-2">
-                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h6>
-                                                    <p className="text-sm text-muted-foreground">{group.summary || 'Chưa có thông tin.'}</p>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h6>
-                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.objectives || 'Chưa có thông tin.'}</p>
-                                                </div>
-                                                <div className="space-y-2">
-                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h6>
-                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.expectedResults || 'Chưa có thông tin.'}</p>
-                                                </div>
-                                                {group.reportLink && (
-                                                    <div className="space-y-2">
-                                                        <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h6>
-                                                        <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
-                                                            {group.reportLink}
-                                                        </a>
-                                                    </div>
-                                                )}
                                             </div>
+                                        </AccordionContent>
+                                    </AccordionItem>
+                                )
+                            })}
+                        </Accordion>
+                    </TabsContent>
+                    <TabsContent value="internship" className="pt-4">
+                        <div className="space-y-4">
+                        {internshipStudents.map((student) => {
+                            const internEvaluation = getEvaluationForInternship(student);
+                            return (
+                                <Card key={student.id} className="p-4">
+                                     <div className="flex items-start justify-between gap-4">
+                                        <InternshipInfo student={student} />
+                                        <div className="flex items-center gap-2 flex-shrink-0">
+                                            {internEvaluation && (
+                                                <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
+                                                    {internEvaluation.totalScore.toFixed(2)}
+                                                </Badge>
+                                            )}
+                                            <Button 
+                                                variant="outline" 
+                                                size="sm"
+                                                disabled={!councilInternshipRubric}
+                                                onClick={() => handleGradeInternshipClick(student)}
+                                            >
+                                                <Briefcase className="mr-2 h-4 w-4"/>
+                                                {internEvaluation ? 'Sửa điểm' : 'Chấm điểm'}
+                                            </Button>
                                         </div>
                                     </div>
-                                </AccordionContent>
-                            </AccordionItem>
-                        )
-                    })}
-                </Accordion>
+                                </Card>
+                            )
+                        })}
+                        </div>
+                    </TabsContent>
+                </Tabs>
             </CardContent>
             {selectedGroupForGrading && selectedRubric && selectedEvalType && (
                  <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
