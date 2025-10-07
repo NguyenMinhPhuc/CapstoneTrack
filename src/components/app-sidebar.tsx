@@ -100,11 +100,18 @@ export function AppSidebar() {
             </SidebarMenuItem>
 
             {userData?.role === 'student' && (
-              <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
-                      <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
+              <>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
+                        <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/internship-submission")} tooltip="Nộp hồ sơ thực tập">
+                        <Link href="/internship-submission"><Briefcase /><span>Nộp hồ sơ thực tập</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
             )}
             
             {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
@@ -176,5 +183,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    

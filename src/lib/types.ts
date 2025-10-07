@@ -72,11 +72,13 @@ export type DefenseRegistration = {
   studentDocId: string; // The doc ID from the 'students' collection (which is the user's UID)
   studentId: string; // The official student ID number (e.g. 122001306)
   studentName: string;
+  // Graduation Project fields
   projectTitle?: string;
   summary?: string;
   objectives?: string;
   expectedResults?: string;
   reportLink?: string;
+  // General fields
   supervisorName?: string;
   registrationDate: any;
   registrationStatus: 'reporting' | 'exempted' | 'withdrawn';
@@ -85,6 +87,16 @@ export type DefenseRegistration = {
   exemptionDecisionDate?: any;
   exemptionProofLink?: string;
   subCommitteeId?: string;
+  // Internship fields
+  internship_companyName?: string;
+  internship_companyAddress?: string;
+  internship_companySupervisorName?: string;
+  internship_companySupervisorPhone?: string;
+  internship_registrationFormLink?: string;
+  internship_commitmentFormLink?: string;
+  internship_acceptanceLetterLink?: string;
+  internship_feedbackFormLink?: string;
+  internship_reportLink?: string;
 }
 
 // Represents a student's registration for a specific graduation defense session.

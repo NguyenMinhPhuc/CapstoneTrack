@@ -211,7 +211,7 @@
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "DefenseSessionRegistration",
       "type": "object",
-      "description": "Represents a student's registration for a specific defense session, including special exemption status.",
+      "description": "Represents a student's registration for a specific defense session, including project and internship details.",
       "properties": {
         "id": {
           "type": "string",
@@ -240,24 +240,28 @@
         },
         "projectTitle": {
           "type": "string",
-          "description": "The title of the student's project."
+          "description": "The title of the student's graduation project."
         },
         "summary": {
           "type": "string",
-          "description": "A brief summary of the project."
+          "description": "A brief summary of the graduation project."
         },
         "objectives": {
           "type": "string",
-          "description": "The objectives of the project."
+          "description": "The objectives of the graduation project."
         },
         "expectedResults": {
           "type": "string",
-          "description": "The expected results of the project."
+          "description": "The expected results of the graduation project."
         },
         "reportLink": {
           "type": "string",
           "format": "uri",
-          "description": "A URL link to the full report document."
+          "description": "A URL link to the full graduation project report."
+        },
+        "supervisorName": {
+          "type": "string",
+          "description": "The name of the supervisor for the project/internship."
         },
         "registrationStatus": {
           "type": "string",
@@ -285,6 +289,47 @@
         "subCommitteeId": {
             "type": "string",
             "description": "Reference to the DefenseSubCommittee this registration is assigned to."
+        },
+        "internship_companyName": {
+            "type": "string",
+            "description": "Name of the internship company."
+        },
+        "internship_companyAddress": {
+            "type": "string",
+            "description": "Address of the internship company."
+        },
+        "internship_companySupervisorName": {
+            "type": "string",
+            "description": "Name of the supervisor at the internship company."
+        },
+        "internship_companySupervisorPhone": {
+            "type": "string",
+            "description": "Phone number of the supervisor at the internship company."
+        },
+        "internship_registrationFormLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the internship registration form."
+        },
+        "internship_commitmentFormLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the self-arranged internship commitment form."
+        },
+        "internship_acceptanceLetterLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the internship acceptance letter from the company."
+        },
+        "internship_feedbackFormLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the feedback form from the company."
+        },
+        "internship_reportLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "URL to the full internship report."
         }
       },
       "required": [
