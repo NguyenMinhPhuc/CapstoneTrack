@@ -26,6 +26,8 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Rubric } from '@/lib/types';
 
+const NO_RUBRIC_VALUE = "__NONE__";
+
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên đợt là bắt buộc.' }),
   startDate: z.date({ required_error: 'Ngày bắt đầu là bắt buộc.' }),
@@ -61,7 +63,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
     const collectionRef = collection(firestore, 'graduationDefenseSessions');
     const newSessionData = {
       ...values,
-      rubricId: values.rubricId || '',
+      rubricId: values.rubricId === NO_RUBRIC_VALUE ? '' : values.rubricId,
       status: 'upcoming', // Default status for a new session
       createdAt: serverTimestamp(),
     };
@@ -225,14 +227,14 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Rubric chấm điểm</FormLabel>
-              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingRubrics}>
+              <Select onValueChange={field.onChange} defaultValue={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Không sử dụng Rubric</SelectItem>
+                  <SelectItem value={NO_RUBRIC_VALUE}>Không sử dụng Rubric</SelectItem>
                   {rubrics?.map(rubric => (
                     <SelectItem key={rubric.id} value={rubric.id}>
                       {rubric.name}

@@ -26,6 +26,8 @@ import { format } from 'date-fns';
 import type { GraduationDefenseSession, Rubric } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
+const NO_RUBRIC_VALUE = "__NONE__";
+
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên đợt là bắt buộc.' }),
   startDate: z.date({ required_error: 'Ngày bắt đầu là bắt buộc.' }),
@@ -76,7 +78,7 @@ export function EditDefenseSessionForm({ session, onFinished }: EditDefenseSessi
     
     const dataToUpdate = {
         ...values,
-        rubricId: values.rubricId || '',
+        rubricId: values.rubricId === NO_RUBRIC_VALUE ? '' : values.rubricId,
     };
     
     try {
@@ -237,14 +239,14 @@ export function EditDefenseSessionForm({ session, onFinished }: EditDefenseSessi
           render={({ field }) => (
             <FormItem>
               <FormLabel>Rubric chấm điểm</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingRubrics}>
+              <Select onValueChange={field.onChange} value={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">Không sử dụng Rubric</SelectItem>
+                  <SelectItem value={NO_RUBRIC_VALUE}>Không sử dụng Rubric</SelectItem>
                   {rubrics?.map(rubric => (
                     <SelectItem key={rubric.id} value={rubric.id}>
                       {rubric.name}
