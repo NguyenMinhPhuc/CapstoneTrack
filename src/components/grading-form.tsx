@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,6 +33,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Switch } from './ui/switch';
+import { Label } from './ui/label';
 
 export interface ProjectGroup {
     projectTitle: string;
