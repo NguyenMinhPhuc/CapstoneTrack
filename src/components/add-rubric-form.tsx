@@ -20,6 +20,7 @@ import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
+import { ScrollArea } from './ui/scroll-area';
 
 const criterionSchema = z.object({
   id: z.string(),
@@ -113,66 +114,70 @@ export function AddRubricForm({ onFinished }: AddRubricFormProps) {
 
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Các tiêu chí</h3>
-          {fields.map((field, index) => (
-            <div key={field.id} className="grid grid-cols-12 gap-x-4 gap-y-2 p-4 border rounded-lg relative">
-              <div className="col-span-12 md:col-span-4">
-                <FormField
-                  control={form.control}
-                  name={`criteria.${index}.name`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tên tiêu chí</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Ví dụ: Nội dung báo cáo" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-12 md:col-span-6">
-                 <FormField
-                  control={form.control}
-                  name={`criteria.${index}.description`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Mô tả chi tiết (tùy chọn)</FormLabel>
-                      <FormControl>
-                        <Textarea placeholder="Giải thích rõ hơn về tiêu chí này" {...field} className="h-10 resize-none"/>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-              <div className="col-span-8 md:col-span-1">
-                 <FormField
-                  control={form.control}
-                  name={`criteria.${index}.maxScore`}
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Điểm tối đa</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-               <div className="col-span-4 md:col-span-1 flex items-end justify-end">
-                <Button
-                    type="button"
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => remove(index)}
-                    className="h-10 w-10"
-                >
-                    <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          ))}
+            <ScrollArea className="h-[40vh] pr-4">
+                <div className="space-y-4">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="grid grid-cols-12 gap-x-4 gap-y-2 p-4 border rounded-lg relative">
+                        <div className="col-span-12 md:col-span-4">
+                            <FormField
+                            control={form.control}
+                            name={`criteria.${index}.name`}
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Tên tiêu chí</FormLabel>
+                                <FormControl>
+                                    <Input placeholder="Ví dụ: Nội dung báo cáo" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        </div>
+                        <div className="col-span-12 md:col-span-6">
+                            <FormField
+                            control={form.control}
+                            name={`criteria.${index}.description`}
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Mô tả chi tiết (tùy chọn)</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="Giải thích rõ hơn về tiêu chí này" {...field} className="h-10 resize-none"/>
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        </div>
+                        <div className="col-span-8 md:col-span-1">
+                            <FormField
+                            control={form.control}
+                            name={`criteria.${index}.maxScore`}
+                            render={({ field }) => (
+                                <FormItem>
+                                <FormLabel>Điểm tối đa</FormLabel>
+                                <FormControl>
+                                    <Input type="number" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                                </FormItem>
+                            )}
+                            />
+                        </div>
+                        <div className="col-span-4 md:col-span-1 flex items-end justify-end">
+                            <Button
+                                type="button"
+                                variant="destructive"
+                                size="icon"
+                                onClick={() => remove(index)}
+                                className="h-10 w-10"
+                            >
+                                <Trash2 className="h-4 w-4" />
+                            </Button>
+                        </div>
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
           <Button
             type="button"
             variant="outline"
