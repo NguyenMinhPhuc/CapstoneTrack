@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Trash2, Edit, UserPlus } from 'lucide-react';
@@ -50,6 +50,16 @@ export function SubCommitteeCard({ subcommittee, allSupervisors, sessionId }: Su
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isMembersDialogOpen, setIsMembersDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+
+  const sortedMembers = useMemo(() => {
+    const roleOrder: Record<string, number> = {
+        'Head': 1,
+        'Commissioner': 2,
+        'Secretary': 3,
+    };
+    return [...subcommittee.members].sort((a, b) => (roleOrder[a.role] || 99) - (roleOrder[b.role] || 99));
+  }, [subcommittee.members]);
+
 
   const handleDelete = async () => {
     const subcommitteeDocRef = doc(firestore, `graduationDefenseSessions/${sessionId}/subCommittees`, subcommittee.id);
@@ -104,9 +114,9 @@ export function SubCommitteeCard({ subcommittee, allSupervisors, sessionId }: Su
           </DropdownMenu>
         </CardHeader>
         <CardContent>
-            {subcommittee.members.length > 0 ? (
+            {sortedMembers.length > 0 ? (
                 <ul className="space-y-2 text-sm">
-                    {subcommittee.members.map((member, index) => (
+                    {sortedMembers.map((member, index) => (
                         <li key={index} className="flex justify-between items-center">
                             <span>{member.name}</span>
                             <Badge variant="outline">{roleLabel[member.role] || member.role}</Badge>
