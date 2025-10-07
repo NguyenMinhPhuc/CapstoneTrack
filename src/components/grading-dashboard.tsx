@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ClipboardCheck, Info, Users, FileText } from 'lucide-react';
+import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, ChevronDown } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
@@ -30,6 +30,11 @@ interface SessionWithAssignments {
 interface ProjectGroup {
     projectTitle: string;
     students: DefenseRegistration[];
+    // We pass the first student's details for display, assuming they are the same for the group
+    summary?: string;
+    objectives?: string;
+    expectedResults?: string;
+    reportLink?: string;
 }
 
 // A new component to render the list for a single subcommittee
@@ -62,7 +67,17 @@ function SubcommitteeGradingView({
             }
             groups.get(projectKey)!.push(reg);
         });
-        return Array.from(groups.entries()).map(([projectTitle, students]) => ({projectTitle, students}));
+        return Array.from(groups.entries()).map(([projectTitle, students]) => {
+            const firstStudent = students[0];
+            return {
+                projectTitle, 
+                students,
+                summary: firstStudent?.summary,
+                objectives: firstStudent?.objectives,
+                expectedResults: firstStudent?.expectedResults,
+                reportLink: firstStudent?.reportLink,
+            }
+        });
     }, [studentsInSubcommittee]);
 
     const handleGradeClick = (group: ProjectGroup) => {
@@ -77,36 +92,63 @@ function SubcommitteeGradingView({
     return (
         <>
             <CardContent>
-                <div className="space-y-4">
+                <Accordion type="multiple" className="w-full space-y-4">
                     {projectGroups.map((group) => (
-                        <div key={group.projectTitle} className="border rounded-lg p-4">
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <h4 className="font-semibold text-base">
-                                        {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
-                                    </h4>
-                                    <div className="mt-2 space-y-1">
-                                        {group.students.map(student => (
-                                            <div key={student.id} className="flex items-center gap-2 text-sm">
-                                                <Users className="h-4 w-4 text-muted-foreground" />
-                                                <span>{student.studentName} ({student.studentId})</span>
-                                            </div>
-                                        ))}
+                        <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
+                            <AccordionTrigger className="hover:no-underline">
+                                 <div className="flex justify-between items-center w-full">
+                                    <div className="text-left">
+                                        <h4 className="font-semibold text-base">
+                                            {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                                        </h4>
+                                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
+                                            {group.students.map(student => (
+                                                <div key={student.id} className="flex items-center gap-2 text-sm">
+                                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                                    <span>{student.studentName} ({student.studentId})</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
+                                     <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        disabled={!rubric}
+                                        onClick={(e) => { e.stopPropagation(); handleGradeClick(group); }}
+                                        className="mr-4"
+                                    >
+                                        <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                        {rubric ? 'Chấm điểm' : 'Chưa có Rubric'}
+                                    </Button>
+                                 </div>
+                            </AccordionTrigger>
+                            <AccordionContent>
+                                <div className="space-y-4 pt-2 border-t mt-2">
+                                     <div className="space-y-2">
+                                        <h5 className="font-semibold flex items-center gap-2"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h5>
+                                        <p className="text-sm text-muted-foreground pl-6">{group.summary || 'Chưa có thông tin.'}</p>
+                                     </div>
+                                      <div className="space-y-2">
+                                        <h5 className="font-semibold flex items-center gap-2"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h5>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-6">{group.objectives || 'Chưa có thông tin.'}</p>
+                                     </div>
+                                      <div className="space-y-2">
+                                        <h5 className="font-semibold flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h5>
+                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-6">{group.expectedResults || 'Chưa có thông tin.'}</p>
+                                     </div>
+                                     {group.reportLink && (
+                                        <div className="space-y-2">
+                                            <h5 className="font-semibold flex items-center gap-2"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h5>
+                                            <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all pl-6">
+                                                {group.reportLink}
+                                            </a>
+                                        </div>
+                                     )}
                                 </div>
-                                <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    disabled={!rubric}
-                                    onClick={() => handleGradeClick(group)}
-                                >
-                                    <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                    {rubric ? 'Chấm điểm' : 'Chưa có Rubric'}
-                                </Button>
-                            </div>
-                        </div>
+                            </AccordionContent>
+                        </AccordionItem>
                     ))}
-                </div>
+                </Accordion>
             </CardContent>
             {selectedGroup && rubric && (
                  <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
