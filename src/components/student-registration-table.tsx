@@ -33,6 +33,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap } from 'lucide-react';
@@ -601,30 +602,30 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                     <RefreshCw className="mr-2 h-4 w-4" />
                                     <span>Về 'Báo cáo'</span>
                                 </DropdownMenuSubTrigger>
-                                <DropdownMenuContent>
+                                <DropdownMenuSubContent>
                                     <DropdownMenuItem onClick={() => handleRevertToReporting([reg.id], 'graduation')} disabled={reg.graduationStatus === 'reporting'}>Chỉ Tốt nghiệp</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => handleRevertToReporting([reg.id], 'internship')} disabled={reg.internshipStatus === 'reporting'}>Chỉ Thực tập</DropdownMenuItem>
-                                </DropdownMenuContent>
+                                </DropdownMenuSubContent>
                            </DropdownMenuSub>
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                      <Star className="mr-2 h-4 w-4" />
                                     <span>Xét đặc cách</span>
                                 </DropdownMenuSubTrigger>
-                                <DropdownMenuContent>
+                                <DropdownMenuSubContent>
                                     <DropdownMenuItem onClick={() => { setIsExemptionDialogOpen(true); setSelectedRowIds([reg.id]); }}>Cho Tốt nghiệp</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => { /* Implement internship exemption */ }}>Cho Thực tập</DropdownMenuItem>
-                                </DropdownMenuContent>
+                                </DropdownMenuSubContent>
                             </DropdownMenuSub>
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                      <XCircle className="mr-2 h-4 w-4" />
                                     <span>Bỏ báo cáo</span>
                                 </DropdownMenuSubTrigger>
-                                <DropdownMenuContent>
+                                <DropdownMenuSubContent>
                                     <DropdownMenuItem onClick={() => { setIsWithdrawDialogOpen(true); setSelectedRowIds([reg.id]); }}>Tốt nghiệp</DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => { /* Implement internship withdrawal */ }}>Thực tập</DropdownMenuItem>
-                                </DropdownMenuContent>
+                                </DropdownMenuSubContent>
                             </DropdownMenuSub>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(reg.id)}>
@@ -675,4 +676,3 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     </>
   );
 }
-
