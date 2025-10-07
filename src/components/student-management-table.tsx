@@ -14,6 +14,8 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -109,6 +111,28 @@ export function StudentManagementTable() {
   );
   
   const { data: students, isLoading } = useCollection<Student>(studentsCollectionRef);
+
+  const classStats = useMemo(() => {
+    if (!students) return [];
+
+    const statsByClass: Record<string, { total: number; studying: number; reserved: number; dropped_out: number; graduated: number; }> = {};
+
+    students.forEach(student => {
+        const className = student.className || 'Chưa xếp lớp';
+        if (!statsByClass[className]) {
+            statsByClass[className] = { total: 0, studying: 0, reserved: 0, dropped_out: 0, graduated: 0 };
+        }
+        statsByClass[className].total++;
+        if (statsByClass[className][student.status] !== undefined) {
+            statsByClass[className][student.status]++;
+        }
+    });
+
+    return Object.entries(statsByClass).map(([className, stats]) => ({
+        className,
+        ...stats,
+    })).sort((a, b) => a.className.localeCompare(b.className));
+  }, [students]);
 
   const uniqueClasses = useMemo(() => {
     if (!students) return [];
@@ -259,6 +283,39 @@ export function StudentManagementTable() {
 
   return (
     <div className="space-y-4">
+        {classStats.length > 0 && (
+            <div className="space-y-2">
+                <h2 className="text-xl font-semibold">Thống kê theo lớp</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                {classStats.map(stat => (
+                    <Card key={stat.className}>
+                        <CardHeader className="pb-2">
+                            <CardTitle className="text-base">{stat.className}</CardTitle>
+                            <CardDescription>{stat.total} sinh viên</CardDescription>
+                        </CardHeader>
+                        <CardContent className="text-xs">
+                            <div className="flex items-center justify-between">
+                                <span>{statusLabel.studying}</span>
+                                <Badge variant="outline" className={cn(statusColorClass.studying)}>{stat.studying}</Badge>
+                            </div>
+                             <div className="flex items-center justify-between mt-1">
+                                <span>{statusLabel.reserved}</span>
+                                <Badge variant="outline" className={cn(statusColorClass.reserved)}>{stat.reserved}</Badge>
+                            </div>
+                             <div className="flex items-center justify-between mt-1">
+                                <span>{statusLabel.dropped_out}</span>
+                                <Badge variant="outline" className={cn(statusColorClass.dropped_out)}>{stat.dropped_out}</Badge>
+                            </div>
+                             <div className="flex items-center justify-between mt-1">
+                                <span>{statusLabel.graduated}</span>
+                                <Badge variant="outline" className={cn(statusColorClass.graduated)}>{stat.graduated}</Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+                </div>
+            </div>
+        )}
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
