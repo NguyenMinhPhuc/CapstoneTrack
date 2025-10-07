@@ -252,13 +252,13 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
             collection(firestore, 'defenseRegistrations'), 
             where('sessionId', '==', session.id),
             where('supervisorId', '==', supervisorId),
-            where('registrationStatus', '==', 'reporting')
+            where('graduationStatus', '==', 'reporting')
         );
         const internSupervisorQuery = query(
             collection(firestore, 'defenseRegistrations'),
             where('sessionId', '==', session.id),
             where('internshipSupervisorId', '==', supervisorId),
-            where('registrationStatus', '==', 'reporting')
+            where('internshipStatus', '==', 'reporting')
         );
         
         const [gradSnapshot, internSnapshot] = await Promise.all([

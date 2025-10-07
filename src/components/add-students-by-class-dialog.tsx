@@ -133,7 +133,8 @@ export function AddStudentsByClassDialog({
                 projectTitle: '',
                 supervisorName: '',
                 registrationDate: serverTimestamp(),
-                registrationStatus: 'reporting',
+                graduationStatus: 'not_reporting',
+                internshipStatus: 'not_reporting',
             });
         }
     });

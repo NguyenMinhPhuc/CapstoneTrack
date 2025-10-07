@@ -118,7 +118,8 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       supervisorId: supervisorIdValue,
       supervisorName: supervisorNameValue,
       registrationDate: serverTimestamp(),
-      registrationStatus: 'reporting' as const,
+      graduationStatus: 'reporting' as const,
+      internshipStatus: 'not_reporting' as const, // Default to not reporting for internship
     };
 
     addDoc(registrationsCollectionRef, newRegistrationData)

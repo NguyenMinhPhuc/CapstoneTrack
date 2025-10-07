@@ -148,7 +148,8 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
                 supervisorId: supervisorInfo?.id || '',
                 supervisorName: supervisorName,
                 registrationDate: serverTimestamp(),
-                registrationStatus: 'reporting',
+                graduationStatus: 'reporting',
+                internshipStatus: 'not_reporting',
             };
             batch.set(newRegistrationRef, registrationData);
             successCount++;

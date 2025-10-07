@@ -52,12 +52,13 @@ function SubcommitteeGradingView({
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
 
     const studentsInSubcommittee = useMemo(() => {
-        return registrations.filter(reg => reg.subCommitteeId === subcommittee.id && reg.registrationStatus === 'reporting');
+        return registrations.filter(reg => reg.subCommitteeId === subcommittee.id);
     }, [registrations, subcommittee.id]);
 
     const projectGroups = useMemo(() => {
+        const reportingStudents = studentsInSubcommittee.filter(reg => reg.graduationStatus === 'reporting');
         const groups = new Map<string, DefenseRegistration[]>();
-        studentsInSubcommittee.forEach(reg => {
+        reportingStudents.forEach(reg => {
             const projectKey = reg.projectTitle || `_individual_${reg.id}`;
             if (!groups.has(projectKey)) {
                 groups.set(projectKey, []);
@@ -79,6 +80,10 @@ function SubcommitteeGradingView({
                 reportLink: representativeStudent?.reportLink,
             }
         });
+    }, [studentsInSubcommittee]);
+
+    const internshipStudents = useMemo(() => {
+        return studentsInSubcommittee.filter(reg => reg.internshipStatus === 'reporting');
     }, [studentsInSubcommittee]);
     
     // Find evaluations for each group/student
@@ -208,24 +213,26 @@ function SubcommitteeGradingView({
                                                             <Users className="h-4 w-4 text-muted-foreground" />
                                                             <span>{student.studentName} ({student.studentId})</span>
                                                         </div>
-                                                        <div className="flex items-center gap-2">
-                                                            {internEvaluation && (
-                                                                <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
-                                                                    {internEvaluation.totalScore.toFixed(2)}
-                                                                </Badge>
-                                                            )}
-                                                            <Button 
-                                                                variant="outline" 
-                                                                size="sm"
-                                                                disabled={!councilInternshipRubric}
-                                                                onClick={() => handleGradeInternshipClick(student)}
-                                                            >
-                                                                <Briefcase className="mr-2 h-4 w-4"/>
-                                                                {internEvaluation ? 'Sửa điểm TT' : 'Chấm TT'}
-                                                            </Button>
-                                                        </div>
+                                                        {student.internshipStatus === 'reporting' && (
+                                                            <div className="flex items-center gap-2">
+                                                                {internEvaluation && (
+                                                                    <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
+                                                                        {internEvaluation.totalScore.toFixed(2)}
+                                                                    </Badge>
+                                                                )}
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    size="sm"
+                                                                    disabled={!councilInternshipRubric}
+                                                                    onClick={() => handleGradeInternshipClick(student)}
+                                                                >
+                                                                    <Briefcase className="mr-2 h-4 w-4"/>
+                                                                    {internEvaluation ? 'Sửa điểm TT' : 'Chấm TT'}
+                                                                </Button>
+                                                            </div>
+                                                        )}
                                                     </div>
-                                                    <InternshipInfo student={student} />
+                                                    {student.internshipStatus === 'reporting' && <InternshipInfo student={student} />}
                                                 </div>
                                             )
                                         })}
