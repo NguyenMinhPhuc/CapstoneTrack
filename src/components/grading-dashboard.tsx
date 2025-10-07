@@ -4,12 +4,12 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getDocs, doc } from 'firebase/firestore';
-import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration, StudentWithRegistrationDetails } from '@/lib/types';
+import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration, Supervisor } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle } from 'lucide-react';
+import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle, UserCheck } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
@@ -21,11 +21,16 @@ interface GradingDashboardProps {
   userRole: 'supervisor' | 'admin';
 }
 
-interface SessionWithAssignments {
+interface SessionWithCouncilAssignments {
   session: GraduationDefenseSession;
   registrations: DefenseRegistration[];
   isCouncilMember: boolean;
   subCommittees: DefenseSubCommittee[];
+}
+
+interface SessionWithSupervisedStudents {
+    session: GraduationDefenseSession;
+    registrations: DefenseRegistration[];
 }
 
 
@@ -33,15 +38,15 @@ interface SessionWithAssignments {
 function SubcommitteeGradingView({
     subcommittee, 
     registrations,
-    graduationRubric,
-    internshipRubric,
+    councilGraduationRubric,
+    councilInternshipRubric,
     supervisorId,
     sessionId
 }: { 
     subcommittee: DefenseSubCommittee, 
     registrations: DefenseRegistration[],
-    graduationRubric: Rubric | null,
-    internshipRubric: Rubric | null,
+    councilGraduationRubric: Rubric | null,
+    councilInternshipRubric: Rubric | null,
     supervisorId: string,
     sessionId: string,
 }) {
@@ -81,23 +86,23 @@ function SubcommitteeGradingView({
     }, [studentsInSubcommittee]);
 
     const handleGradeGraduationClick = (group: (typeof projectGroups)[0]) => {
-        if (!graduationRubric) return;
+        if (!councilGraduationRubric) return;
         setSelectedGroupForGrading({
             projectTitle: group.projectTitle,
             students: group.students
         });
-        setSelectedRubric(graduationRubric);
+        setSelectedRubric(councilGraduationRubric);
         setSelectedEvalType('graduation');
         setIsGradingDialogOpen(true);
     };
 
     const handleGradeInternshipClick = (student: DefenseRegistration) => {
-        if (!internshipRubric) return;
+        if (!councilInternshipRubric) return;
         setSelectedGroupForGrading({
             projectTitle: `Thực tập của ${student.studentName}`,
             students: [student] // Pass only the single student
         });
-        setSelectedRubric(internshipRubric);
+        setSelectedRubric(councilInternshipRubric);
         setSelectedEvalType('internship');
         setIsGradingDialogOpen(true);
     };
@@ -159,7 +164,7 @@ function SubcommitteeGradingView({
                                     <Button 
                                         variant="outline" 
                                         size="sm"
-                                        disabled={!graduationRubric}
+                                        disabled={!councilGraduationRubric}
                                         onClick={() => handleGradeGraduationClick(group)}
                                     >
                                         <GraduationCap className="mr-2 h-4 w-4"/>
@@ -179,7 +184,7 @@ function SubcommitteeGradingView({
                                                 <Button 
                                                     variant="outline" 
                                                     size="sm"
-                                                    disabled={!internshipRubric}
+                                                    disabled={!councilInternshipRubric}
                                                     onClick={() => handleGradeInternshipClick(student)}
                                                 >
                                                     <Briefcase className="mr-2 h-4 w-4"/>
@@ -239,6 +244,123 @@ function SubcommitteeGradingView({
     )
 }
 
+function SupervisedStudentsGradingView({
+    registrations,
+    supervisorGraduationRubric,
+    supervisorInternshipRubric,
+    supervisorId,
+    sessionId
+}: {
+    registrations: DefenseRegistration[],
+    supervisorGraduationRubric: Rubric | null,
+    supervisorInternshipRubric: Rubric | null,
+    supervisorId: string,
+    sessionId: string,
+}) {
+    const [selectedGroupForGrading, setSelectedGroupForGrading] = useState<ProjectGroup | null>(null);
+    const [selectedRubric, setSelectedRubric] = useState<Rubric | null>(null);
+    const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
+    const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+
+    const projectGroups = useMemo(() => {
+        const groups = new Map<string, DefenseRegistration[]>();
+        registrations.forEach(reg => {
+            const projectKey = reg.projectTitle || `_individual_${reg.id}`;
+            if (!groups.has(projectKey)) {
+                groups.set(projectKey, []);
+            }
+            groups.get(projectKey)!.push(reg);
+        });
+
+        return Array.from(groups.entries()).map(([projectTitle, students]) => ({
+            projectTitle,
+            students
+        }));
+    }, [registrations]);
+
+    const handleGradeGraduationClick = (group: (typeof projectGroups)[0]) => {
+        if (!supervisorGraduationRubric) return;
+        setSelectedGroupForGrading({
+            projectTitle: group.projectTitle,
+            students: group.students
+        });
+        setSelectedRubric(supervisorGraduationRubric);
+        setSelectedEvalType('graduation');
+        setIsGradingDialogOpen(true);
+    };
+
+    const handleGradeInternshipClick = (student: DefenseRegistration) => {
+        if (!supervisorInternshipRubric) return;
+        setSelectedGroupForGrading({
+            projectTitle: `Thực tập của ${student.studentName}`,
+            students: [student]
+        });
+        setSelectedRubric(supervisorInternshipRubric);
+        setSelectedEvalType('internship');
+        setIsGradingDialogOpen(true);
+    };
+
+    if (registrations.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn sinh viên nào trong đợt này.</p>;
+    }
+    
+    return (
+        <>
+            <CardContent className="space-y-4">
+                 {projectGroups.map((group) => (
+                    <div key={group.projectTitle} className="border rounded-lg p-4">
+                        <h4 className="font-semibold mb-2">
+                           {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                        </h4>
+                        <div className="space-y-3">
+                            {group.students.map(student => (
+                                <div key={student.id} className="flex items-center justify-between pl-4 border-l-2">
+                                    <p className="text-sm">{student.studentName} ({student.studentId})</p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={!supervisorInternshipRubric}
+                                        onClick={() => handleGradeInternshipClick(student)}
+                                    >
+                                        <Briefcase className="mr-2 h-4 w-4" />
+                                        Chấm TT
+                                    </Button>
+                                </div>
+                            ))}
+                        </div>
+                        <Separator className="my-3"/>
+                         <Button
+                            className="w-full"
+                            variant="secondary"
+                            disabled={!supervisorGraduationRubric}
+                            onClick={() => handleGradeGraduationClick(group)}
+                        >
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            Chấm điểm Đồ án Tốt nghiệp cho nhóm
+                        </Button>
+                    </div>
+                ))}
+            </CardContent>
+
+             {selectedGroupForGrading && selectedRubric && selectedEvalType && (
+                 <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
+                    <DialogContent className="sm:max-w-3xl">
+                         <GradingForm 
+                            projectGroup={selectedGroupForGrading}
+                            rubric={selectedRubric}
+                            evaluationType={selectedEvalType}
+                            supervisorId={supervisorId}
+                            sessionId={sessionId}
+                            onFinished={() => setIsGradingDialogOpen(false)}
+                         />
+                    </DialogContent>
+                </Dialog>
+            )}
+        </>
+    );
+}
+
+
 
 export function GradingDashboard({ supervisorId, userRole }: GradingDashboardProps) {
   const firestore = useFirestore();
@@ -246,19 +368,23 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
   const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore]);
   const { data: allSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
-  const [assignedSessions, setAssignedSessions] = useState<SessionWithAssignments[]>([]);
+  const supervisorDocRef = useMemoFirebase(() => doc(firestore, 'supervisors', supervisorId), [firestore, supervisorId]);
+  const { data: supervisorData, isLoading: isLoadingSupervisor } = useDoc<Supervisor>(supervisorDocRef);
+
+  const [councilAssignments, setCouncilAssignments] = useState<SessionWithCouncilAssignments[]>([]);
+  const [supervisedAssignments, setSupervisedAssignments] = useState<SessionWithSupervisedStudents[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
 
   useEffect(() => {
-    if (isLoadingSessions || !allSessions) return;
+    if (isLoadingSessions || !allSessions || isLoadingSupervisor) return;
 
     const fetchAssignments = async () => {
       setIsLoadingAssignments(true);
-      const assignments: SessionWithAssignments[] = [];
+      const councilAssignmentsData: SessionWithCouncilAssignments[] = [];
+      const supervisedAssignmentsData: SessionWithSupervisedStudents[] = [];
+      const supervisorFullName = supervisorData ? `${supervisorData.firstName} ${supervisorData.lastName}` : null;
 
       for (const session of allSessions) {
-        if (!supervisorId) continue;
-
         let isCouncilMember = false;
         const assignedSubCommittees: DefenseSubCommittee[] = [];
 
@@ -283,36 +409,43 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
         const registrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
         
         if (isCouncilMember || assignedSubCommittees.length > 0) {
-          assignments.push({
+          councilAssignmentsData.push({
             session,
             registrations,
             isCouncilMember,
             subCommittees: assignedSubCommittees,
           });
         }
+        
+        if(supervisorFullName) {
+            const supervisedRegistrations = registrations.filter(
+                reg => reg.supervisorName === supervisorFullName && reg.registrationStatus === 'reporting'
+            );
+            if (supervisedRegistrations.length > 0) {
+                supervisedAssignmentsData.push({
+                    session,
+                    registrations: supervisedRegistrations,
+                });
+            }
+        }
       }
-      setAssignedSessions(assignments);
+      setCouncilAssignments(councilAssignmentsData);
+      setSupervisedAssignments(supervisedAssignmentsData);
       setIsLoadingAssignments(false);
     };
 
     fetchAssignments();
-  }, [allSessions, isLoadingSessions, supervisorId, firestore]);
+  }, [allSessions, isLoadingSessions, supervisorId, firestore, supervisorData, isLoadingSupervisor]);
   
   
-  const SessionAccordionItem = ({ sessionData }: { sessionData: SessionWithAssignments }) => {
+  const CouncilSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithCouncilAssignments }) => {
     const { session, isCouncilMember, subCommittees, registrations } = sessionData;
     
-    const gradRubricDocRef = useMemoFirebase(
-      () => (session.graduationRubricId ? doc(firestore, 'rubrics', session.graduationRubricId) : null),
-      [firestore, session.graduationRubricId]
-    );
-    const { data: graduationRubric, isLoading: isLoadingGradRubric } = useDoc<Rubric>(gradRubricDocRef);
+    const councilGradRubricDocRef = useMemoFirebase(() => (session.councilGraduationRubricId ? doc(firestore, 'rubrics', session.councilGraduationRubricId) : null), [firestore, session.councilGraduationRubricId]);
+    const { data: councilGraduationRubric, isLoading: isLoadingCouncilGradRubric } = useDoc<Rubric>(councilGradRubricDocRef);
     
-    const internRubricDocRef = useMemoFirebase(
-      () => (session.internshipRubricId ? doc(firestore, 'rubrics', session.internshipRubricId) : null),
-      [firestore, session.internshipRubricId]
-    );
-    const { data: internshipRubric, isLoading: isLoadingInternRubric } = useDoc<Rubric>(internRubricDocRef);
+    const councilInternRubricDocRef = useMemoFirebase(() => (session.councilInternshipRubricId ? doc(firestore, 'rubrics', session.councilInternshipRubricId) : null), [firestore, session.councilInternshipRubricId]);
+    const { data: councilInternshipRubric, isLoading: isLoadingCouncilInternRubric } = useDoc<Rubric>(councilInternRubricDocRef);
 
     const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
         if (isLoading) return 'Đang tải...';
@@ -320,7 +453,7 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
     }
 
     return (
-        <AccordionItem key={session.id} value={session.id}>
+        <AccordionItem key={session.id} value={`council-${session.id}`}>
             <AccordionTrigger>
             <div className="flex items-center gap-4">
                 <h3 className="text-lg font-semibold">{session.name}</h3>
@@ -342,20 +475,20 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
                 <Card key={sc.id}>
                     <CardHeader>
                         <CardTitle className="text-base">{sc.name}</CardTitle>
-                        <CardDescription className="flex items-center gap-4 text-xs">
+                        <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                             <span>{sc.members.length} thành viên</span>
-                             <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> Rubric TN: {getRubricName(graduationRubric, isLoadingGradRubric)}</span>
-                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> Rubric TT: {getRubricName(internshipRubric, isLoadingInternRubric)}</span>
+                             <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> HĐ chấm TN: {getRubricName(councilGraduationRubric, isLoadingCouncilGradRubric)}</span>
+                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> HĐ chấm TT: {getRubricName(councilInternshipRubric, isLoadingCouncilInternRubric)}</span>
                         </CardDescription>
                     </CardHeader>
-                    {(isLoadingGradRubric || isLoadingInternRubric) ? (
+                    {(isLoadingCouncilGradRubric || isLoadingCouncilInternRubric) ? (
                         <div className="p-6"><Skeleton className="h-20 w-full" /></div>
                     ) : (
                          <SubcommitteeGradingView 
                             subcommittee={sc} 
                             registrations={registrations} 
-                            graduationRubric={graduationRubric || null}
-                            internshipRubric={internshipRubric || null}
+                            councilGraduationRubric={councilGraduationRubric || null}
+                            councilInternshipRubric={councilInternshipRubric || null}
                             supervisorId={supervisorId}
                             sessionId={session.id}
                         />
@@ -367,43 +500,122 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
     );
   }
 
+  const SupervisedSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithSupervisedStudents }) => {
+    const { session, registrations } = sessionData;
 
-  const isLoading = isLoadingSessions || isLoadingAssignments;
+    const supervisorGradRubricDocRef = useMemoFirebase(() => (session.supervisorGraduationRubricId ? doc(firestore, 'rubrics', session.supervisorGraduationRubricId) : null), [firestore, session.supervisorGraduationRubricId]);
+    const { data: supervisorGraduationRubric, isLoading: isLoadingSupGradRubric } = useDoc<Rubric>(supervisorGradRubricDocRef);
+
+    const companyInternRubricDocRef = useMemoFirebase(() => (session.companyInternshipRubricId ? doc(firestore, 'rubrics', session.companyInternshipRubricId) : null), [firestore, session.companyInternshipRubricId]);
+    const { data: supervisorInternshipRubric, isLoading: isLoadingSupInternRubric } = useDoc<Rubric>(companyInternRubricDocRef);
+    
+     const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
+        if (isLoading) return 'Đang tải...';
+        return rubric ? rubric.name : 'Chưa gán';
+    }
+
+    return (
+        <AccordionItem key={session.id} value={`supervisor-${session.id}`}>
+            <AccordionTrigger>
+                <div className="flex items-center gap-4">
+                    <h3 className="text-lg font-semibold">{session.name}</h3>
+                    <Badge>{session.status}</Badge>
+                </div>
+            </AccordionTrigger>
+            <AccordionContent>
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Danh sách sinh viên</CardTitle>
+                         <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+                             <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> GVHD chấm TN: {getRubricName(supervisorGraduationRubric, isLoadingSupGradRubric)}</span>
+                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> GVHD chấm TT: {getRubricName(supervisorInternshipRubric, isLoadingSupInternRubric)}</span>
+                        </CardDescription>
+                    </CardHeader>
+                     {(isLoadingSupGradRubric || isLoadingSupInternRubric) ? (
+                        <div className="p-6"><Skeleton className="h-20 w-full" /></div>
+                    ) : (
+                        <SupervisedStudentsGradingView
+                            registrations={registrations}
+                            supervisorGraduationRubric={supervisorGraduationRubric}
+                            supervisorInternshipRubric={supervisorInternshipRubric}
+                            supervisorId={supervisorId}
+                            sessionId={session.id}
+                        />
+                    )}
+                </Card>
+            </AccordionContent>
+        </AccordionItem>
+    );
+};
+
+
+  const isLoading = isLoadingSessions || isLoadingAssignments || isLoadingSupervisor;
+
+  const noAssignments = councilAssignments.length === 0 && supervisedAssignments.length === 0;
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck />
-            Phiếu Chấm Điểm
-          </CardTitle>
-          <CardDescription>
-            Đây là danh sách các đợt báo cáo và tiểu ban đang hoạt động mà bạn được phân công chấm điểm.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-      
-      {isLoading ? (
-        <div className="space-y-4">
-          <Skeleton className="h-16 w-full" />
-          <Skeleton className="h-16 w-full" />
-        </div>
-      ) : assignedSessions.length > 0 ? (
-        <Accordion type="multiple" defaultValue={assignedSessions.map(s => s.session.id)}>
-          {assignedSessions.map((sessionData) => (
-            <SessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
-          ))}
-        </Accordion>
-      ) : (
-        <Alert>
-          <Info className="h-4 w-4" />
-          <AlertTitle>Chưa được phân công</AlertTitle>
-          <AlertDescription>
-            Bạn hiện chưa được phân công vào bất kỳ hội đồng hoặc tiểu ban chấm điểm nào trong các đợt đang diễn ra.
-          </AlertDescription>
-        </Alert>
-      )}
+        {isLoading ? (
+             <div className="space-y-4">
+                <Skeleton className="h-24 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+            </div>
+        ) : noAssignments ? (
+            <Card>
+                <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Info /> Chưa được phân công</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <p>Bạn hiện chưa được phân công vào bất kỳ hội đồng, tiểu ban, hoặc hướng dẫn sinh viên nào trong các đợt đang diễn ra.</p>
+                </CardContent>
+            </Card>
+        ) : (
+            <>
+                {councilAssignments.length > 0 && (
+                    <div>
+                        <Card className="mb-4">
+                            <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <ClipboardCheck />
+                                Vai trò trong Hội đồng/Tiểu ban
+                            </CardTitle>
+                            <CardDescription>
+                                Chấm điểm với tư cách là thành viên hội đồng hoặc tiểu ban bạn được phân công.
+                            </CardDescription>
+                            </CardHeader>
+                        </Card>
+                        <Accordion type="multiple" defaultValue={councilAssignments.map(s => `council-${s.session.id}`)}>
+                            {councilAssignments.map((sessionData) => (
+                                <CouncilSessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
+                            ))}
+                        </Accordion>
+                    </div>
+                )}
+
+                {supervisedAssignments.length > 0 && (
+                     <div>
+                        <Card className="mb-4">
+                            <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <UserCheck />
+                                Sinh viên bạn hướng dẫn
+                            </CardTitle>
+                            <CardDescription>
+                                Chấm điểm với tư cách là giáo viên hướng dẫn trực tiếp cho các sinh viên/đề tài dưới đây.
+                            </CardDescription>
+                            </CardHeader>
+                        </Card>
+                        <Accordion type="multiple" defaultValue={supervisedAssignments.map(s => `supervisor-${s.session.id}`)}>
+                            {supervisedAssignments.map((sessionData) => (
+                                <SupervisedSessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
+                            ))}
+                        </Accordion>
+                    </div>
+                )}
+            </>
+        )}
     </div>
   );
 }
+
