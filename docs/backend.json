@@ -283,28 +283,51 @@
           "type": "string",
           "description": "The name of the internship supervisor."
         },
-        "registrationStatus": {
+        "graduationStatus": {
           "type": "string",
-          "description": "The registration status of the student for the defense.",
-          "enum": ["reporting", "exempted", "withdrawn"]
+          "description": "The registration status for the graduation defense.",
+          "enum": ["reporting", "exempted", "withdrawn", "not_reporting"]
         },
-        "statusNote": {
+        "graduationStatusNote": {
             "type": "string",
-            "description": "A note explaining the reason for the 'withdrawn' status."
+            "description": "A note explaining the reason for the 'withdrawn' status for graduation."
         },
-        "exemptionDecisionNumber": {
+        "graduationExemptionDecisionNumber": {
           "type": "string",
-          "description": "The official number of the exemption decision document."
+          "description": "The official number of the graduation exemption decision document."
         },
-        "exemptionDecisionDate": {
+        "graduationExemptionDecisionDate": {
           "type": "string",
           "format": "date",
-          "description": "The date when the exemption decision was made."
+          "description": "The date when the graduation exemption decision was made."
         },
-        "exemptionProofLink": {
+        "graduationExemptionProofLink": {
           "type": "string",
           "format": "uri",
-          "description": "A URL link to the proof document for the exemption."
+          "description": "A URL link to the proof document for the graduation exemption."
+        },
+        "internshipStatus": {
+          "type": "string",
+          "description": "The registration status for the internship report.",
+          "enum": ["reporting", "exempted", "withdrawn", "not_reporting"]
+        },
+        "internshipStatusNote": {
+            "type": "string",
+            "description": "A note explaining the reason for the 'withdrawn' status for internship."
+        },
+        "internshipExemptionDecisionNumber": {
+          "type": "string",
+          "description": "The official number of the internship exemption decision document."
+        },
+        "internshipExemptionDecisionDate": {
+          "type": "string",
+          "format": "date",
+          "description": "The date when the internship exemption decision was made."
+        },
+        "internshipExemptionProofLink": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL link to the proof document for the internship exemption."
         },
         "subCommitteeId": {
             "type": "string",
@@ -359,7 +382,8 @@
         "studentId",
         "studentName",
         "registrationDate",
-        "registrationStatus"
+        "graduationStatus",
+        "internshipStatus"
       ]
     },
      "DefenseCouncil": {

@@ -68,6 +68,8 @@ export type Supervisor = {
     createdAt: any;
 }
 
+export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting';
+
 export type DefenseRegistration = {
   id: string;
   sessionId: string;
@@ -86,11 +88,19 @@ export type DefenseRegistration = {
   internshipSupervisorId?: string; // Internship supervisor
   internshipSupervisorName?: string; // Internship supervisor name
   registrationDate: any;
-  registrationStatus: 'reporting' | 'exempted' | 'withdrawn';
-  statusNote?: string;
-  exemptionDecisionNumber?: string;
-  exemptionDecisionDate?: any;
-  exemptionProofLink?: string;
+  
+  graduationStatus: ReportStatus;
+  graduationStatusNote?: string;
+  graduationExemptionDecisionNumber?: string;
+  graduationExemptionDecisionDate?: any;
+  graduationExemptionProofLink?: string;
+
+  internshipStatus: ReportStatus;
+  internshipStatusNote?: string;
+  internshipExemptionDecisionNumber?: string;
+  internshipExemptionDecisionDate?: any;
+  internshipExemptionProofLink?: string;
+  
   subCommitteeId?: string;
   // Internship fields
   internship_companyName?: string;
