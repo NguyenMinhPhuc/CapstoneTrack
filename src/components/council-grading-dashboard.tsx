@@ -131,7 +131,7 @@ function SubcommitteeGradingView({
         setIsGradingDialogOpen(true);
     };
 
-    if (studentsInSubcommittee.length === 0) {
+    if (projectGroups.length === 0 && internshipStudents.length === 0) {
         return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào được phân công vào tiểu ban này.</p>;
     }
 
@@ -207,6 +207,9 @@ function SubcommitteeGradingView({
                                                         <h4 className="font-semibold text-base">
                                                             {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
                                                         </h4>
+                                                         <p className="text-sm text-muted-foreground mt-1">
+                                                            SV: {group.students.map(s => `${s.studentName} (${s.studentId})`).join(', ')}
+                                                        </p>
                                                     </div>
                                                 </AccordionTrigger>
                                                 <div className="ml-auto pl-4 flex items-center gap-2">
@@ -228,13 +231,6 @@ function SubcommitteeGradingView({
                                             </div>
                                             <AccordionContent>
                                                 <div className="space-y-4 pt-2 border-t">
-                                                    <div className="flex items-center justify-between">
-                                                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                                                            <Users className="h-4 w-4" />
-                                                            <span>{group.students.map(s => s.studentName).join(', ')}</span>
-                                                        </div>
-                                                    </div>
-                                                    <Separator className="my-4"/>
                                                     <div>
                                                         <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
                                                         <div className="space-y-4 pl-6">
