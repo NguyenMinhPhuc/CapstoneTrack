@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck } from 'lucide-react';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck, GraduationCap, Briefcase } from 'lucide-react';
 import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails, type Rubric } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
@@ -38,11 +38,18 @@ export default function DefenseSessionDetailPage() {
   
   const { data: session, isLoading: isSessionLoading } = useDoc<GraduationDefenseSession>(sessionDocRef);
 
-  const rubricDocRef = useMemoFirebase(
-    () => (session?.rubricId ? doc(firestore, 'rubrics', session.rubricId) : null),
+  const gradRubricDocRef = useMemoFirebase(
+    () => (session?.graduationRubricId ? doc(firestore, 'rubrics', session.graduationRubricId) : null),
     [firestore, session]
   );
-  const { data: rubric, isLoading: isRubricLoading } = useDoc<Rubric>(rubricDocRef);
+  const { data: graduationRubric, isLoading: isGradRubricLoading } = useDoc<Rubric>(gradRubricDocRef);
+
+  const internRubricDocRef = useMemoFirebase(
+    () => (session?.internshipRubricId ? doc(firestore, 'rubrics', session.internshipRubricId) : null),
+    [firestore, session]
+  );
+  const { data: internshipRubric, isLoading: isInternRubricLoading } = useDoc<Rubric>(internRubricDocRef);
+
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -149,7 +156,7 @@ export default function DefenseSessionDetailPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading || isRubricLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading || isGradRubricLoading || isInternRubricLoading;
 
   if (isLoading || !user || !userData || userData.role !== 'admin') {
     return (
@@ -179,6 +186,11 @@ export default function DefenseSessionDetailPage() {
     }
     return timestamp;
   };
+
+  const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
+    if (isLoading) return 'Đang tải...';
+    return rubric ? rubric.name : 'Chưa gán';
+  }
 
   return (
     <main className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -236,11 +248,20 @@ export default function DefenseSessionDetailPage() {
                          </div>
                      )}
                      <div className="flex items-center gap-3">
-                        <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+                        <GraduationCap className="h-5 w-5 text-muted-foreground" />
                         <div>
-                            <p className="font-semibold">Rubric áp dụng</p>
+                            <p className="font-semibold">Rubric Tốt nghiệp</p>
                             <p className="text-primary hover:underline">
-                                {isRubricLoading ? 'Đang tải...' : rubric ? rubric.name : 'Chưa gán'}
+                                {getRubricName(graduationRubric, isGradRubricLoading)}
+                            </p>
+                        </div>
+                    </div>
+                     <div className="flex items-center gap-3">
+                        <Briefcase className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                            <p className="font-semibold">Rubric Thực tập</p>
+                            <p className="text-primary hover:underline">
+                                {getRubricName(internshipRubric, isInternRubricLoading)}
                             </p>
                         </div>
                     </div>
