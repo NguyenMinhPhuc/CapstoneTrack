@@ -102,6 +102,7 @@ export function StudentManagementTable() {
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('all');
+  const [courseFilter, setCourseFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
 
@@ -112,6 +113,17 @@ export function StudentManagementTable() {
   
   const { data: students, isLoading } = useCollection<Student>(studentsCollectionRef);
 
+  const uniqueCourses = useMemo(() => {
+    if (!students) return [];
+    const courseSet = new Set<string>();
+    students.forEach(student => {
+        if (student.className && student.className.length >= 2) {
+            courseSet.add(student.className.substring(0, 2));
+        }
+    });
+    return Array.from(courseSet).sort();
+  }, [students]);
+
   const classStats = useMemo(() => {
     if (!students) return [];
 
@@ -119,6 +131,11 @@ export function StudentManagementTable() {
 
     students.forEach(student => {
         const className = student.className || 'Chưa xếp lớp';
+        // Filter by course
+        if (courseFilter !== 'all' && !className.startsWith(courseFilter)) {
+            return;
+        }
+
         if (!statsByClass[className]) {
             statsByClass[className] = { total: 0, studying: 0, reserved: 0, dropped_out: 0, graduated: 0 };
         }
@@ -132,7 +149,7 @@ export function StudentManagementTable() {
         className,
         ...stats,
     })).sort((a, b) => a.className.localeCompare(b.className));
-  }, [students]);
+  }, [students, courseFilter]);
 
   const uniqueClasses = useMemo(() => {
     if (!students) return [];
@@ -154,10 +171,11 @@ export function StudentManagementTable() {
       const emailMatch = student.email?.toLowerCase().includes(term);
       
       const classMatch = classFilter === 'all' || student.className === classFilter;
+      const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
 
-      return (nameMatch || idMatch || emailMatch) && classMatch;
+      return (nameMatch || idMatch || emailMatch) && classMatch && courseMatch;
     });
-  }, [students, searchTerm, classFilter]);
+  }, [students, searchTerm, classFilter, courseFilter]);
   
   const handleEditClick = (student: Student) => {
     setSelectedStudent(student);
@@ -377,10 +395,28 @@ export function StudentManagementTable() {
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
                                 <ListFilter className="h-3.5 w-3.5" />
-                                <span className="sr-only sm:not-sr-only">Lọc theo lớp</span>
+                                <span className="sr-only sm:not-sr-only">Lọc</span>
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                            <DropdownMenuLabel>Lọc theo niên khóa</DropdownMenuLabel>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem
+                                checked={courseFilter === 'all'}
+                                onCheckedChange={() => setCourseFilter('all')}
+                            >
+                                Tất cả niên khóa
+                            </DropdownMenuCheckboxItem>
+                            {uniqueCourses.map(course => (
+                                <DropdownMenuCheckboxItem
+                                    key={course}
+                                    checked={courseFilter === course}
+                                    onCheckedChange={() => setCourseFilter(course)}
+                                >
+                                    Khóa {course}
+                                </DropdownMenuCheckboxItem>
+                            ))}
+                            <DropdownMenuSeparator />
                              <DropdownMenuLabel>Lọc theo lớp</DropdownMenuLabel>
                              <DropdownMenuSeparator />
                              <DropdownMenuCheckboxItem
@@ -574,3 +610,4 @@ export function StudentManagementTable() {
     
 
     
+
