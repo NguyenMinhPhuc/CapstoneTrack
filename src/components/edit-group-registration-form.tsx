@@ -66,7 +66,7 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
     }
 
     const batch = writeBatch(firestore);
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : values.supervisorId;
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === '' ? '' : registrations[0]?.supervisorName);
 
 

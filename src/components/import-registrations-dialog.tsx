@@ -100,7 +100,7 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
 
             supervisorsSnapshot.forEach(doc => {
                 const supervisor = { id: doc.id, ...doc.data() } as Supervisor;
-                const fullName = `${supervisor.firstName} ${supervisor.lastName}`.toLowerCase();
+                const fullName = `${supervisor.firstName} ${supervisor.lastName}`.toLowerCase().trim();
                 supervisorMap.set(fullName, supervisor);
             })
 
@@ -135,7 +135,7 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
                 continue;
             }
 
-            const supervisorName = row['SupervisorName'] || row['GVHD'] || '';
+            const supervisorName = (row['SupervisorName'] || row['GVHD'] || '').trim();
             const supervisorInfo = supervisorMap.get(supervisorName.toLowerCase());
 
             const newRegistrationRef = doc(registrationsCollectionRef);

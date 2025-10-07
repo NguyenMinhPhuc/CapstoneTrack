@@ -16,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import type { Student, Supervisor } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { SupervisorSelect } from './supervisor-select';
@@ -50,9 +50,17 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
   useEffect(() => {
     const fetchStudents = async () => {
       try {
+        // Fetch existing registrations for this session to filter out already registered students
+        const registrationsQuery = query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', sessionId));
+        const registrationsSnapshot = await getDocs(registrationsQuery);
+        const registeredStudentIds = new Set(registrationsSnapshot.docs.map(doc => doc.data().studentDocId));
+
         const studentsCollectionRef = collection(firestore, 'students');
         const querySnapshot = await getDocs(studentsCollectionRef);
-        const studentList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Student));
+        const studentList = querySnapshot.docs
+            .map(doc => ({ id: doc.id, ...doc.data() } as Student))
+            .filter(student => !registeredStudentIds.has(student.id)); // Exclude already registered students
+
         setStudents(studentList);
       } catch (error) {
         console.error("Error fetching students:", error);
@@ -66,7 +74,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       }
     };
     fetchStudents();
-  }, [firestore, toast]);
+  }, [firestore, toast, sessionId]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,7 +106,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
         return;
     }
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : values.supervisorId;
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
     
     const newRegistrationData = {
@@ -151,7 +159,9 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
                         !field.value && "text-muted-foreground"
                       )}
                     >
-                      {field.value
+                      {isLoadingStudents
+                        ? "Đang tải..."
+                        : field.value
                         ? students.find(
                             (student) => student.id === field.value
                           )?.studentId

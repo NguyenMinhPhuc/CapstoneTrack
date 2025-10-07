@@ -49,7 +49,7 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, `defenseRegistrations`, registration.id);
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : values.supervisorId;
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === '' ? '' : registration.supervisorName);
 
 
