@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase } from 'lucide-react';
+import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
 import { GradingForm } from './grading-form';
+import { Separator } from './ui/separator';
 
 interface GradingDashboardProps {
   supervisorId: string;
@@ -30,11 +31,21 @@ interface SessionWithAssignments {
 interface ProjectGroup {
     projectTitle: string;
     students: DefenseRegistration[];
-    // We pass the first student's details for display, assuming they are the same for the group
+    // Graduation project details
     summary?: string;
     objectives?: string;
     expectedResults?: string;
     reportLink?: string;
+    // Internship details
+    internship_companyName?: string;
+    internship_companyAddress?: string;
+    internship_companySupervisorName?: string;
+    internship_companySupervisorPhone?: string;
+    internship_registrationFormLink?: string;
+    internship_commitmentFormLink?: string;
+    internship_acceptanceLetterLink?: string;
+    internship_feedbackFormLink?: string;
+    internship_reportLink?: string;
 }
 
 // A new component to render the list for a single subcommittee
@@ -72,9 +83,9 @@ function SubcommitteeGradingView({
             groups.get(projectKey)!.push(reg);
         });
         return Array.from(groups.entries()).map(([projectTitle, students]) => {
+            // Find a representative student who has updated their info
             const representativeStudent = 
-                students.find(s => s.summary && s.reportLink) ||
-                students.find(s => s.summary) ||
+                students.find(s => s.summary || s.reportLink || s.internship_companyName) ||
                 students[0];
 
             return {
@@ -84,6 +95,15 @@ function SubcommitteeGradingView({
                 objectives: representativeStudent?.objectives,
                 expectedResults: representativeStudent?.expectedResults,
                 reportLink: representativeStudent?.reportLink,
+                internship_companyName: representativeStudent?.internship_companyName,
+                internship_companyAddress: representativeStudent?.internship_companyAddress,
+                internship_companySupervisorName: representativeStudent?.internship_companySupervisorName,
+                internship_companySupervisorPhone: representativeStudent?.internship_companySupervisorPhone,
+                internship_registrationFormLink: representativeStudent?.internship_registrationFormLink,
+                internship_commitmentFormLink: representativeStudent?.internship_commitmentFormLink,
+                internship_acceptanceLetterLink: representativeStudent?.internship_acceptanceLetterLink,
+                internship_feedbackFormLink: representativeStudent?.internship_feedbackFormLink,
+                internship_reportLink: representativeStudent?.internship_reportLink,
             }
         });
     }, [studentsInSubcommittee]);
@@ -143,27 +163,70 @@ function SubcommitteeGradingView({
                                 </div>
                             </div>
                             <AccordionContent>
-                                <div className="space-y-4 pt-2 border-t mt-2">
-                                     <div className="space-y-2">
-                                        <h5 className="font-semibold flex items-center gap-2"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h5>
-                                        <p className="text-sm text-muted-foreground pl-6">{group.summary || 'Chưa có thông tin.'}</p>
-                                     </div>
-                                      <div className="space-y-2">
-                                        <h5 className="font-semibold flex items-center gap-2"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h5>
-                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-6">{group.objectives || 'Chưa có thông tin.'}</p>
-                                     </div>
-                                      <div className="space-y-2">
-                                        <h5 className="font-semibold flex items-center gap-2"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h5>
-                                        <p className="text-sm text-muted-foreground whitespace-pre-wrap pl-6">{group.expectedResults || 'Chưa có thông tin.'}</p>
-                                     </div>
-                                     {group.reportLink && (
-                                        <div className="space-y-2">
-                                            <h5 className="font-semibold flex items-center gap-2"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h5>
-                                            <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all pl-6">
-                                                {group.reportLink}
-                                            </a>
+                                <div className="space-y-6 pt-2 border-t mt-2">
+                                     <div>
+                                        <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
+                                        <div className="space-y-4 pl-6">
+                                            <div className="space-y-2">
+                                                <h6 className="font-medium flex items-center gap-2 text-sm"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h6>
+                                                <p className="text-sm text-muted-foreground">{group.summary || 'Chưa có thông tin.'}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h6 className="font-medium flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h6>
+                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.objectives || 'Chưa có thông tin.'}</p>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h6 className="font-medium flex items-center gap-2 text-sm"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h6>
+                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.expectedResults || 'Chưa có thông tin.'}</p>
+                                            </div>
+                                            {group.reportLink && (
+                                                <div className="space-y-2">
+                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h6>
+                                                    <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                                        {group.reportLink}
+                                                    </a>
+                                                </div>
+                                            )}
                                         </div>
-                                     )}
+                                     </div>
+                                     <Separator />
+                                     <div>
+                                         <h5 className="font-semibold mb-2">Thông tin Thực tập</h5>
+                                          {group.internship_companyName ? (
+                                                <div className="space-y-4 pl-6">
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                                                        <div className="flex items-start gap-2">
+                                                            <Building className="h-4 w-4 mt-1 text-primary"/>
+                                                            <div>
+                                                                <p className="font-medium">Đơn vị thực tập</p>
+                                                                <p className="text-muted-foreground">{group.internship_companyName}</p>
+                                                                <p className="text-muted-foreground">{group.internship_companyAddress}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-start gap-2">
+                                                            <UserCircle className="h-4 w-4 mt-1 text-primary"/>
+                                                             <div>
+                                                                <p className="font-medium">Người hướng dẫn tại đơn vị</p>
+                                                                <p className="text-muted-foreground">{group.internship_companySupervisorName || 'N/A'}</p>
+                                                                <p className="text-muted-foreground">{group.internship_companySupervisorPhone || 'N/A'}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Các tài liệu liên quan</h6>
+                                                        <ul className="list-disc list-inside text-sm text-blue-500 space-y-1">
+                                                            {group.internship_registrationFormLink && <li><a href={group.internship_registrationFormLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Đơn đăng kí thực tập</a></li>}
+                                                            {group.internship_commitmentFormLink && <li><a href={group.internship_commitmentFormLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Đơn cam kết tự đi thực tập</a></li>}
+                                                            {group.internship_acceptanceLetterLink && <li><a href={group.internship_acceptanceLetterLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Giấy tiếp nhận thực tập</a></li>}
+                                                            {group.internship_feedbackFormLink && <li><a href={group.internship_feedbackFormLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Giấy nhận xét từ đơn vị</a></li>}
+                                                            {group.internship_reportLink && <li><a href={group.internship_reportLink} target="_blank" rel="noopener noreferrer" className="hover:underline font-semibold">File báo cáo thực tập</a></li>}
+                                                        </ul>
+                                                    </div>
+                                                </div>
+                                          ) : (
+                                            <p className="text-sm text-muted-foreground pl-6">Chưa có thông tin thực tập.</p>
+                                          )}
+                                     </div>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
