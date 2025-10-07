@@ -4,7 +4,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, getDocs, doc } from 'firebase/firestore';
-import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration, Supervisor } from '@/lib/types';
+import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration, Evaluation } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -26,11 +26,13 @@ interface SessionWithCouncilAssignments {
   registrations: DefenseRegistration[];
   isCouncilMember: boolean;
   subCommittees: DefenseSubCommittee[];
+  evaluations: Evaluation[];
 }
 
 function SubcommitteeGradingView({
     subcommittee, 
     registrations,
+    evaluations,
     councilGraduationRubric,
     councilInternshipRubric,
     supervisorId,
@@ -38,6 +40,7 @@ function SubcommitteeGradingView({
 }: { 
     subcommittee: DefenseSubCommittee, 
     registrations: DefenseRegistration[],
+    evaluations: Evaluation[],
     councilGraduationRubric: Rubric | null,
     councilInternshipRubric: Rubric | null,
     supervisorId: string,
@@ -47,6 +50,7 @@ function SubcommitteeGradingView({
     const [selectedRubric, setSelectedRubric] = useState<Rubric | null>(null);
     const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
     const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+    const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
 
     const studentsInSubcommittee = useMemo(() => {
         return registrations.filter(reg => reg.subCommitteeId === subcommittee.id && reg.registrationStatus === 'reporting');
@@ -77,9 +81,29 @@ function SubcommitteeGradingView({
             }
         });
     }, [studentsInSubcommittee]);
+    
+    // Find evaluations for each group/student
+    const getEvaluationForGroup = (group: ProjectGroup) => {
+        // For a group, all students have the same registrationId for evaluation purposes
+        const studentId = group.students[0].id;
+        return evaluations.find(e => 
+            e.registrationId === studentId && 
+            e.evaluationType === 'graduation' &&
+            e.evaluatorId === supervisorId
+        );
+    }
+    
+    const getEvaluationForInternship = (student: DefenseRegistration) => {
+        return evaluations.find(e => 
+            e.registrationId === student.id &&
+            e.evaluationType === 'internship' &&
+            e.evaluatorId === supervisorId
+        );
+    }
 
     const handleGradeGraduationClick = (group: (typeof projectGroups)[0]) => {
         if (!councilGraduationRubric) return;
+        setExistingEvaluation(getEvaluationForGroup(group) || null);
         setSelectedGroupForGrading({
             projectTitle: group.projectTitle,
             students: group.students
@@ -91,6 +115,7 @@ function SubcommitteeGradingView({
 
     const handleGradeInternshipClick = (student: DefenseRegistration) => {
         if (!councilInternshipRubric) return;
+        setExistingEvaluation(getEvaluationForInternship(student) || null);
         setSelectedGroupForGrading({
             projectTitle: `Thực tập của ${student.studentName}`,
             students: [student] // Pass only the single student
@@ -143,80 +168,99 @@ function SubcommitteeGradingView({
         <>
             <CardContent>
                 <Accordion type="multiple" className="w-full space-y-4">
-                    {projectGroups.map((group) => (
-                        <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
-                            <div className="flex items-center py-4">
-                                <AccordionTrigger className="hover:no-underline flex-1 p-0">
-                                    <div className="text-left">
-                                        <h4 className="font-semibold text-base">
-                                            {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
-                                        </h4>
+                    {projectGroups.map((group) => {
+                        const gradEvaluation = getEvaluationForGroup(group);
+
+                        return (
+                            <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
+                                <div className="flex items-center py-4">
+                                    <AccordionTrigger className="hover:no-underline flex-1 p-0">
+                                        <div className="text-left">
+                                            <h4 className="font-semibold text-base">
+                                                {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                                            </h4>
+                                        </div>
+                                    </AccordionTrigger>
+                                    <div className="ml-auto pl-4 flex items-center gap-2">
+                                        {gradEvaluation && (
+                                            <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
+                                                {gradEvaluation.totalScore.toFixed(2)}
+                                            </Badge>
+                                        )}
+                                        <Button 
+                                            variant="outline" 
+                                            size="sm"
+                                            disabled={!councilGraduationRubric}
+                                            onClick={() => handleGradeGraduationClick(group)}
+                                        >
+                                            <GraduationCap className="mr-2 h-4 w-4"/>
+                                            {gradEvaluation ? 'Sửa điểm TN' : 'Chấm TN'}
+                                        </Button>
                                     </div>
-                                </AccordionTrigger>
-                                <div className="ml-auto pl-4">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        disabled={!councilGraduationRubric}
-                                        onClick={() => handleGradeGraduationClick(group)}
-                                    >
-                                        <GraduationCap className="mr-2 h-4 w-4"/>
-                                        Chấm TN
-                                    </Button>
                                 </div>
-                            </div>
-                            <AccordionContent>
-                                <div className="space-y-4 pt-2 border-t">
-                                     {group.students.map((student, index) => (
-                                        <div key={student.id} className={index > 0 ? 'border-t mt-4 pt-4' : ''}>
-                                            <div className="flex items-center justify-between">
-                                                 <div className="flex items-center gap-2 text-sm">
-                                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                                    <span>{student.studentName} ({student.studentId})</span>
+                                <AccordionContent>
+                                    <div className="space-y-4 pt-2 border-t">
+                                        {group.students.map((student, index) => {
+                                            const internEvaluation = getEvaluationForInternship(student);
+                                            return (
+                                                <div key={student.id} className={index > 0 ? 'border-t mt-4 pt-4' : ''}>
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center gap-2 text-sm">
+                                                            <Users className="h-4 w-4 text-muted-foreground" />
+                                                            <span>{student.studentName} ({student.studentId})</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {internEvaluation && (
+                                                                <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
+                                                                    {internEvaluation.totalScore.toFixed(2)}
+                                                                </Badge>
+                                                            )}
+                                                            <Button 
+                                                                variant="outline" 
+                                                                size="sm"
+                                                                disabled={!councilInternshipRubric}
+                                                                onClick={() => handleGradeInternshipClick(student)}
+                                                            >
+                                                                <Briefcase className="mr-2 h-4 w-4"/>
+                                                                {internEvaluation ? 'Sửa điểm TT' : 'Chấm TT'}
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                    <InternshipInfo student={student} />
                                                 </div>
-                                                <Button 
-                                                    variant="outline" 
-                                                    size="sm"
-                                                    disabled={!councilInternshipRubric}
-                                                    onClick={() => handleGradeInternshipClick(student)}
-                                                >
-                                                    <Briefcase className="mr-2 h-4 w-4"/>
-                                                    Chấm TT
-                                                </Button>
-                                            </div>
-                                            <InternshipInfo student={student} />
-                                        </div>
-                                     ))}
-                                     <Separator className="my-4"/>
-                                     <div>
-                                        <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
-                                        <div className="space-y-4 pl-6">
-                                            <div className="space-y-2">
-                                                <h6 className="font-medium flex items-center gap-2 text-sm"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h6>
-                                                <p className="text-sm text-muted-foreground">{group.summary || 'Chưa có thông tin.'}</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <h6 className="font-medium flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h6>
-                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.objectives || 'Chưa có thông tin.'}</p>
-                                            </div>
-                                            <div className="space-y-2">
-                                                <h6 className="font-medium flex items-center gap-2 text-sm"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h6>
-                                                <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.expectedResults || 'Chưa có thông tin.'}</p>
-                                            </div>
-                                            {group.reportLink && (
+                                            )
+                                        })}
+                                        <Separator className="my-4"/>
+                                        <div>
+                                            <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
+                                            <div className="space-y-4 pl-6">
                                                 <div className="space-y-2">
-                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h6>
-                                                    <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
-                                                        {group.reportLink}
-                                                    </a>
+                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><Book className="h-4 w-4 text-primary"/>Tóm tắt</h6>
+                                                    <p className="text-sm text-muted-foreground">{group.summary || 'Chưa có thông tin.'}</p>
                                                 </div>
-                                            )}
+                                                <div className="space-y-2">
+                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><Target className="h-4 w-4 text-primary"/>Mục tiêu</h6>
+                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.objectives || 'Chưa có thông tin.'}</p>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <h6 className="font-medium flex items-center gap-2 text-sm"><CheckCircle className="h-4 w-4 text-primary"/>Kết quả mong đợi</h6>
+                                                    <p className="text-sm text-muted-foreground whitespace-pre-wrap">{group.expectedResults || 'Chưa có thông tin.'}</p>
+                                                </div>
+                                                {group.reportLink && (
+                                                    <div className="space-y-2">
+                                                        <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Link báo cáo</h6>
+                                                        <a href={group.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                                            {group.reportLink}
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
-                                     </div>
-                                </div>
-                            </AccordionContent>
-                        </AccordionItem>
-                    ))}
+                                    </div>
+                                </AccordionContent>
+                            </AccordionItem>
+                        )
+                    })}
                 </Accordion>
             </CardContent>
             {selectedGroupForGrading && selectedRubric && selectedEvalType && (
@@ -229,6 +273,7 @@ function SubcommitteeGradingView({
                             supervisorId={supervisorId}
                             sessionId={sessionId}
                             onFinished={() => setIsGradingDialogOpen(false)}
+                            existingEvaluation={existingEvaluation}
                          />
                     </DialogContent>
                 </Dialog>
@@ -257,10 +302,11 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
         let isCouncilMember = false;
         const assignedSubCommittees: DefenseSubCommittee[] = [];
 
-        const [councilSnapshot, subCommitteesSnapshot, registrationsSnapshot] = await Promise.all([
+        const [councilSnapshot, subCommitteesSnapshot, registrationsSnapshot, evaluationsSnapshot] = await Promise.all([
             getDocs(collection(firestore, `graduationDefenseSessions/${session.id}/council`)),
             getDocs(collection(firestore, `graduationDefenseSessions/${session.id}/subCommittees`)),
-            getDocs(query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', session.id)))
+            getDocs(query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', session.id))),
+            getDocs(query(collection(firestore, 'evaluations'), where('sessionId', '==', session.id))),
         ]);
         
         const members = councilSnapshot.docs.map(d => d.data() as DefenseCouncilMember);
@@ -276,6 +322,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
         });
         
         const registrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
+        const evaluations = evaluationsSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation);
         
         if (isCouncilMember || assignedSubCommittees.length > 0) {
           councilAssignmentsData.push({
@@ -283,6 +330,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
             registrations,
             isCouncilMember,
             subCommittees: assignedSubCommittees,
+            evaluations,
           });
         }
       }
@@ -295,7 +343,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
   
   
   const CouncilSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithCouncilAssignments }) => {
-    const { session, isCouncilMember, subCommittees, registrations } = sessionData;
+    const { session, isCouncilMember, subCommittees, registrations, evaluations } = sessionData;
     
     const councilGradRubricDocRef = useMemoFirebase(() => (session.councilGraduationRubricId ? doc(firestore, 'rubrics', session.councilGraduationRubricId) : null), [firestore, session.councilGraduationRubricId]);
     const { data: councilGraduationRubric, isLoading: isLoadingCouncilGradRubric } = useDoc<Rubric>(councilGradRubricDocRef);
@@ -343,6 +391,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
                          <SubcommitteeGradingView 
                             subcommittee={sc} 
                             registrations={registrations} 
+                            evaluations={evaluations}
                             councilGraduationRubric={councilGraduationRubric || null}
                             councilInternshipRubric={councilInternshipRubric || null}
                             supervisorId={supervisorId}

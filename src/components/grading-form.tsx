@@ -23,7 +23,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
+import { collection, writeBatch, serverTimestamp, doc, setDoc } from 'firebase/firestore';
 import type { Rubric, DefenseRegistration, Evaluation } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
@@ -45,9 +45,10 @@ interface GradingFormProps {
   supervisorId: string;
   sessionId: string;
   onFinished: () => void;
+  existingEvaluation?: Evaluation | null;
 }
 
-export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId, sessionId, onFinished }: GradingFormProps) {
+export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId, sessionId, onFinished, existingEvaluation }: GradingFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -71,11 +72,36 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
 
   const form = useForm<GradingFormData>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      scores: rubric.criteria.reduce((acc, c) => ({ ...acc, [c.id]: c.maxScore }), {}),
-      comments: '',
-    },
+    defaultValues: useMemo(() => {
+        let defaultScores: Record<string, number> = {};
+        if (existingEvaluation) {
+             existingEvaluation.scores.forEach(s => {
+                defaultScores[s.criterionId] = s.score;
+            });
+        } else {
+            defaultScores = rubric.criteria.reduce((acc, c) => ({ ...acc, [c.id]: c.maxScore }), {});
+        }
+        return {
+            scores: defaultScores,
+            comments: existingEvaluation?.comments || '',
+        };
+    }, [existingEvaluation, rubric])
   });
+  
+  useEffect(() => {
+      let defaultScores: Record<string, number> = {};
+      if (existingEvaluation) {
+            existingEvaluation.scores.forEach(s => {
+              defaultScores[s.criterionId] = s.score;
+          });
+      } else {
+          defaultScores = rubric.criteria.reduce((acc, c) => ({ ...acc, [c.id]: c.maxScore }), {});
+      }
+      form.reset({
+          scores: defaultScores,
+          comments: existingEvaluation?.comments || '',
+      });
+  }, [existingEvaluation, rubric, form]);
 
   const watchedScores = useWatch({
     control: form.control,
@@ -107,7 +133,10 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
     const evaluationsCollection = collection(firestore, 'evaluations');
 
     projectGroup.students.forEach(student => {
-        const evaluationDoc = doc(evaluationsCollection);
+        const evaluationDocRef = existingEvaluation 
+            ? doc(firestore, 'evaluations', existingEvaluation.id)
+            : doc(evaluationsCollection);
+            
         const evaluationData: Omit<Evaluation, 'id'> = {
             sessionId: sessionId,
             registrationId: student.id,
@@ -122,7 +151,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
             comments: values.comments || '',
             evaluationDate: serverTimestamp(),
         };
-        batch.set(evaluationDoc, evaluationData);
+        batch.set(evaluationDocRef, evaluationData);
     });
 
     try {
