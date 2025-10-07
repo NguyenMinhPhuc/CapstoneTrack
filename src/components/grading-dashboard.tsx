@@ -185,6 +185,9 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
       const assignments: SessionWithAssignments[] = [];
 
       for (const session of allSessions) {
+        // Skip if supervisorId is not yet available for this iteration
+        if (!supervisorId) continue;
+
         let isCouncilMember = false;
         const assignedSubCommittees: DefenseSubCommittee[] = [];
 
