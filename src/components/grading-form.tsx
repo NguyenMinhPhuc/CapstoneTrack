@@ -92,7 +92,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
         }
         return {
             scores: defaultScores,
-            overallScore: existingEvaluation?.totalScore || maxTotalScore,
+            overallScore: existingEvaluation?.totalScore ?? maxTotalScore,
             comments: existingEvaluation?.comments || '',
         };
     }, [existingEvaluation, rubric, maxTotalScore])
@@ -109,7 +109,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
       }
       form.reset({
           scores: defaultScores,
-          overallScore: existingEvaluation?.totalScore || maxTotalScore,
+          overallScore: existingEvaluation?.totalScore ?? maxTotalScore,
           comments: existingEvaluation?.comments || '',
       });
   }, [existingEvaluation, rubric, form, maxTotalScore]);
@@ -150,18 +150,51 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
     let totalScoreToSave: number;
 
     if (isOverallMode) {
-      totalScoreToSave = Math.max(0, Math.min(values.overallScore || 0, maxTotalScore));
-      scoresToSave = rubric.criteria.map(criterion => {
-        const proportion = criterion.maxScore / maxTotalScore;
-        const calculatedScore = totalScoreToSave * proportion;
-        // Round to nearest 0.25
-        const roundedScore = Math.round(calculatedScore * 4) / 4; 
+      const overallScore = Math.max(0, Math.min(values.overallScore || 0, maxTotalScore));
+      
+      // 1. Calculate unrounded scores and rounding errors
+      let unroundedScores = rubric.criteria.map(criterion => {
+        const proportion = maxTotalScore > 0 ? criterion.maxScore / maxTotalScore : 0;
+        const unroundedScore = overallScore * proportion;
+        const roundedScore = Math.round(unroundedScore * 4) / 4;
+        const error = unroundedScore - roundedScore;
         return {
           criterionId: criterion.id,
           score: roundedScore,
+          error: error,
+          maxScore: criterion.maxScore,
         };
       });
-      // Recalculate total score from rounded parts to ensure consistency
+
+      // 2. Calculate sum of rounded scores and the difference
+      let currentTotal = unroundedScores.reduce((sum, s) => sum + s.score, 0);
+      let difference = overallScore - currentTotal;
+      
+      // 3. Distribute the difference
+      // Sort by the largest rounding error to adjust those first
+      unroundedScores.sort((a, b) => b.error - a.error);
+      
+      let adjustments = Math.round(difference / 0.25);
+
+      while (adjustments !== 0) {
+        for (let i = 0; i < unroundedScores.length && adjustments !== 0; i++) {
+          const scoreData = unroundedScores[i];
+          if (adjustments > 0 && scoreData.score < scoreData.maxScore) {
+            scoreData.score += 0.25;
+            adjustments--;
+          } else if (adjustments < 0 && scoreData.score > 0) {
+            scoreData.score -= 0.25;
+            adjustments++;
+          }
+        }
+        // If we still have adjustments left, it means we hit min/max limits.
+        // This is a safeguard; it should be rare in practice.
+        if (adjustments !== 0 && !unroundedScores.some(s => (adjustments > 0 && s.score < s.maxScore) || (adjustments < 0 && s.score > 0))) {
+            break;
+        }
+      }
+
+      scoresToSave = unroundedScores.map(({ criterionId, score }) => ({ criterionId, score }));
       totalScoreToSave = scoresToSave.reduce((sum, s) => sum + s.score, 0);
 
     } else {
