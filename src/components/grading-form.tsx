@@ -177,14 +177,17 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
     if (projectGroup.students.length > 1 && evaluationType === 'graduation') {
         return `Phiếu Chấm Điểm ${typeLabel} - Nhóm`;
     }
-    return `Phiếu Chấm Điểm ${typeLabel} - ${projectGroup.students[0]?.studentName}`;
+    const student = projectGroup.students[0];
+    return `Phiếu Chấm Điểm ${typeLabel} - ${student?.studentName} (${student?.studentId})`;
   }
 
    const getDescription = () => {
         if (evaluationType === 'internship') {
-            return `Chấm điểm thực tập cho sinh viên ${projectGroup.students[0]?.studentName}.`;
+            const student = projectGroup.students[0];
+            return `Chấm điểm thực tập cho sinh viên ${student?.studentName} (${student?.studentId}).`;
         }
-        return `Chấm điểm cho đề tài: "${projectGroup.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : projectGroup.projectTitle}"`;
+        const studentNames = projectGroup.students.map(s => `${s.studentName} (${s.studentId})`).join(', ');
+        return `Chấm điểm cho đề tài: "${projectGroup.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : projectGroup.projectTitle}" do sinh viên thực hiện: ${studentNames}.`;
     }
 
   return (
