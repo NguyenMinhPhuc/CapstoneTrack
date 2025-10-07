@@ -28,6 +28,7 @@ import type { Rubric, DefenseRegistration, StudentWithRegistrationDetails } from
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { useEffect, useMemo } from 'react';
+import { Minus, Plus } from 'lucide-react';
 
 interface ProjectGroup {
     projectTitle: string;
@@ -85,6 +86,16 @@ export function GradingForm({ projectGroup, rubric, supervisorId, sessionId, onF
   const maxTotalScore = useMemo(() => {
     return rubric.criteria.reduce((sum, criterion) => sum + criterion.maxScore, 0);
   }, [rubric]);
+
+  const adjustScore = (fieldName: `scores.${string}`, amount: number, maxScore: number) => {
+    const currentValue = Number(form.getValues(fieldName)) || 0;
+    let newValue = currentValue + amount;
+    // Clamp the value between 0 and maxScore
+    newValue = Math.max(0, Math.min(newValue, maxScore));
+    // Round to 2 decimal places to avoid floating point issues
+    newValue = Math.round(newValue * 100) / 100;
+    form.setValue(fieldName, newValue, { shouldValidate: true });
+  };
 
 
   async function onSubmit(values: GradingFormData) {
@@ -152,11 +163,43 @@ export function GradingForm({ projectGroup, rubric, supervisorId, sessionId, onF
                                     </div>
                                     <div className="col-span-1">
                                     <FormControl>
-                                        <div className="relative">
-                                            <Input type="number" {...field} className="pr-12 text-right" />
-                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                                        <div className="relative flex items-center">
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-r-none"
+                                                onClick={() => adjustScore(field.name, -0.25, criterion.maxScore)}
+                                            >
+                                                <Minus className="h-4 w-4" />
+                                            </Button>
+                                            <Input
+                                                type="number"
+                                                step="0.25"
+                                                {...field}
+                                                className="z-10 rounded-none border-x-0 text-center"
+                                                onBlur={(e) => {
+                                                  const val = parseFloat(e.target.value);
+                                                  if (!isNaN(val)) {
+                                                    const clamped = Math.max(0, Math.min(val, criterion.maxScore));
+                                                    field.onChange(clamped);
+                                                  } else {
+                                                    field.onChange(0);
+                                                  }
+                                                }}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="outline"
+                                                size="icon"
+                                                className="h-9 w-9 rounded-l-none"
+                                                onClick={() => adjustScore(field.name, 0.25, criterion.maxScore)}
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                            </Button>
+                                            <div className="absolute right-[-30px] top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
                                                 / {criterion.maxScore}
-                                            </span>
+                                            </div>
                                         </div>
                                     </FormControl>
                                     <FormMessage className="mt-1 text-xs" />
