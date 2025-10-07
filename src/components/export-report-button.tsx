@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -17,6 +18,7 @@ import type {
   DefenseCouncilMember,
   DefenseSubCommittee,
   DefenseRegistration,
+  Evaluation,
 } from '@/lib/types';
 import {
   Dialog,
@@ -31,9 +33,15 @@ import {
 interface ExportReportButtonProps {
   sessionId: string;
   session: GraduationDefenseSession;
+  rubricIds: {
+    councilGraduation?: string;
+    councilInternship?: string;
+    supervisorGraduation?: string;
+    companyInternship?: string;
+  }
 }
 
-export function ExportReportButton({ sessionId, session }: ExportReportButtonProps) {
+export function ExportReportButton({ sessionId, session, rubricIds }: ExportReportButtonProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [template, setTemplate] = useState<File | null>(null);
@@ -59,6 +67,13 @@ export function ExportReportButton({ sessionId, session }: ExportReportButtonPro
   );
   const { data: registrations } = useCollection<DefenseRegistration>(registrationsRef);
 
+  const evaluationsRef = useMemoFirebase(
+    () => query(collection(firestore, 'evaluations'), where('sessionId', '==', sessionId)),
+    [firestore, sessionId]
+  );
+  const { data: evaluations } = useCollection<Evaluation>(evaluationsRef);
+
+
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.files) {
       setTemplate(event.target.files[0]);
@@ -74,7 +89,7 @@ export function ExportReportButton({ sessionId, session }: ExportReportButtonPro
       });
       return;
     }
-    if (!councilMembers || !subCommittees || !registrations) {
+    if (!councilMembers || !subCommittees || !registrations || !evaluations) {
       toast({
         variant: 'destructive',
         title: 'Dữ liệu chưa sẵn sàng',
@@ -107,10 +122,38 @@ export function ExportReportButton({ sessionId, session }: ExportReportButtonPro
             let studentCounter = 0;
             const students = registrations
                 .filter(reg => reg.subCommitteeId === sc.id && reg.registrationStatus === 'reporting')
-                .map(reg => ({
-                    ...reg,
-                    stt: ++studentCounter
-                }));
+                .map(reg => {
+                    const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
+                    
+                    const calculateAverage = (rubricId?: string, type?: 'graduation' | 'internship') => {
+                        if (!rubricId) return null;
+                        const relevantEvals = studentEvals.filter(e => e.rubricId === rubricId && e.evaluationType === type);
+                        if (relevantEvals.length === 0) return null;
+                        const total = relevantEvals.reduce((sum, e) => sum + e.totalScore, 0);
+                        return (total / relevantEvals.length).toFixed(2);
+                    }
+                    
+                    const findScore = (supervisorId?: string, rubricId?: string, type?: 'graduation' | 'internship') => {
+                         if (!rubricId || !supervisorId) return null;
+                         const evalRecord = studentEvals.find(e => 
+                            e.rubricId === rubricId &&
+                            e.evaluationType === type &&
+                            e.evaluatorId === supervisorId
+                         );
+                         return evalRecord ? evalRecord.totalScore.toFixed(2) : null;
+                    }
+
+                    return {
+                        ...reg,
+                        stt: ++studentCounter,
+                        scores: {
+                            council_grad_avg: calculateAverage(rubricIds.councilGraduation, 'graduation'),
+                            council_intern_avg: calculateAverage(rubricIds.councilInternship, 'internship'),
+                            supervisor_grad_score: findScore(reg.supervisorId, rubricIds.supervisorGraduation, 'graduation'),
+                            company_intern_score: findScore(reg.internshipSupervisorId, rubricIds.companyInternship, 'internship'),
+                        }
+                    }
+                });
             return {
                 ...sc,
                 students

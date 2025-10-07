@@ -220,7 +220,16 @@ export default function DefenseSessionDetailPage() {
                                 Quản lý Hội đồng
                             </Link>
                         </Button>
-                        <ExportReportButton sessionId={sessionId} session={session} />
+                        <ExportReportButton 
+                            sessionId={sessionId} 
+                            session={session} 
+                            rubricIds={{
+                                councilGraduation: session.councilGraduationRubricId,
+                                councilInternship: session.councilInternshipRubricId,
+                                supervisorGraduation: session.supervisorGraduationRubricId,
+                                companyInternship: session.companyInternshipRubricId,
+                            }}
+                        />
                     </div>
                 </div>
             </CardHeader>
