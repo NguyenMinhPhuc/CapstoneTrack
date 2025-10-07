@@ -17,7 +17,6 @@ import {
   LayoutDashboard,
   FileText,
   Users,
-  BarChart3,
   Settings,
   GraduationCap,
   Briefcase,
@@ -32,7 +31,6 @@ import { doc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Button } from "./ui/button";
-import { cn } from "@/lib/utils";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -110,21 +108,9 @@ export function AppSidebar() {
 
             <div className="px-2 py-2"><SidebarSeparator /></div>
             
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/internship/applications")} tooltip="Applications">
-                    <Link href="#"><Briefcase /><span>Internship</span></Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/graduation/projects")} tooltip="Projects">
-                    <Link href="#"><FileText /><span>Graduation</span></Link>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-
              {userData?.role === 'admin' && (
                 <>
-                <div className="px-2 py-2"><SidebarSeparator /></div>
-                 <Collapsible asChild>
+                 <Collapsible asChild defaultOpen>
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
                             <div className="flex items-center justify-between w-full">
@@ -137,34 +123,35 @@ export function AppSidebar() {
                          <CollapsibleContent asChild>
                             <SidebarMenu>
                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/users")} tooltip="User Management">
-                                        <Link href="/admin/users"><Shield /><span>User Management</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/students")} tooltip="Student Management">
-                                        <Link href="/admin/students"><Users /><span>Student Management</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/supervisors")} tooltip="Supervisor Management">
-                                        <Link href="/admin/supervisors"><UserSquare /><span>Supervisor Management</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/defense-sessions")} tooltip="Defense Sessions">
-                                        <Link href="/admin/defense-sessions"><Calendar /><span>Defense Sessions</span></Link>
+                                        <Link href="/admin/defense-sessions"><Calendar /><span>Quản lý Đợt báo cáo</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                  <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/rubrics")} tooltip="Rubric Management">
-                                        <Link href="/admin/rubrics"><ClipboardCheck /><span>Rubric Management</span></Link>
+                                        <Link href="/admin/rubrics"><ClipboardCheck /><span>Quản lý Rubric</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/students")} tooltip="Student Management">
+                                        <Link href="/admin/students"><Users /><span>Quản lý Sinh viên</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/supervisors")} tooltip="Supervisor Management">
+                                        <Link href="/admin/supervisors"><UserSquare /><span>Quản lý GVHD</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/users")} tooltip="User Management">
+                                        <Link href="/admin/users"><Shield /><span>Quản lý Tài khoản</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             </SidebarMenu>
                          </CollapsibleContent>
                     </SidebarGroup>
                  </Collapsible>
+                 <div className="px-2 py-2"><SidebarSeparator /></div>
                 </>
              )}
             
