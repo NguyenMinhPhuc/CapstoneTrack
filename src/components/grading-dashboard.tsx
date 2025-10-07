@@ -1,8 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore';
 import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -43,8 +44,8 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
         const assignedSubCommittees: DefenseSubCommittee[] = [];
 
         // Fetch and check main council
-        const councilQuery = query(collection(firestore, `graduationDefenseSessions/${session.id}/council`), where('supervisorId', '==', supervisorId));
-        const councilSnapshot = await collection(firestore, `graduationDefenseSessions/${session.id}/council`).get();
+        const councilCollectionRef = collection(firestore, `graduationDefenseSessions/${session.id}/council`);
+        const councilSnapshot = await getDocs(councilCollectionRef);
         if (!councilSnapshot.empty) {
           const members = councilSnapshot.docs.map(d => d.data() as DefenseCouncilMember);
           if (members.some(m => m.supervisorId === supervisorId)) {
@@ -53,7 +54,8 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
         }
         
         // Fetch and check subcommittees
-        const subCommitteesSnapshot = await collection(firestore, `graduationDefenseSessions/${session.id}/subCommittees`).get();
+        const subCommitteesCollectionRef = collection(firestore, `graduationDefenseSessions/${session.id}/subCommittees`);
+        const subCommitteesSnapshot = await getDocs(subCommitteesCollectionRef);
         if (!subCommitteesSnapshot.empty) {
           subCommitteesSnapshot.forEach(doc => {
             const sc = { id: doc.id, ...doc.data() } as DefenseSubCommittee;
