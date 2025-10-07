@@ -13,7 +13,7 @@ import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link 
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
-import { GradingForm } from './grading-form';
+import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
 
 interface GradingDashboardProps {
@@ -28,25 +28,6 @@ interface SessionWithAssignments {
   subCommittees: DefenseSubCommittee[];
 }
 
-interface ProjectGroup {
-    projectTitle: string;
-    students: DefenseRegistration[];
-    // Graduation project details
-    summary?: string;
-    objectives?: string;
-    expectedResults?: string;
-    reportLink?: string;
-    // Internship details
-    internship_companyName?: string;
-    internship_companyAddress?: string;
-    internship_companySupervisorName?: string;
-    internship_companySupervisorPhone?: string;
-    internship_registrationFormLink?: string;
-    internship_commitmentFormLink?: string;
-    internship_acceptanceLetterLink?: string;
-    internship_feedbackFormLink?: string;
-    internship_reportLink?: string;
-}
 
 // A new component to render the list for a single subcommittee
 function SubcommitteeGradingView({
@@ -64,7 +45,7 @@ function SubcommitteeGradingView({
     supervisorId: string,
     sessionId: string,
 }) {
-    const [selectedGroup, setSelectedGroup] = useState<ProjectGroup | null>(null);
+    const [selectedGroupForGrading, setSelectedGroupForGrading] = useState<ProjectGroup | null>(null);
     const [selectedRubric, setSelectedRubric] = useState<Rubric | null>(null);
     const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
     const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
@@ -82,10 +63,10 @@ function SubcommitteeGradingView({
             }
             groups.get(projectKey)!.push(reg);
         });
+
         return Array.from(groups.entries()).map(([projectTitle, students]) => {
-            // Find a representative student who has updated their info
             const representativeStudent = 
-                students.find(s => s.summary || s.reportLink || s.internship_companyName) ||
+                students.find(s => s.summary || s.reportLink) ||
                 students[0];
 
             return {
@@ -95,29 +76,70 @@ function SubcommitteeGradingView({
                 objectives: representativeStudent?.objectives,
                 expectedResults: representativeStudent?.expectedResults,
                 reportLink: representativeStudent?.reportLink,
-                internship_companyName: representativeStudent?.internship_companyName,
-                internship_companyAddress: representativeStudent?.internship_companyAddress,
-                internship_companySupervisorName: representativeStudent?.internship_companySupervisorName,
-                internship_companySupervisorPhone: representativeStudent?.internship_companySupervisorPhone,
-                internship_registrationFormLink: representativeStudent?.internship_registrationFormLink,
-                internship_commitmentFormLink: representativeStudent?.internship_commitmentFormLink,
-                internship_acceptanceLetterLink: representativeStudent?.internship_acceptanceLetterLink,
-                internship_feedbackFormLink: representativeStudent?.internship_feedbackFormLink,
-                internship_reportLink: representativeStudent?.internship_reportLink,
             }
         });
     }, [studentsInSubcommittee]);
 
-    const handleGradeClick = (group: ProjectGroup, rubric: Rubric, type: 'graduation' | 'internship') => {
-        setSelectedGroup(group);
-        setSelectedRubric(rubric);
-        setSelectedEvalType(type);
+    const handleGradeGraduationClick = (group: (typeof projectGroups)[0]) => {
+        if (!graduationRubric) return;
+        setSelectedGroupForGrading({
+            projectTitle: group.projectTitle,
+            students: group.students
+        });
+        setSelectedRubric(graduationRubric);
+        setSelectedEvalType('graduation');
+        setIsGradingDialogOpen(true);
+    };
+
+    const handleGradeInternshipClick = (student: DefenseRegistration) => {
+        if (!internshipRubric) return;
+        setSelectedGroupForGrading({
+            projectTitle: `Thực tập của ${student.studentName}`,
+            students: [student] // Pass only the single student
+        });
+        setSelectedRubric(internshipRubric);
+        setSelectedEvalType('internship');
         setIsGradingDialogOpen(true);
     };
 
     if (studentsInSubcommittee.length === 0) {
         return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào được phân công vào tiểu ban này.</p>;
     }
+
+    const InternshipInfo = ({ student }: { student: DefenseRegistration }) => (
+        <div className="pl-6 mt-2">
+            <h6 className="font-semibold text-sm flex items-center gap-2"><Briefcase className="h-4 w-4 text-primary"/>Thông tin Thực tập</h6>
+            {student.internship_companyName ? (
+                <div className="space-y-3 pl-6 mt-2 text-xs">
+                    <div className="flex items-start gap-2">
+                        <Building className="h-3 w-3 mt-0.5 text-muted-foreground"/>
+                        <div>
+                            <p className="font-medium text-muted-foreground">{student.internship_companyName}</p>
+                            <p className="text-muted-foreground">{student.internship_companyAddress}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                        <UserCircle className="h-3 w-3 mt-0.5 text-muted-foreground"/>
+                        <div>
+                            <p className="text-muted-foreground">{student.internship_companySupervisorName || 'N/A'}</p>
+                            <p className="text-muted-foreground">{student.internship_companySupervisorPhone || 'N/A'}</p>
+                        </div>
+                    </div>
+                     {student.internship_reportLink && (
+                        <div className="flex items-start gap-2">
+                            <LinkIcon className="h-3 w-3 mt-0.5 text-muted-foreground"/>
+                             <a href={student.internship_reportLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline break-all">
+                                Link báo cáo thực tập
+                            </a>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <p className="text-xs text-muted-foreground pl-6 mt-1">Chưa có thông tin thực tập.</p>
+            )}
+        </div>
+    );
+
 
     return (
         <>
@@ -131,39 +153,43 @@ function SubcommitteeGradingView({
                                         <h4 className="font-semibold text-base">
                                             {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
                                         </h4>
-                                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1">
-                                            {group.students.map(student => (
-                                                <div key={student.id} className="flex items-center gap-2 text-sm">
-                                                    <Users className="h-4 w-4 text-muted-foreground" />
-                                                    <span>{student.studentName} ({student.studentId})</span>
-                                                </div>
-                                            ))}
-                                        </div>
                                     </div>
                                 </AccordionTrigger>
-                                <div className="flex items-center gap-2 ml-auto pl-4">
+                                <div className="ml-auto pl-4">
                                     <Button 
                                         variant="outline" 
                                         size="sm"
                                         disabled={!graduationRubric}
-                                        onClick={() => graduationRubric && handleGradeClick(group, graduationRubric, 'graduation')}
+                                        onClick={() => handleGradeGraduationClick(group)}
                                     >
                                         <GraduationCap className="mr-2 h-4 w-4"/>
                                         Chấm TN
                                     </Button>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        disabled={!internshipRubric}
-                                        onClick={() => internshipRubric && handleGradeClick(group, internshipRubric, 'internship')}
-                                    >
-                                        <Briefcase className="mr-2 h-4 w-4"/>
-                                        Chấm TT
-                                    </Button>
                                 </div>
                             </div>
                             <AccordionContent>
-                                <div className="space-y-6 pt-2 border-t mt-2">
+                                <div className="space-y-4 pt-2 border-t">
+                                     {group.students.map((student, index) => (
+                                        <div key={student.id} className={index > 0 ? 'border-t mt-4 pt-4' : ''}>
+                                            <div className="flex items-center justify-between">
+                                                 <div className="flex items-center gap-2 text-sm">
+                                                    <Users className="h-4 w-4 text-muted-foreground" />
+                                                    <span>{student.studentName} ({student.studentId})</span>
+                                                </div>
+                                                <Button 
+                                                    variant="outline" 
+                                                    size="sm"
+                                                    disabled={!internshipRubric}
+                                                    onClick={() => handleGradeInternshipClick(student)}
+                                                >
+                                                    <Briefcase className="mr-2 h-4 w-4"/>
+                                                    Chấm TT
+                                                </Button>
+                                            </div>
+                                            <InternshipInfo student={student} />
+                                        </div>
+                                     ))}
+                                     <Separator className="my-4"/>
                                      <div>
                                         <h5 className="font-semibold mb-2">Thông tin Đồ án Tốt nghiệp</h5>
                                         <div className="space-y-4 pl-6">
@@ -189,55 +215,17 @@ function SubcommitteeGradingView({
                                             )}
                                         </div>
                                      </div>
-                                     <Separator />
-                                     <div>
-                                         <h5 className="font-semibold mb-2">Thông tin Thực tập</h5>
-                                          {group.internship_companyName ? (
-                                                <div className="space-y-4 pl-6">
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                                                        <div className="flex items-start gap-2">
-                                                            <Building className="h-4 w-4 mt-1 text-primary"/>
-                                                            <div>
-                                                                <p className="font-medium">Đơn vị thực tập</p>
-                                                                <p className="text-muted-foreground">{group.internship_companyName}</p>
-                                                                <p className="text-muted-foreground">{group.internship_companyAddress}</p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex items-start gap-2">
-                                                            <UserCircle className="h-4 w-4 mt-1 text-primary"/>
-                                                             <div>
-                                                                <p className="font-medium">Người hướng dẫn tại đơn vị</p>
-                                                                <p className="text-muted-foreground">{group.internship_companySupervisorName || 'N/A'}</p>
-                                                                <p className="text-muted-foreground">{group.internship_companySupervisorPhone || 'N/A'}</p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <h6 className="font-medium flex items-center gap-2 text-sm"><LinkIcon className="h-4 w-4 text-primary"/>Các tài liệu liên quan</h6>
-                                                        <ul className="list-disc list-inside text-sm text-blue-500 space-y-1">
-                                                            {group.internship_registrationFormLink && <li><a href={group.internship_registrationFormLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Đơn đăng kí thực tập</a></li>}
-                                                            {group.internship_commitmentFormLink && <li><a href={group.internship_commitmentFormLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Đơn cam kết tự đi thực tập</a></li>}
-                                                            {group.internship_acceptanceLetterLink && <li><a href={group.internship_acceptanceLetterLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Giấy tiếp nhận thực tập</a></li>}
-                                                            {group.internship_feedbackFormLink && <li><a href={group.internship_feedbackFormLink} target="_blank" rel="noopener noreferrer" className="hover:underline">Giấy nhận xét từ đơn vị</a></li>}
-                                                            {group.internship_reportLink && <li><a href={group.internship_reportLink} target="_blank" rel="noopener noreferrer" className="hover:underline font-semibold">File báo cáo thực tập</a></li>}
-                                                        </ul>
-                                                    </div>
-                                                </div>
-                                          ) : (
-                                            <p className="text-sm text-muted-foreground pl-6">Chưa có thông tin thực tập.</p>
-                                          )}
-                                     </div>
                                 </div>
                             </AccordionContent>
                         </AccordionItem>
                     ))}
                 </Accordion>
             </CardContent>
-            {selectedGroup && selectedRubric && selectedEvalType && (
+            {selectedGroupForGrading && selectedRubric && selectedEvalType && (
                  <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
                     <DialogContent className="sm:max-w-3xl">
                          <GradingForm 
-                            projectGroup={selectedGroup}
+                            projectGroup={selectedGroupForGrading}
                             rubric={selectedRubric}
                             evaluationType={selectedEvalType}
                             supervisorId={supervisorId}

@@ -33,7 +33,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 
-interface ProjectGroup {
+export interface ProjectGroup {
     projectTitle: string;
     students: DefenseRegistration[];
 }
@@ -143,12 +143,27 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
     }
   }
 
+  const getTitle = () => {
+    const typeLabel = evaluationType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập';
+    if (projectGroup.students.length > 1 && evaluationType === 'graduation') {
+        return `Phiếu Chấm Điểm ${typeLabel} - Nhóm`;
+    }
+    return `Phiếu Chấm Điểm ${typeLabel} - ${projectGroup.students[0]?.studentName}`;
+  }
+
+   const getDescription = () => {
+        if (evaluationType === 'internship') {
+            return `Chấm điểm thực tập cho sinh viên ${projectGroup.students[0]?.studentName}.`;
+        }
+        return `Chấm điểm cho đề tài: "${projectGroup.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : projectGroup.projectTitle}"`;
+    }
+
   return (
      <>
         <DialogHeader>
-            <DialogTitle>Phiếu Chấm Điểm - {evaluationType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'}</DialogTitle>
+            <DialogTitle>{getTitle()}</DialogTitle>
             <DialogDescription>
-                Chấm điểm cho đề tài: "{projectGroup.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : projectGroup.projectTitle}"
+               {getDescription()}
             </DialogDescription>
         </DialogHeader>
         <Form {...form}>
