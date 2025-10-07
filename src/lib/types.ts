@@ -72,6 +72,10 @@ export type DefenseRegistration = {
   studentId: string; // The official student ID number (e.g. 122001306)
   studentName: string;
   projectTitle?: string;
+  summary?: string;
+  objectives?: string;
+  expectedResults?: string;
+  reportLink?: string;
   supervisorName?: string;
   registrationDate: any;
   registrationStatus: 'reporting' | 'exempted' | 'withdrawn';
@@ -133,3 +137,5 @@ export type Rubric = {
     description?: string;
     criteria: RubricCriterion[];
 }
+
+    

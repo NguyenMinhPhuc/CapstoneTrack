@@ -25,6 +25,7 @@ import {
   UserSquare,
   ClipboardCheck,
   ChevronDown,
+  FileUp,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -97,6 +98,14 @@ export function AppSidebar() {
                     <Link href="/"><LayoutDashboard /><span>Dashboard</span></Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
+
+            {userData?.role === 'student' && (
+              <SidebarMenuItem>
+                  <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
+                      <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
+                  </SidebarMenuButton>
+              </SidebarMenuItem>
+            )}
             
             {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
               <SidebarMenuItem>
@@ -167,3 +176,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    

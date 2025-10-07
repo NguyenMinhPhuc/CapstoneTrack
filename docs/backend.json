@@ -234,6 +234,27 @@
           "format": "date-time",
           "description": "Timestamp when the registration was created."
         },
+        "projectTitle": {
+          "type": "string",
+          "description": "The title of the student's project."
+        },
+        "summary": {
+          "type": "string",
+          "description": "A brief summary of the project."
+        },
+        "objectives": {
+          "type": "string",
+          "description": "The objectives of the project."
+        },
+        "expectedResults": {
+          "type": "string",
+          "description": "The expected results of the project."
+        },
+        "reportLink": {
+          "type": "string",
+          "format": "uri",
+          "description": "A URL link to the full report document."
+        },
         "registrationStatus": {
           "type": "string",
           "description": "The registration status of the student for the defense.",
@@ -459,3 +480,5 @@
     }
   }
 }
+
+    
