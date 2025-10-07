@@ -77,6 +77,8 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     if (!session) return [];
 
     if (reportType === 'graduation') {
+        const gradCouncilWeight = (session.graduationCouncilWeight ?? 80) / 100;
+        const gradSupervisorWeight = 1 - gradCouncilWeight;
         const subCommitteeMap = new Map(subCommittees.map(sc => [sc.id, { name: sc.name, members: sc.members }]));
         return registrations
             .filter(reg => reg.graduationStatus === 'reporting')
@@ -110,7 +112,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             
             let finalGradScore: number | null = null;
             if (supervisorGradScore !== null && councilGradAvg !== null) {
-                finalGradScore = councilGradAvg * 0.8 + supervisorGradScore * 0.2;
+                finalGradScore = councilGradAvg * gradCouncilWeight + supervisorGradScore * gradSupervisorWeight;
             }
 
             return {
@@ -126,6 +128,8 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             };
         });
     } else { // internship report
+        const internCouncilWeight = (session.internshipCouncilWeight ?? 50) / 100;
+        const internCompanyWeight = 1 - internCouncilWeight;
         return registrations
         .filter(reg => reg.internshipStatus === 'reporting')
         .map((reg): ProcessedInternshipData => {
@@ -139,7 +143,6 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 ? councilInternEvals.reduce((sum, e) => sum + e.totalScore, 0) / councilInternEvals.length
                 : null;
             
-            // This is the score given by the school supervisor (GVHD TT) using the company's rubric
             const companySupervisorEval = studentEvals.find(e =>
                 e.evaluatorId === reg.internshipSupervisorId &&
                 e.evaluationType === 'internship' &&
@@ -149,7 +152,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
             let finalInternScore: number | null = null;
             if (councilInternAvg !== null && companySupervisorScore !== null) {
-                finalInternScore = councilInternAvg * 0.5 + companySupervisorScore * 0.5;
+                finalInternScore = councilInternAvg * internCouncilWeight + companySupervisorScore * internCompanyWeight;
             }
 
             return {

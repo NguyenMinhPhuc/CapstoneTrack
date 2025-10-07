@@ -26,6 +26,7 @@ import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Rubric } from '@/lib/types';
 import { Separator } from './ui/separator';
+import { Slider } from './ui/slider';
 
 const NO_RUBRIC_VALUE = "__NONE__";
 
@@ -40,6 +41,8 @@ const formSchema = z.object({
   councilInternshipRubricId: z.string().optional(),
   supervisorGraduationRubricId: z.string().optional(),
   companyInternshipRubricId: z.string().optional(),
+  graduationCouncilWeight: z.number().min(0).max(100).optional(),
+  internshipCouncilWeight: z.number().min(0).max(100).optional(),
 });
 
 interface AddDefenseSessionFormProps {
@@ -63,6 +66,8 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       councilInternshipRubricId: '',
       supervisorGraduationRubricId: '',
       companyInternshipRubricId: '',
+      graduationCouncilWeight: 80, // Default to 80%
+      internshipCouncilWeight: 50, // Default to 50%
     },
   });
   
@@ -273,6 +278,52 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
         </div>
         
         <Separator />
+         <p className="text-sm font-medium">Tùy chỉnh Tỷ lệ điểm</p>
+
+        <FormField
+          control={form.control}
+          name="graduationCouncilWeight"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tỷ lệ điểm Tốt nghiệp</FormLabel>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">HĐ: {field.value}%</span>
+                <Slider
+                  value={[field.value ?? 80]}
+                  onValueChange={(value) => field.onChange(value[0])}
+                  max={100}
+                  step={5}
+                />
+                <span className="text-xs text-muted-foreground">GVHD: {100 - (field.value ?? 80)}%</span>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="internshipCouncilWeight"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tỷ lệ điểm Thực tập</FormLabel>
+              <div className="flex items-center gap-4">
+                <span className="text-xs text-muted-foreground">HĐ: {field.value}%</span>
+                <Slider
+                  value={[field.value ?? 50]}
+                  onValueChange={(value) => field.onChange(value[0])}
+                  max={100}
+                  step={5}
+                />
+                <span className="text-xs text-muted-foreground">ĐV: {100 - (field.value ?? 50)}%</span>
+              </div>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        <Separator />
+
 
         <FormField
           control={form.control}

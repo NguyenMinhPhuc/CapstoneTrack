@@ -204,6 +204,14 @@
         "companyInternshipRubricId": {
           "type": "string",
           "description": "Reference to the Rubric used for internship evaluation by the company supervisor."
+        },
+        "graduationCouncilWeight": {
+          "type": "number",
+          "description": "The weight of the council's grade in the final graduation score (0-100)."
+        },
+        "internshipCouncilWeight": {
+          "type": "number",
+          "description": "The weight of the council's grade in the final internship score (0-100)."
         }
       },
       "required": [

@@ -39,6 +39,8 @@ export type GraduationDefenseSession = {
   councilInternshipRubricId?: string; // Renamed from internshipRubricId
   supervisorGraduationRubricId?: string; // New
   companyInternshipRubricId?: string;    // New
+  graduationCouncilWeight?: number;
+  internshipCouncilWeight?: number;
 }
 
 export type Student = {
