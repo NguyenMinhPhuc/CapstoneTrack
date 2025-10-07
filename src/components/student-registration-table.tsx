@@ -32,8 +32,10 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
@@ -74,31 +76,22 @@ interface StudentRegistrationTableProps {
   isLoading: boolean;
 }
 
-const studentStatusLabel: Record<Student['status'], string> = {
-  studying: 'Đang học',
-  reserved: 'Bảo lưu',
-  dropped_out: 'Đã nghỉ',
-  graduated: 'Đã tốt nghiệp',
-};
+type ReportStatusType = 'graduationStatus' | 'internshipStatus';
 
-const studentStatusColorClass: Record<Student['status'], string> = {
-  studying: 'bg-green-100 text-green-800 border-green-200 dark:bg-green-900/50 dark:text-green-300 dark:border-green-700',
-  reserved: 'bg-orange-100 text-orange-800 border-orange-200 dark:bg-orange-900/50 dark:text-orange-300 dark:border-orange-700',
-  dropped_out: 'bg-red-100 text-red-800 border-red-200 dark:bg-red-900/50 dark:text-red-300 dark:border-red-700',
-  graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
-};
-
-const registrationStatusLabel: Record<DefenseRegistration['registrationStatus'], string> = {
+const registrationStatusLabel: Record<DefenseRegistration['graduationStatus'], string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
     withdrawn: 'Bỏ báo cáo',
+    not_reporting: 'Không BC',
 };
 
-const registrationStatusVariant: Record<DefenseRegistration['registrationStatus'], 'default' | 'secondary' | 'destructive'> = {
+const registrationStatusVariant: Record<DefenseRegistration['graduationStatus'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
     reporting: 'default',
     exempted: 'secondary',
     withdrawn: 'destructive',
+    not_reporting: 'outline',
 };
+
 
 const UNASSIGNED_VALUE = "__UNASSIGNED__";
 
@@ -159,7 +152,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       const searchMatch = nameMatch || idMatch;
 
       const supervisorMatch = supervisorFilter === 'all' || reg.supervisorName === supervisorFilter;
-      const statusMatch = statusFilter === 'all' || reg.registrationStatus === statusFilter;
+      const statusMatch = statusFilter === 'all' || reg.graduationStatus === statusFilter || reg.internshipStatus === statusFilter;
 
       return searchMatch && supervisorMatch && statusMatch;
     });
@@ -193,7 +186,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     setIsEditDialogOpen(true);
   };
 
-  const handleRevertToReporting = async (registrationIds: string[]) => {
+  const handleRevertToReporting = async (registrationIds: string[], type: 'graduation' | 'internship' | 'both') => {
     if (registrationIds.length === 0) {
       toast({
         variant: "destructive",
@@ -205,14 +198,28 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
 
     const batch = writeBatch(firestore);
     
-    // Data to reset the status and clear related fields
-    const dataToUpdate = {
-        registrationStatus: 'reporting' as const,
-        statusNote: "",
-        exemptionDecisionNumber: "",
-        exemptionDecisionDate: null,
-        exemptionProofLink: "",
-    };
+    let dataToUpdate: any = {};
+    if (type === 'graduation' || type === 'both') {
+        dataToUpdate = {
+            ...dataToUpdate,
+            graduationStatus: 'reporting',
+            graduationStatusNote: "",
+            graduationExemptionDecisionNumber: "",
+            graduationExemptionDecisionDate: null,
+            graduationExemptionProofLink: "",
+        }
+    }
+    if (type === 'internship' || type === 'both') {
+         dataToUpdate = {
+            ...dataToUpdate,
+            internshipStatus: 'reporting',
+            internshipStatusNote: "",
+            internshipExemptionDecisionNumber: "",
+            internshipExemptionDecisionDate: null,
+            internshipExemptionProofLink: "",
+        }
+    }
+
 
     registrationIds.forEach(id => {
       const registrationDocRef = doc(firestore, 'defenseRegistrations', id);
@@ -223,7 +230,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
         await batch.commit();
         toast({
             title: 'Thành công',
-            description: `Đã cập nhật trạng thái cho ${registrationIds.length} sinh viên về "Báo cáo".`,
+            description: `Đã cập nhật trạng thái cho ${registrationIds.length} sinh viên.`,
         });
         setSelectedRowIds([]); // Clear selection after action
     } catch(error) {
@@ -318,56 +325,20 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
            <div className="flex flex-wrap items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
-                        <Dialog open={isAssignInternshipSupervisorDialogOpen} onOpenChange={setIsAssignInternshipSupervisorDialogOpen}>
-                            <DialogTrigger asChild>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
                                 <Button variant="outline" size="sm">
-                                    <UserCheck className="mr-2 h-4 w-4" />
-                                    Gán GVHD TT ({selectedRowIds.length})
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    <span>Về 'Báo cáo' ({selectedRowIds.length})</span>
                                 </Button>
-                            </DialogTrigger>
-                            <AssignInternshipSupervisorDialog
-                                registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
-                                onFinished={handleGroupActionFinished}
-                             />
-                        </Dialog>
-                        <Dialog open={isAssignManualDialogOpen} onOpenChange={setIsAssignManualDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <GitMerge className="mr-2 h-4 w-4" />
-                                    Phân công T.Ban ({selectedRowIds.length})
-                                </Button>
-                            </DialogTrigger>
-                            <AssignSubcommitteeManualDialog
-                                registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
-                                subCommittees={subCommittees || []}
-                                onFinished={handleGroupActionFinished}
-                             />
-                        </Dialog>
-                        <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm">
-                                    <Move className="mr-2 h-4 w-4" />
-                                    Chuyển đợt ({selectedRowIds.length})
-                                </Button>
-                            </DialogTrigger>
-                            <MoveRegistrationsDialog
-                                currentSessionId={sessionId}
-                                registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
-                                onFinished={handleGroupActionFinished}
-                            />
-                        </Dialog>
-                         <Dialog open={isEditGroupDialogOpen} onOpenChange={setIsEditGroupDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" disabled={selectedRowIds.length > 2}>
-                                    <Edit className="mr-2 h-4 w-4" />
-                                    Cập nhật đề tài ({selectedRowIds.length})
-                                </Button>
-                            </DialogTrigger>
-                             <EditGroupRegistrationForm
-                                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
-                                onFinished={handleGroupActionFinished}
-                            />
-                        </Dialog>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => handleRevertToReporting(selectedRowIds, 'graduation')}>Chỉ Tốt nghiệp</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRevertToReporting(selectedRowIds, 'internship')}>Chỉ Thực tập</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleRevertToReporting(selectedRowIds, 'both')}>Cả hai</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
                         <Dialog open={isExemptionDialogOpen} onOpenChange={setIsExemptionDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm">
@@ -392,10 +363,34 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 onFinished={handleGroupActionFinished}
                             />
                         </Dialog>
-                         <Button variant="outline" size="sm" onClick={() => handleRevertToReporting(selectedRowIds)}>
-                            <RefreshCw className="mr-2 h-4 w-4" />
-                            Về 'Báo cáo' ({selectedRowIds.length})
-                        </Button>
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <Users className="mr-2 h-4 w-4" />
+                                    <span>Thao tác nhóm ({selectedRowIds.length})</span>
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                                <DropdownMenuItem onClick={() => setIsEditGroupDialogOpen(true)} disabled={selectedRowIds.length > 2}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Cập nhật đề tài
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIsAssignInternshipSupervisorDialogOpen(true)}>
+                                    <UserCheck className="mr-2 h-4 w-4" />
+                                    Gán GVHD Thực tập
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => setIsAssignManualDialogOpen(true)}>
+                                    <GitMerge className="mr-2 h-4 w-4" />
+                                    Phân công Tiểu ban
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onClick={() => setIsMoveDialogOpen(true)}>
+                                    <Move className="mr-2 h-4 w-4" />
+                                    Chuyển sang đợt khác
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </>
                 )}
             </div>
@@ -516,12 +511,11 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 </TableHead>
                 <TableHead>STT</TableHead>
                 <TableHead>Tên sinh viên</TableHead>
-                <TableHead>MSSV</TableHead>
                 <TableHead>Tên đề tài</TableHead>
                 <TableHead>GVHD TN</TableHead>
                 <TableHead>GVHD TT</TableHead>
                 <TableHead>Tiểu ban</TableHead>
-                <TableHead>Trạng thái ĐK</TableHead>
+                <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
@@ -536,8 +530,10 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         />
                     </TableCell>
                     <TableCell>{index + 1}</TableCell>
-                    <TableCell className="font-medium">{reg.studentName}</TableCell>
-                    <TableCell>{reg.studentId}</TableCell>
+                    <TableCell className="font-medium">
+                        <div>{reg.studentName}</div>
+                        <div className="text-xs text-muted-foreground">{reg.studentId}</div>
+                    </TableCell>
                     <TableCell>
                       {reg.projectTitle ? (
                         <TooltipProvider>
@@ -576,9 +572,16 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         </Select>
                     </TableCell>
                     <TableCell>
-                       <Badge variant={registrationStatusVariant[reg.registrationStatus]}>
-                          {registrationStatusLabel[reg.registrationStatus]}
-                        </Badge>
+                       <div className="flex flex-col gap-1">
+                          <Badge variant={registrationStatusVariant[reg.graduationStatus]} className="justify-center">
+                            <GraduationCap className="mr-1 h-3 w-3"/>
+                            {registrationStatusLabel[reg.graduationStatus]}
+                          </Badge>
+                          <Badge variant={registrationStatusVariant[reg.internshipStatus]} className="justify-center">
+                            <Briefcase className="mr-1 h-3 w-3"/>
+                            {registrationStatusLabel[reg.internshipStatus]}
+                          </Badge>
+                       </div>
                     </TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
@@ -588,28 +591,41 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem onClick={() => handleEditClick(reg)}>Sửa</DropdownMenuItem>
+                           <DropdownMenuItem onClick={() => handleEditClick(reg)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Sửa đề tài/GVHD</span>
+                            </DropdownMenuItem>
                           <DropdownMenuSeparator />
-                           <DropdownMenuItem onClick={() => handleRevertToReporting([reg.id])}
-                                disabled={reg.registrationStatus === 'reporting'}
-                           >
-                                <RefreshCw className="mr-2 h-4 w-4" />
-                                Chuyển về 'Báo cáo'
-                           </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => {
-                                setIsExemptionDialogOpen(true);
-                                setSelectedRowIds([reg.id]);
-                           }}>
-                                <Star className="mr-2 h-4 w-4" />
-                                Xét đặc cách
-                           </DropdownMenuItem>
-                           <DropdownMenuItem onClick={() => {
-                                setIsWithdrawDialogOpen(true);
-                                setSelectedRowIds([reg.id]);
-                           }}>
-                                <XCircle className="mr-2 h-4 w-4" />
-                                Bỏ báo cáo
-                           </DropdownMenuItem>
+                           <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                    <RefreshCw className="mr-2 h-4 w-4" />
+                                    <span>Về 'Báo cáo'</span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => handleRevertToReporting([reg.id], 'graduation')} disabled={reg.graduationStatus === 'reporting'}>Chỉ Tốt nghiệp</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleRevertToReporting([reg.id], 'internship')} disabled={reg.internshipStatus === 'reporting'}>Chỉ Thực tập</DropdownMenuItem>
+                                </DropdownMenuContent>
+                           </DropdownMenuSub>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                     <Star className="mr-2 h-4 w-4" />
+                                    <span>Xét đặc cách</span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => { setIsExemptionDialogOpen(true); setSelectedRowIds([reg.id]); }}>Cho Tốt nghiệp</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { /* Implement internship exemption */ }}>Cho Thực tập</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenuSub>
+                            <DropdownMenuSub>
+                                <DropdownMenuSubTrigger>
+                                     <XCircle className="mr-2 h-4 w-4" />
+                                    <span>Bỏ báo cáo</span>
+                                </DropdownMenuSubTrigger>
+                                <DropdownMenuContent>
+                                    <DropdownMenuItem onClick={() => { setIsWithdrawDialogOpen(true); setSelectedRowIds([reg.id]); }}>Tốt nghiệp</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { /* Implement internship withdrawal */ }}>Thực tập</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenuSub>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(reg.id)}>
                             Xóa
@@ -630,6 +646,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
           </Table>
         </CardContent>
       </Card>
+
+      {/* Dialog for single edit */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
             <DialogHeader>
@@ -646,6 +664,15 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
             )}
         </DialogContent>
       </Dialog>
+      
+       {/* Dialog for group edit */}
+       <Dialog open={isEditGroupDialogOpen} onOpenChange={setIsEditGroupDialogOpen}>
+            <EditGroupRegistrationForm
+                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                onFinished={handleGroupActionFinished}
+            />
+       </Dialog>
     </>
   );
 }
+
