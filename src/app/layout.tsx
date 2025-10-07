@@ -2,10 +2,8 @@ import type { Metadata } from 'next';
 import './globals.css';
 import { cn } from '@/lib/utils';
 import { Toaster } from '@/components/ui/toaster';
-import { AppSidebar } from '@/components/app-sidebar';
-import { AppHeader } from '@/components/app-header';
-import { SidebarProvider, SidebarInset } from '@/components/ui/sidebar';
 import { FirebaseClientProvider } from '@/firebase/client-provider';
+import { MainLayout } from '@/components/main-layout';
 
 export const metadata: Metadata = {
   title: 'CapstoneTrack',
@@ -33,13 +31,7 @@ export default function RootLayout({
       </head>
       <body className={cn('font-body antialiased', 'min-h-screen')}>
         <FirebaseClientProvider>
-          <SidebarProvider defaultOpen>
-            <AppSidebar />
-            <SidebarInset>
-              <AppHeader />
-              {children}
-            </SidebarInset>
-          </SidebarProvider>
+          <MainLayout>{children}</MainLayout>
         </FirebaseClientProvider>
         <Toaster />
       </body>
