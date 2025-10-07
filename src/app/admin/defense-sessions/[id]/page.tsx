@@ -240,7 +240,7 @@ export default function DefenseSessionDetailPage() {
                         <div>
                             <p className="font-semibold">Rubric áp dụng</p>
                             <p className="text-primary hover:underline">
-                                {rubric ? rubric.name : 'Chưa gán'}
+                                {isRubricLoading ? 'Đang tải...' : rubric ? rubric.name : 'Chưa gán'}
                             </p>
                         </div>
                     </div>

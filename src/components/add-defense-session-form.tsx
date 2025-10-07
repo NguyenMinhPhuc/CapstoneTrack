@@ -249,7 +249,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
           name="zaloGroupLink"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Link nhóm Zalo</FormLabel>
+              <FormLabel>Link nhóm Zalo (tùy chọn)</FormLabel>
               <FormControl>
                 <Input placeholder="https://zalo.me/g/..." {...field} />
               </FormControl>
@@ -262,7 +262,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
           name="description"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Mô tả</FormLabel>
+              <FormLabel>Mô tả (tùy chọn)</FormLabel>
               <FormControl>
                 <Textarea
                   placeholder="Nhập mô tả ngắn về đợt báo cáo này..."
