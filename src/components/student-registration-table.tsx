@@ -624,7 +624,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
                                     <DropdownMenuItem onClick={() => { setIsWithdrawDialogOpen(true); setSelectedRowIds([reg.id]); }}>Tốt nghiệp</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => { /* Implement internship withdrawal */ }}>Thực tập</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => { setIsWithdrawDialogOpen(true); setSelectedRowIds([reg.id]); }}>Thực tập</DropdownMenuItem>
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
                           <DropdownMenuSeparator />

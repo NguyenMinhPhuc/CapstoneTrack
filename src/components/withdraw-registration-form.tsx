@@ -26,9 +26,13 @@ import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase
 import { doc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const formSchema = z.object({
   statusNote: z.string().optional(),
+  reportType: z.enum(['graduation', 'internship', 'both'], {
+    required_error: 'Vui lòng chọn loại báo cáo để cập nhật.'
+  }),
 });
 
 interface WithdrawRegistrationFormProps {
@@ -44,6 +48,7 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
     resolver: zodResolver(formSchema),
     defaultValues: {
       statusNote: '',
+      reportType: 'graduation',
     },
   });
 
@@ -59,10 +64,16 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
 
     const batch = writeBatch(firestore);
     
-    const dataToUpdate = {
-        registrationStatus: 'withdrawn' as const,
-        statusNote: values.statusNote || '',
-    };
+    let dataToUpdate: any = {};
+    if (values.reportType === 'graduation' || values.reportType === 'both') {
+      dataToUpdate.graduationStatus = 'withdrawn' as const;
+      dataToUpdate.graduationStatusNote = values.statusNote || '';
+    }
+    if (values.reportType === 'internship' || values.reportType === 'both') {
+      dataToUpdate.internshipStatus = 'withdrawn' as const;
+      dataToUpdate.internshipStatusNote = values.statusNote || '';
+    }
+
 
     registrations.forEach(reg => {
       const registrationDocRef = doc(firestore, 'defenseRegistrations', reg.id);
@@ -107,6 +118,42 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
                         </ul>
                     </ScrollArea>
                 </div>
+
+                 <FormField
+                  control={form.control}
+                  name="reportType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Áp dụng cho</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex flex-col space-y-1"
+                        >
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="graduation" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Chỉ Tốt nghiệp
+                            </FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <RadioGroupItem value="internship" />
+                            </FormControl>
+                            <FormLabel className="font-normal">
+                              Chỉ Thực tập
+                            </FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
                 <FormField
                 control={form.control}
                 name="statusNote"
