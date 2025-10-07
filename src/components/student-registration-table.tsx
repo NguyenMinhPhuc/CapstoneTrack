@@ -33,7 +33,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
@@ -52,6 +52,7 @@ import { SpecialExemptionForm } from './special-exemption-form';
 import { WithdrawRegistrationForm } from './withdraw-registration-form';
 import { AssignSubcommitteeDialog } from './assign-subcommittee-dialog';
 import { AssignSubcommitteeManualDialog } from './assign-subcommittee-manual-dialog';
+import { AssignInternshipSupervisorDialog } from './assign-internship-supervisor-dialog';
 import {
   Select,
   SelectContent,
@@ -114,6 +115,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isWithdrawDialogOpen, setIsWithdrawDialogOpen] = useState(false);
   const [isAssignSubcommitteeDialogOpen, setIsAssignSubcommitteeDialogOpen] = useState(false);
   const [isAssignManualDialogOpen, setIsAssignManualDialogOpen] = useState(false);
+  const [isAssignInternshipSupervisorDialogOpen, setIsAssignInternshipSupervisorDialogOpen] = useState(false);
 
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
@@ -281,6 +283,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     setIsExemptionDialogOpen(false);
     setIsWithdrawDialogOpen(false);
     setIsAssignManualDialogOpen(false);
+    setIsAssignInternshipSupervisorDialogOpen(false);
     setSelectedRowIds([]);
   };
 
@@ -315,11 +318,23 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
            <div className="flex flex-wrap items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
+                        <Dialog open={isAssignInternshipSupervisorDialogOpen} onOpenChange={setIsAssignInternshipSupervisorDialogOpen}>
+                            <DialogTrigger asChild>
+                                <Button variant="outline" size="sm">
+                                    <UserCheck className="mr-2 h-4 w-4" />
+                                    Gán GVHD TT ({selectedRowIds.length})
+                                </Button>
+                            </DialogTrigger>
+                            <AssignInternshipSupervisorDialog
+                                registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                                onFinished={handleGroupActionFinished}
+                             />
+                        </Dialog>
                         <Dialog open={isAssignManualDialogOpen} onOpenChange={setIsAssignManualDialogOpen}>
                             <DialogTrigger asChild>
                                 <Button variant="outline" size="sm">
                                     <GitMerge className="mr-2 h-4 w-4" />
-                                    Phân công thủ công ({selectedRowIds.length})
+                                    Phân công T.Ban ({selectedRowIds.length})
                                 </Button>
                             </DialogTrigger>
                             <AssignSubcommitteeManualDialog
@@ -503,7 +518,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 <TableHead>Tên sinh viên</TableHead>
                 <TableHead>MSSV</TableHead>
                 <TableHead>Tên đề tài</TableHead>
-                <TableHead>GVHD</TableHead>
+                <TableHead>GVHD TN</TableHead>
+                <TableHead>GVHD TT</TableHead>
                 <TableHead>Tiểu ban</TableHead>
                 <TableHead>Trạng thái ĐK</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
@@ -541,6 +557,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                       )}
                     </TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
+                    <TableCell>{reg.internshipSupervisorName || 'Chưa có'}</TableCell>
                     <TableCell>
                         <Select
                             value={reg.subCommitteeId || UNASSIGNED_VALUE}
@@ -604,7 +621,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center">
+                  <TableCell colSpan={10} className="text-center">
                     Chưa có sinh viên nào được thêm vào đợt này.
                   </TableCell>
                 </TableRow>
