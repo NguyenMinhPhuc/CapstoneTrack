@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -27,11 +26,12 @@ import { collection, writeBatch, serverTimestamp, doc, setDoc } from 'firebase/f
 import type { Rubric, DefenseRegistration, Evaluation } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
-import { useEffect, useMemo } from 'react';
-import { Minus, Plus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { Minus, Plus, Settings2, SlidersHorizontal } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import { Switch } from './ui/switch';
 
 export interface ProjectGroup {
     projectTitle: string;
@@ -51,6 +51,7 @@ interface GradingFormProps {
 export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId, sessionId, onFinished, existingEvaluation }: GradingFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [isOverallMode, setIsOverallMode] = useState(false);
 
   // Dynamically create the schema based on the rubric
   const formSchema = useMemo(() => {
@@ -64,11 +65,17 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
 
     return z.object({
       scores: z.object(criteriaSchema),
+      overallScore: z.coerce.number().optional(),
       comments: z.string().optional(),
     });
   }, [rubric]);
 
   type GradingFormData = z.infer<typeof formSchema>;
+  
+  const maxTotalScore = useMemo(() => {
+    return rubric.criteria.reduce((sum, criterion) => sum + criterion.maxScore, 0);
+  }, [rubric]);
+
 
   const form = useForm<GradingFormData>({
     resolver: zodResolver(formSchema),
@@ -83,9 +90,10 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
         }
         return {
             scores: defaultScores,
+            overallScore: existingEvaluation?.totalScore || maxTotalScore,
             comments: existingEvaluation?.comments || '',
         };
-    }, [existingEvaluation, rubric])
+    }, [existingEvaluation, rubric, maxTotalScore])
   });
   
   useEffect(() => {
@@ -99,30 +107,34 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
       }
       form.reset({
           scores: defaultScores,
+          overallScore: existingEvaluation?.totalScore || maxTotalScore,
           comments: existingEvaluation?.comments || '',
       });
-  }, [existingEvaluation, rubric, form]);
+  }, [existingEvaluation, rubric, form, maxTotalScore]);
 
   const watchedScores = useWatch({
     control: form.control,
     name: 'scores',
   });
+  
+  const watchedOverallScore = useWatch({
+      control: form.control,
+      name: 'overallScore'
+  });
 
   const totalScore = useMemo(() => {
+    if (isOverallMode) {
+        return watchedOverallScore || 0;
+    }
     if (!watchedScores) return 0;
     return Object.values(watchedScores).reduce((sum, score) => sum + (Number(score) || 0), 0);
-  }, [watchedScores]);
+  }, [watchedScores, isOverallMode, watchedOverallScore]);
   
-  const maxTotalScore = useMemo(() => {
-    return rubric.criteria.reduce((sum, criterion) => sum + criterion.maxScore, 0);
-  }, [rubric]);
 
   const adjustScore = (fieldName: `scores.${string}`, amount: number, maxScore: number) => {
     const currentValue = Number(form.getValues(fieldName)) || 0;
     let newValue = currentValue + amount;
-    // Clamp the value between 0 and maxScore
     newValue = Math.max(0, Math.min(newValue, maxScore));
-    // Round to 2 decimal places to avoid floating point issues
     newValue = Math.round(newValue * 100) / 100;
     form.setValue(fieldName, newValue, { shouldValidate: true });
   };
@@ -131,11 +143,32 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
   async function onSubmit(values: GradingFormData) {
     const batch = writeBatch(firestore);
     const evaluationsCollection = collection(firestore, 'evaluations');
+    
+    let scoresToSave: { criterionId: string; score: number }[];
+    let totalScoreToSave: number;
+
+    if (isOverallMode) {
+      totalScoreToSave = Math.max(0, Math.min(values.overallScore || 0, maxTotalScore));
+      scoresToSave = rubric.criteria.map(criterion => {
+        const proportion = criterion.maxScore / maxTotalScore;
+        const calculatedScore = totalScoreToSave * proportion;
+        return {
+          criterionId: criterion.id,
+          score: Math.round(calculatedScore * 100) / 100, // Round to 2 decimal places
+        };
+      });
+    } else {
+      totalScoreToSave = totalScore;
+      scoresToSave = Object.entries(values.scores).map(([criterionId, score]) => ({
+          criterionId,
+          score: Number(score),
+      }));
+    }
+
 
     projectGroup.students.forEach(student => {
-        const evaluationDocRef = existingEvaluation 
-            ? doc(firestore, 'evaluations', existingEvaluation.id)
-            : doc(evaluationsCollection);
+        const evaluationId = existingEvaluation?.registrationId === student.id ? existingEvaluation.id : doc(evaluationsCollection).id;
+        const evaluationDocRef = doc(firestore, 'evaluations', evaluationId);
             
         const evaluationData: Omit<Evaluation, 'id'> = {
             sessionId: sessionId,
@@ -143,11 +176,8 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
             evaluatorId: supervisorId,
             rubricId: rubric.id,
             evaluationType: evaluationType,
-            scores: Object.entries(values.scores).map(([criterionId, score]) => ({
-                criterionId,
-                score: Number(score),
-            })),
-            totalScore: totalScore,
+            scores: scoresToSave,
+            totalScore: totalScoreToSave,
             comments: values.comments || '',
             evaluationDate: serverTimestamp(),
         };
@@ -200,9 +230,50 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                 <div className="flex items-center space-x-2">
+                    <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                    <Label htmlFor="grading-mode" className={cn(isOverallMode && "text-muted-foreground")}>Chấm chi tiết</Label>
+                    <Switch
+                        id="grading-mode"
+                        checked={isOverallMode}
+                        onCheckedChange={setIsOverallMode}
+                    />
+                    <Label htmlFor="grading-mode" className={cn(!isOverallMode && "text-muted-foreground")}>Chấm điểm tổng</Label>
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                </div>
+                <Separator />
                  <ScrollArea className="h-[50vh] pr-6">
                     <div className="space-y-6">
-                        {rubric.criteria.map((criterion) => (
+                       {isOverallMode ? (
+                           <FormField
+                                control={form.control}
+                                name="overallScore"
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="text-lg font-semibold">Điểm tổng</FormLabel>
+                                    <FormControl>
+                                         <Input
+                                            type="number"
+                                            step="0.25"
+                                            {...field}
+                                            className="text-center text-xl h-14"
+                                            onBlur={(e) => {
+                                                const val = parseFloat(e.target.value);
+                                                if (!isNaN(val)) {
+                                                    const clamped = Math.max(0, Math.min(val, maxTotalScore));
+                                                    field.onChange(clamped);
+                                                } else {
+                                                    field.onChange(0);
+                                                }
+                                            }}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                       ) : (
+                           rubric.criteria.map((criterion) => (
                             <FormField
                                 key={criterion.id}
                                 control={form.control}
@@ -267,7 +338,8 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
                                 </FormItem>
                                 )}
                             />
-                        ))}
+                        ))
+                       )}
                          <FormField
                             control={form.control}
                             name="comments"
