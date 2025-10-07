@@ -364,7 +364,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
                 <Separator />
                  <DialogFooter className="flex-col-reverse sm:flex-row sm:justify-between items-center">
                     <div className="text-lg font-bold">
-                        Tổng điểm: <span className="text-primary">{totalScore.toFixed(2)}</span> / {maxTotalScore.toFixed(2)}
+                        Tổng điểm: <span className="text-primary">{(totalScore || 0).toFixed(2)}</span> / {maxTotalScore.toFixed(2)}
                     </div>
                     <div className="flex gap-2">
                         <Button type="button" variant="outline" onClick={onFinished}>Hủy</Button>
