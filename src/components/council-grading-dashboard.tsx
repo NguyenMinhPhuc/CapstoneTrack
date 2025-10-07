@@ -26,7 +26,6 @@ interface SessionWithCouncilAssignments {
   registrations: DefenseRegistration[];
   isCouncilMember: boolean;
   subCommittees: DefenseSubCommittee[];
-  evaluations: Evaluation[];
 }
 
 function SubcommitteeGradingView({
@@ -291,6 +290,14 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
   const [councilAssignments, setCouncilAssignments] = useState<SessionWithCouncilAssignments[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
 
+  const ongoingSessionIds = useMemo(() => allSessions?.map(s => s.id) || [], [allSessions]);
+
+  const evaluationsQuery = useMemoFirebase(
+      () => ongoingSessionIds.length > 0 ? query(collection(firestore, 'evaluations'), where('sessionId', 'in', ongoingSessionIds)) : null,
+      [firestore, ongoingSessionIds]
+  );
+  const { data: allEvaluations, isLoading: isLoadingEvaluations } = useCollection<Evaluation>(evaluationsQuery);
+
   useEffect(() => {
     if (isLoadingSessions || !allSessions) return;
 
@@ -302,11 +309,10 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
         let isCouncilMember = false;
         const assignedSubCommittees: DefenseSubCommittee[] = [];
 
-        const [councilSnapshot, subCommitteesSnapshot, registrationsSnapshot, evaluationsSnapshot] = await Promise.all([
+        const [councilSnapshot, subCommitteesSnapshot, registrationsSnapshot] = await Promise.all([
             getDocs(collection(firestore, `graduationDefenseSessions/${session.id}/council`)),
             getDocs(collection(firestore, `graduationDefenseSessions/${session.id}/subCommittees`)),
             getDocs(query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', session.id))),
-            getDocs(query(collection(firestore, 'evaluations'), where('sessionId', '==', session.id))),
         ]);
         
         const members = councilSnapshot.docs.map(d => d.data() as DefenseCouncilMember);
@@ -322,7 +328,6 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
         });
         
         const registrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
-        const evaluations = evaluationsSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation);
         
         if (isCouncilMember || assignedSubCommittees.length > 0) {
           councilAssignmentsData.push({
@@ -330,7 +335,6 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
             registrations,
             isCouncilMember,
             subCommittees: assignedSubCommittees,
-            evaluations,
           });
         }
       }
@@ -343,13 +347,17 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
   
   
   const CouncilSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithCouncilAssignments }) => {
-    const { session, isCouncilMember, subCommittees, registrations, evaluations } = sessionData;
+    const { session, isCouncilMember, subCommittees, registrations } = sessionData;
     
     const councilGradRubricDocRef = useMemoFirebase(() => (session.councilGraduationRubricId ? doc(firestore, 'rubrics', session.councilGraduationRubricId) : null), [firestore, session.councilGraduationRubricId]);
     const { data: councilGraduationRubric, isLoading: isLoadingCouncilGradRubric } = useDoc<Rubric>(councilGradRubricDocRef);
     
     const councilInternRubricDocRef = useMemoFirebase(() => (session.councilInternshipRubricId ? doc(firestore, 'rubrics', session.councilInternshipRubricId) : null), [firestore, session.councilInternshipRubricId]);
     const { data: councilInternshipRubric, isLoading: isLoadingCouncilInternRubric } = useDoc<Rubric>(councilInternRubricDocRef);
+
+    const sessionEvaluations = useMemo(() => {
+        return allEvaluations?.filter(e => e.sessionId === session.id) || [];
+    }, [allEvaluations, session.id]);
 
     const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
         if (isLoading) return 'Đang tải...';
@@ -391,7 +399,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
                          <SubcommitteeGradingView 
                             subcommittee={sc} 
                             registrations={registrations} 
-                            evaluations={evaluations}
+                            evaluations={sessionEvaluations}
                             councilGraduationRubric={councilGraduationRubric || null}
                             councilInternshipRubric={councilInternshipRubric || null}
                             supervisorId={supervisorId}
@@ -405,7 +413,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     );
   }
 
-  const isLoading = isLoadingSessions || isLoadingAssignments;
+  const isLoading = isLoadingSessions || isLoadingAssignments || isLoadingEvaluations;
 
   if (isLoading) {
     return (
@@ -440,5 +448,3 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     </div>
   );
 }
-
-    

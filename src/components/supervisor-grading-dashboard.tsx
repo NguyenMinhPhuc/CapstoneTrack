@@ -32,7 +32,6 @@ interface SessionAssignments {
   session: GraduationDefenseSession;
   graduationRegistrations: DefenseRegistration[];
   internshipRegistrations: DefenseRegistration[];
-  evaluations: Evaluation[];
 }
 
 // Component for grading Graduation Projects
@@ -233,6 +232,14 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
   const [supervisedAssignments, setSupervisedAssignments] = useState<SessionAssignments[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
 
+  const ongoingSessionIds = useMemo(() => allSessions?.map(s => s.id) || [], [allSessions]);
+
+  const evaluationsQuery = useMemoFirebase(
+      () => ongoingSessionIds.length > 0 ? query(collection(firestore, 'evaluations'), where('sessionId', 'in', ongoingSessionIds)) : null,
+      [firestore, ongoingSessionIds]
+  );
+  const { data: allEvaluations, isLoading: isLoadingEvaluations } = useCollection<Evaluation>(evaluationsQuery);
+
   useEffect(() => {
     if (isLoadingSessions || !allSessions) return;
 
@@ -254,22 +261,19 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
             where('registrationStatus', '==', 'reporting')
         );
         
-        const [gradSnapshot, internSnapshot, evaluationsSnapshot] = await Promise.all([
+        const [gradSnapshot, internSnapshot] = await Promise.all([
           getDocs(gradSupervisorQuery),
           getDocs(internSupervisorQuery),
-          getDocs(query(collection(firestore, 'evaluations'), where('sessionId', '==', session.id))),
         ]);
 
         const graduationRegistrations = gradSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as DefenseRegistration);
         const internshipRegistrations = internSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as DefenseRegistration);
-        const evaluations = evaluationsSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as Evaluation);
         
         if (graduationRegistrations.length > 0 || internshipRegistrations.length > 0) {
             assignmentsData.push({
                 session,
                 graduationRegistrations,
                 internshipRegistrations,
-                evaluations,
             });
         }
       }
@@ -282,7 +286,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
   
 
   const SessionAccordionItem = ({ sessionData }: { sessionData: SessionAssignments }) => {
-    const { session, graduationRegistrations, internshipRegistrations, evaluations } = sessionData;
+    const { session, graduationRegistrations, internshipRegistrations } = sessionData;
 
     // Fetch rubrics
     const supGradRubricRef = useMemoFirebase(() => (session.supervisorGraduationRubricId ? doc(firestore, 'rubrics', session.supervisorGraduationRubricId) : null), [firestore, session.supervisorGraduationRubricId]);
@@ -290,6 +294,10 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
 
     const compInternRubricRef = useMemoFirebase(() => (session.companyInternshipRubricId ? doc(firestore, 'rubrics', session.companyInternshipRubricId) : null), [firestore, session.companyInternshipRubricId]);
     const { data: companyInternshipRubric, isLoading: isLoadingCompInternRubric } = useDoc<Rubric>(compInternRubricRef);
+
+    const sessionEvaluations = useMemo(() => {
+        return allEvaluations?.filter(e => e.sessionId === session.id) || [];
+    }, [allEvaluations, session.id]);
     
     const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
         if (isLoading) return 'Đang tải...';
@@ -319,7 +327,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                         <GraduationGradingView
                             registrations={graduationRegistrations}
                             rubric={supervisorGraduationRubric}
-                            evaluations={evaluations}
+                            evaluations={sessionEvaluations}
                             supervisorId={supervisorId}
                             sessionId={session.id}
                         />
@@ -338,7 +346,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                         <InternshipGradingView
                             registrations={internshipRegistrations}
                             rubric={companyInternshipRubric}
-                            evaluations={evaluations}
+                            evaluations={sessionEvaluations}
                             supervisorId={supervisorId}
                             sessionId={session.id}
                         />
@@ -350,7 +358,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     );
 };
 
-  const isLoading = isLoadingSessions || isLoadingAssignments;
+  const isLoading = isLoadingSessions || isLoadingAssignments || isLoadingEvaluations;
 
   if (isLoading) {
       return (
@@ -385,5 +393,3 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     </div>
   );
 }
-
-    
