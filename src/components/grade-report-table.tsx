@@ -25,6 +25,11 @@ import { Search, FileDown } from 'lucide-react';
 import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 
+interface CouncilScore {
+    role: string;
+    score: number;
+}
+
 interface ProcessedStudentData {
   id: string;
   studentId: string;
@@ -32,6 +37,7 @@ interface ProcessedStudentData {
   projectTitle?: string;
   subCommitteeName: string;
   supervisorGradScore: number | null;
+  councilScores: CouncilScore[];
   councilGradAvg: number | null;
   finalGradScore: number | null;
 }
@@ -49,14 +55,13 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
   const processedData = useMemo((): ProcessedStudentData[] => {
     if (!session) return [];
 
-    const subCommitteeMap = new Map(subCommittees.map(sc => [sc.id, sc.name]));
+    const subCommitteeMap = new Map(subCommittees.map(sc => [sc.id, { name: sc.name, members: sc.members }]));
 
     return registrations
     .filter(reg => reg.registrationStatus === 'reporting')
     .map(reg => {
       const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
       
-      // Supervisor Graduation Score
       const supervisorGradEval = studentEvals.find(e => 
         e.evaluatorId === reg.supervisorId && 
         e.evaluationType === 'graduation' &&
@@ -64,21 +69,29 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
       );
       const supervisorGradScore = supervisorGradEval ? supervisorGradEval.totalScore : null;
 
-      // Council Graduation Scores
-      const subCommitteeMembers = subCommittees.find(sc => sc.id === reg.subCommitteeId)?.members.map(m => m.supervisorId) || [];
-      const councilGradEvals = studentEvals.filter(e => 
-        subCommitteeMembers.includes(e.evaluatorId) &&
-        e.evaluationType === 'graduation' &&
-        e.rubricId === session.councilGraduationRubricId
-      );
+      const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
+      const subCommitteeMembers = subCommitteeDetails?.members || [];
       
-      let councilGradAvg: number | null = null;
-      if (councilGradEvals.length > 0) {
-        const total = councilGradEvals.reduce((sum, e) => sum + e.totalScore, 0);
-        councilGradAvg = total / councilGradEvals.length;
+      const councilScores: CouncilScore[] = [];
+      if (subCommitteeMembers.length > 0) {
+          subCommitteeMembers.forEach(member => {
+              const evalRecord = studentEvals.find(e => 
+                e.evaluatorId === member.supervisorId &&
+                e.evaluationType === 'graduation' &&
+                e.rubricId === session.councilGraduationRubricId
+              );
+              if (evalRecord) {
+                  councilScores.push({ role: member.role, score: evalRecord.totalScore });
+              }
+          });
       }
       
-      // Final Score Calculation (40% GVHD, 60% Hội đồng)
+      let councilGradAvg: number | null = null;
+      if (councilScores.length > 0) {
+        const total = councilScores.reduce((sum, s) => sum + s.score, 0);
+        councilGradAvg = total / councilScores.length;
+      }
+      
       let finalGradScore: number | null = null;
       if (supervisorGradScore !== null && councilGradAvg !== null) {
           finalGradScore = supervisorGradScore * 0.4 + councilGradAvg * 0.6;
@@ -89,13 +102,23 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
         studentId: reg.studentId,
         studentName: reg.studentName,
         projectTitle: reg.projectTitle,
-        subCommitteeName: reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) || 'N/A' : 'Chưa phân công',
+        subCommitteeName: subCommitteeDetails?.name || 'Chưa phân công',
         supervisorGradScore: supervisorGradScore,
+        councilScores: councilScores,
         councilGradAvg: councilGradAvg,
         finalGradScore: finalGradScore,
       };
     });
   }, [session, registrations, evaluations, subCommittees]);
+
+  const uniqueCouncilRoles = useMemo(() => {
+    const roles = new Set<string>();
+    processedData.forEach(item => {
+      item.councilScores.forEach(score => roles.add(score.role));
+    });
+    const roleOrder: Record<string, number> = { 'Head': 1, 'Secretary': 2, 'Commissioner': 3 };
+    return Array.from(roles).sort((a,b) => (roleOrder[a] || 99) - (roleOrder[b] || 99) );
+  }, [processedData]);
 
   const filteredData = useMemo(() => {
       if (!processedData) return [];
@@ -108,15 +131,22 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
   }, [processedData, searchTerm]);
 
   const exportToExcel = () => {
-    const dataToExport = filteredData.map(item => ({
-      'MSSV': item.studentId,
-      'Họ và Tên': item.studentName,
-      'Tên đề tài': item.projectTitle || 'N/A',
-      'Tiểu ban': item.subCommitteeName,
-      'Điểm GVHD': item.supervisorGradScore?.toFixed(2) ?? 'N/A',
-      'Điểm TB Hội đồng': item.councilGradAvg?.toFixed(2) ?? 'N/A',
-      'Điểm Tổng kết': item.finalGradScore?.toFixed(2) ?? 'N/A',
-    }));
+    const dataToExport = filteredData.map(item => {
+        const row: {[key: string]: any} = {
+            'MSSV': item.studentId,
+            'Họ và Tên': item.studentName,
+            'Tên đề tài': item.projectTitle || 'N/A',
+            'Tiểu ban': item.subCommitteeName,
+            'Điểm GVHD': item.supervisorGradScore?.toFixed(2) ?? 'N/A',
+        };
+        uniqueCouncilRoles.forEach(role => {
+            const score = item.councilScores.find(s => s.role === role);
+            row[`Điểm ${role}`] = score ? score.score.toFixed(2) : 'N/A';
+        });
+        row['Điểm TB Hội đồng'] = item.councilGradAvg?.toFixed(2) ?? 'N/A';
+        row['Điểm Tổng kết'] = item.finalGradScore?.toFixed(2) ?? 'N/A';
+        return row;
+    });
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
@@ -162,9 +192,11 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
                 <TableHead className="w-12">STT</TableHead>
                 <TableHead>MSSV</TableHead>
                 <TableHead>Họ và Tên</TableHead>
-                <TableHead>Tên đề tài</TableHead>
                 <TableHead>Tiểu ban</TableHead>
                 <TableHead className="text-center">Điểm GVHD</TableHead>
+                {uniqueCouncilRoles.map(role => (
+                    <TableHead key={role} className="text-center">Điểm {role}</TableHead>
+                ))}
                 <TableHead className="text-center">Điểm TB HĐ</TableHead>
                 <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
               </TableRow>
@@ -176,11 +208,18 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
                     <TableCell>{index + 1}</TableCell>
                     <TableCell>{item.studentId}</TableCell>
                     <TableCell className="font-medium">{item.studentName}</TableCell>
-                    <TableCell>{item.projectTitle || 'N/A'}</TableCell>
                     <TableCell>{item.subCommitteeName}</TableCell>
                     <TableCell className="text-center">
                       {item.supervisorGradScore !== null ? item.supervisorGradScore.toFixed(2) : '-'}
                     </TableCell>
+                     {uniqueCouncilRoles.map(role => {
+                        const scoreItem = item.councilScores.find(s => s.role === role);
+                        return (
+                            <TableCell key={role} className="text-center">
+                                {scoreItem ? scoreItem.score.toFixed(2) : '-'}
+                            </TableCell>
+                        )
+                     })}
                     <TableCell className="text-center">
                       {item.councilGradAvg !== null ? item.councilGradAvg.toFixed(2) : '-'}
                     </TableCell>
@@ -191,7 +230,7 @@ export function GradeReportTable({ session, registrations, evaluations, subCommi
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center h-24">
+                  <TableCell colSpan={8 + uniqueCouncilRoles.length} className="text-center h-24">
                     Không có dữ liệu để hiển thị.
                   </TableCell>
                 </TableRow>
