@@ -673,6 +673,30 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 onFinished={handleGroupActionFinished}
             />
        </Dialog>
+
+        {/* Other Group Action Dialogs */}
+        <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+            <MoveRegistrationsDialog
+                currentSessionId={sessionId}
+                registrationsToMove={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                onFinished={handleGroupActionFinished}
+            />
+        </Dialog>
+
+        <Dialog open={isAssignInternshipSupervisorDialogOpen} onOpenChange={setIsAssignInternshipSupervisorDialogOpen}>
+            <AssignInternshipSupervisorDialog
+                registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                onFinished={handleGroupActionFinished}
+            />
+        </Dialog>
+
+        <Dialog open={isAssignManualDialogOpen} onOpenChange={setIsAssignManualDialogOpen}>
+            <AssignSubcommitteeManualDialog
+                registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                subCommittees={subCommittees || []}
+                onFinished={handleGroupActionFinished}
+            />
+        </Dialog>
     </>
   );
 }
