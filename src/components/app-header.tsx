@@ -1,3 +1,4 @@
+
 "use client";
 
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -20,12 +21,12 @@ import { signOut } from "firebase/auth";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
-
 export function AppHeader() {
   const auth = useAuth();
   const { user } = useUser();
   const router = useRouter();
+
+  const userAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar');
 
   const handleLogout = async () => {
     await signOut(auth);
