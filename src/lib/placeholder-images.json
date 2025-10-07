@@ -33,7 +33,7 @@
     {
       "id": "user-avatar",
       "description": "Default user avatar",
-      "imageUrl": "https://images.unsplash.com/photo-151746296421fdcec3f25b?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxMHx8cGVyc29uJTIwZmFjZXxlbnwwfHx8fDE3NTkzNzQ4NzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageUrl": "https://images.unsplash.com/photo-1542909168-82c3e7fdca5c?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwxNXx8cGVyc29uJTIwZmFjZXxlbnwwfHx8fDE3NTkzNzQ4NzN8MA&ixlib=rb-4.1.0&q=80&w=1080",
       "imageHint": "person face"
     },
     {
