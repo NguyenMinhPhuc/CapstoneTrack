@@ -24,15 +24,16 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
-import type { DefenseRegistration } from '@/lib/types';
+import type { DefenseRegistration, Supervisor } from '@/lib/types';
 import { SupervisorSelect } from './supervisor-select';
 import { ScrollArea } from './ui/scroll-area';
+import { useState } from 'react';
 
 const NO_SUPERVISOR_VALUE = "__NONE__";
 
 const formSchema = z.object({
   projectTitle: z.string().optional(),
-  supervisorName: z.string().optional(),
+  supervisorId: z.string().optional(),
 });
 
 interface EditGroupRegistrationFormProps {
@@ -43,12 +44,14 @@ interface EditGroupRegistrationFormProps {
 export function EditGroupRegistrationForm({ registrations, onFinished }: EditGroupRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       projectTitle: registrations[0]?.projectTitle || '',
-      supervisorName: registrations[0]?.supervisorName || '',
+      supervisorId: registrations[0]?.supervisorId || '',
     },
   });
 
@@ -63,14 +66,19 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
     }
 
     const batch = writeBatch(firestore);
-    const supervisorValue = values.supervisorName === NO_SUPERVISOR_VALUE ? '' : values.supervisorName;
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : values.supervisorId;
+    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === '' ? '' : registrations[0]?.supervisorName);
+
+
+    const dataToUpdate = {
+        projectTitle: values.projectTitle,
+        supervisorId: supervisorIdValue,
+        supervisorName: supervisorNameValue,
+    };
 
     registrations.forEach(reg => {
       const registrationDocRef = doc(firestore, 'defenseRegistrations', reg.id);
-      batch.update(registrationDocRef, {
-        projectTitle: values.projectTitle,
-        supervisorName: supervisorValue,
-      });
+      batch.update(registrationDocRef, dataToUpdate);
     });
 
     try {
@@ -85,10 +93,7 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
         const contextualError = new FirestorePermissionError({
           path: 'batch update on defenseRegistrations',
           operation: 'update',
-          requestResourceData: {
-            projectTitle: values.projectTitle,
-            supervisorName: supervisorValue,
-          },
+          requestResourceData: dataToUpdate,
         });
         errorEmitter.emit('permission-error', contextualError);
     }
@@ -129,7 +134,7 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
                 />
                 <FormField
                 control={form.control}
-                name="supervisorName"
+                name="supervisorId"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Giáo viên hướng dẫn</FormLabel>
@@ -137,6 +142,7 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
                         <SupervisorSelect
                             value={field.value || ''}
                             onChange={field.onChange}
+                            onSupervisorSelect={setSelectedSupervisor}
                         />
                     </FormControl>
                     <FormMessage />

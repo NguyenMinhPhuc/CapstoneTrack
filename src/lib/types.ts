@@ -81,6 +81,7 @@ export type DefenseRegistration = {
   expectedResults?: string;
   reportLink?: string;
   // General fields
+  supervisorId?: string; // Changed: from supervisorName to supervisorId
   supervisorName?: string;
   registrationDate: any;
   registrationStatus: 'reporting' | 'exempted' | 'withdrawn';

@@ -267,6 +267,10 @@
           "format": "uri",
           "description": "A URL link to the full graduation project report."
         },
+        "supervisorId": {
+            "type": "string",
+            "description": "Reference to the supervisor's document ID."
+        },
         "supervisorName": {
           "type": "string",
           "description": "The name of the supervisor for the project/internship."

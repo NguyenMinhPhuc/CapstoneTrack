@@ -17,14 +17,15 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration } from '@/lib/types';
+import type { DefenseRegistration, Supervisor } from '@/lib/types';
 import { SupervisorSelect } from './supervisor-select';
+import { useState } from 'react';
 
 const NO_SUPERVISOR_VALUE = "__NONE__";
 
 const formSchema = z.object({
   projectTitle: z.string().optional(),
-  supervisorName: z.string().optional(),
+  supervisorId: z.string().optional(),
 });
 
 interface EditStudentRegistrationFormProps {
@@ -35,23 +36,27 @@ interface EditStudentRegistrationFormProps {
 export function EditStudentRegistrationForm({ registration, onFinished }: EditStudentRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       projectTitle: registration.projectTitle || '',
-      supervisorName: registration.supervisorName || '',
+      supervisorId: registration.supervisorId || '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, `defenseRegistrations`, registration.id);
     
-    const supervisorValue = values.supervisorName === NO_SUPERVISOR_VALUE ? '' : values.supervisorName;
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : values.supervisorId;
+    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === '' ? '' : registration.supervisorName);
+
 
     const updateData = {
       projectTitle: values.projectTitle,
-      supervisorName: supervisorValue,
+      supervisorId: supervisorIdValue,
+      supervisorName: supervisorNameValue,
     };
 
     updateDoc(registrationDocRef, updateData)
@@ -95,7 +100,7 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
         />
         <FormField
           control={form.control}
-          name="supervisorName"
+          name="supervisorId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Giáo viên hướng dẫn</FormLabel>
@@ -103,6 +108,7 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
                  <SupervisorSelect
                     value={field.value || ''}
                     onChange={field.onChange}
+                    onSupervisorSelect={setSelectedSupervisor}
                 />
                </FormControl>
               <FormMessage />

@@ -17,11 +17,12 @@ import { useToast } from '@/hooks/use-toast';
 interface SupervisorSelectProps {
   value: string;
   onChange: (value: string) => void;
+  onSupervisorSelect?: (supervisor: Supervisor | null) => void;
 }
 
 const NO_SUPERVISOR_VALUE = "__NONE__";
 
-export function SupervisorSelect({ value, onChange }: SupervisorSelectProps) {
+export function SupervisorSelect({ value, onChange, onSupervisorSelect }: SupervisorSelectProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   
@@ -39,24 +40,36 @@ export function SupervisorSelect({ value, onChange }: SupervisorSelectProps) {
     }
   }, [error, toast]);
 
+  const handleValueChange = (supervisorId: string) => {
+    if (supervisorId === NO_SUPERVISOR_VALUE) {
+        onChange(NO_SUPERVISOR_VALUE);
+        onSupervisorSelect?.(null);
+    } else {
+        const selected = supervisors?.find(s => s.id === supervisorId);
+        if (selected) {
+            onChange(supervisorId);
+            onSupervisorSelect?.(selected);
+        }
+    }
+  }
+  
+  const selectedSupervisor = supervisors?.find(s => s.id === value);
+  const displayValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (value === NO_SUPERVISOR_VALUE ? "Chưa có GVHD" : "Chọn giáo viên hướng dẫn");
+
+
   return (
-    <Select onValueChange={onChange} value={value || NO_SUPERVISOR_VALUE} disabled={isLoading}>
+    <Select onValueChange={handleValueChange} value={value || NO_SUPERVISOR_VALUE} disabled={isLoading}>
       <SelectTrigger>
-        <SelectValue placeholder={isLoading ? "Đang tải..." : "Chọn giáo viên hướng dẫn"} />
+        <SelectValue placeholder={isLoading ? "Đang tải..." : displayValue} />
       </SelectTrigger>
       <SelectContent>
         <SelectItem value={NO_SUPERVISOR_VALUE}>Chưa có GVHD</SelectItem>
         {supervisors?.map(supervisor => {
-            // Ensure supervisor has a valid name before rendering
-            if (!supervisor.firstName || !supervisor.lastName) {
-              return null;
-            }
             const fullName = `${supervisor.firstName} ${supervisor.lastName}`.trim();
-            // Also check if the combined name is not empty
             if (!fullName) return null;
             
             return (
-              <SelectItem key={supervisor.id} value={fullName}>
+              <SelectItem key={supervisor.id} value={supervisor.id}>
                 {fullName}
               </SelectItem>
             )

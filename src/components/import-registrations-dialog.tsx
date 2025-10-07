@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning, Rocket } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
+import type { Student, Supervisor } from '@/lib/types';
 
 interface RegistrationData {
     [key: string]: any;
@@ -83,19 +83,32 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
         let errorCount = 0;
 
         const studentMap = new Map<string, Student>();
+        const supervisorMap = new Map<string, Supervisor>();
+
         try {
-            const studentsSnapshot = await getDocs(collection(firestore, 'students'));
+            const [studentsSnapshot, supervisorsSnapshot] = await Promise.all([
+                getDocs(collection(firestore, 'students')),
+                getDocs(collection(firestore, 'supervisors'))
+            ]);
+            
             studentsSnapshot.forEach(doc => {
                 const student = { id: doc.id, ...doc.data() } as Student;
                 if (student.studentId) {
                     studentMap.set(String(student.studentId), student);
                 }
             });
+
+            supervisorsSnapshot.forEach(doc => {
+                const supervisor = { id: doc.id, ...doc.data() } as Supervisor;
+                const fullName = `${supervisor.firstName} ${supervisor.lastName}`.toLowerCase();
+                supervisorMap.set(fullName, supervisor);
+            })
+
         } catch (e) {
              toast({
                 variant: 'destructive',
-                title: 'Lỗi tải dữ liệu sinh viên',
-                description: 'Không thể tải danh sách sinh viên từ hệ thống để đối chiếu.',
+                title: 'Lỗi tải dữ liệu',
+                description: 'Không thể tải danh sách sinh viên hoặc GVHD từ hệ thống.',
             });
             setIsImporting(false);
             return;
@@ -122,16 +135,20 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
                 continue;
             }
 
+            const supervisorName = row['SupervisorName'] || row['GVHD'] || '';
+            const supervisorInfo = supervisorMap.get(supervisorName.toLowerCase());
+
             const newRegistrationRef = doc(registrationsCollectionRef);
             const registrationData = {
                 sessionId: sessionId,
                 studentDocId: studentInfo.id,
-                studentId: studentIdNumber, // The actual student ID number
+                studentId: studentIdNumber,
                 studentName: `${studentInfo.firstName} ${studentInfo.lastName}`,
                 projectTitle: row['ProjectTitle'] || row['Tên đề tài'] || '',
-                supervisorName: row['SupervisorName'] || row['GVHD'] || '',
+                supervisorId: supervisorInfo?.id || '',
+                supervisorName: supervisorName,
                 registrationDate: serverTimestamp(),
-                registrationStatus: 'reporting', // Set default status
+                registrationStatus: 'reporting',
             };
             batch.set(newRegistrationRef, registrationData);
             successCount++;
@@ -230,7 +247,3 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
         </DialogContent>
     );
 }
-
-    
-
-    

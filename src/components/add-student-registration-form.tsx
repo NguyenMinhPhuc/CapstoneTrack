@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
+import type { Student, Supervisor } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { SupervisorSelect } from './supervisor-select';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -31,7 +31,7 @@ const NO_SUPERVISOR_VALUE = "__NONE__";
 const formSchema = z.object({
   studentDocId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
   projectTitle: z.string().optional(),
-  supervisorName: z.string().optional(),
+  supervisorId: z.string().optional(),
 });
 
 interface AddStudentRegistrationFormProps {
@@ -45,6 +45,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -71,7 +72,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     resolver: zodResolver(formSchema),
     defaultValues: {
       projectTitle: '',
-      supervisorName: '',
+      supervisorId: '',
     },
   });
 
@@ -97,17 +98,17 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
         return;
     }
     
-    const studentName = `${selectedStudent.firstName} ${selectedStudent.lastName}`;
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : values.supervisorId;
+    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
     
-    const supervisorValue = values.supervisorName === NO_SUPERVISOR_VALUE ? '' : values.supervisorName;
-
     const newRegistrationData = {
       sessionId: sessionId,
       studentDocId: selectedStudent.id,
-      studentId: selectedStudent.studentId, // Correctly assign the student ID number
-      studentName,
+      studentId: selectedStudent.studentId,
+      studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
       projectTitle: values.projectTitle,
-      supervisorName: supervisorValue,
+      supervisorId: supervisorIdValue,
+      supervisorName: supervisorNameValue,
       registrationDate: serverTimestamp(),
       registrationStatus: 'reporting' as const,
     };
@@ -116,7 +117,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       .then(() => {
         toast({
           title: 'Thành công',
-          description: `Đã thêm sinh viên ${studentName} vào đợt báo cáo.`,
+          description: `Đã thêm sinh viên ${newRegistrationData.studentName} vào đợt báo cáo.`,
         });
         onFinished();
       })
@@ -212,7 +213,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
         />
         <FormField
           control={form.control}
-          name="supervisorName"
+          name="supervisorId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Giáo viên hướng dẫn</FormLabel>
@@ -220,6 +221,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
                  <SupervisorSelect
                     value={field.value || ''}
                     onChange={field.onChange}
+                    onSupervisorSelect={setSelectedSupervisor}
                 />
                </FormControl>
               <FormMessage />

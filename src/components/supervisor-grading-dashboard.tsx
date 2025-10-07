@@ -147,35 +147,32 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
 
   const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore]);
   const { data: allSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
-
-  const supervisorDocRef = useMemoFirebase(() => doc(firestore, 'supervisors', supervisorId), [firestore, supervisorId]);
-  const { data: supervisorData, isLoading: isLoadingSupervisor } = useDoc<Supervisor>(supervisorDocRef);
-
+  
   const [supervisedAssignments, setSupervisedAssignments] = useState<SessionWithSupervisedStudents[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
 
   useEffect(() => {
-    if (isLoadingSessions || !allSessions || isLoadingSupervisor) return;
+    if (isLoadingSessions || !allSessions) return;
 
     const fetchAssignments = async () => {
       setIsLoadingAssignments(true);
       const supervisedAssignmentsData: SessionWithSupervisedStudents[] = [];
-      const supervisorFullName = supervisorData ? `${supervisorData.firstName} ${supervisorData.lastName}` : null;
 
       for (const session of allSessions) {
-        const registrationsSnapshot = await getDocs(query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', session.id)));
-        const registrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
+        const registrationsQuery = query(
+            collection(firestore, 'defenseRegistrations'), 
+            where('sessionId', '==', session.id),
+            where('supervisorId', '==', supervisorId),
+            where('registrationStatus', '==', 'reporting')
+        );
+        const registrationsSnapshot = await getDocs(registrationsQuery);
+        const supervisedRegistrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
         
-        if(supervisorFullName) {
-            const supervisedRegistrations = registrations.filter(
-                reg => reg.supervisorName === supervisorFullName && reg.registrationStatus === 'reporting'
-            );
-            if (supervisedRegistrations.length > 0) {
-                supervisedAssignmentsData.push({
-                    session,
-                    registrations: supervisedRegistrations,
-                });
-            }
+        if (supervisedRegistrations.length > 0) {
+            supervisedAssignmentsData.push({
+                session,
+                registrations: supervisedRegistrations,
+            });
         }
       }
       setSupervisedAssignments(supervisedAssignmentsData);
@@ -183,7 +180,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     };
 
     fetchAssignments();
-  }, [allSessions, isLoadingSessions, supervisorId, firestore, supervisorData, isLoadingSupervisor]);
+  }, [allSessions, isLoadingSessions, supervisorId, firestore]);
   
 
   const SupervisedSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithSupervisedStudents }) => {
@@ -234,7 +231,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     );
 };
 
-  const isLoading = isLoadingSessions || isLoadingAssignments || isLoadingSupervisor;
+  const isLoading = isLoadingSessions || isLoadingAssignments;
 
   if (isLoading) {
       return (
