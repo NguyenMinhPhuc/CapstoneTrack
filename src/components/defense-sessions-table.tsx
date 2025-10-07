@@ -314,12 +314,6 @@ export function DefenseSessionsTable() {
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
-                    <DialogHeader>
-                    <DialogTitle>Tạo Đợt báo cáo mới</DialogTitle>
-                    <DialogDescription>
-                        Điền thông tin chi tiết để tạo một đợt báo cáo mới.
-                    </DialogDescription>
-                    </DialogHeader>
                     <AddDefenseSessionForm onFinished={() => setIsAddDialogOpen(false)} />
                 </DialogContent>
                 </Dialog>
@@ -402,12 +396,6 @@ export function DefenseSessionsTable() {
       </Card>
        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Chỉnh sửa Đợt báo cáo</DialogTitle>
-            <DialogDescription>
-              Cập nhật thông tin cho đợt báo cáo. Nhấp vào "Lưu thay đổi" khi hoàn tất.
-            </DialogDescription>
-          </DialogHeader>
           {selectedSession && (
             <EditDefenseSessionForm
               session={selectedSession}
