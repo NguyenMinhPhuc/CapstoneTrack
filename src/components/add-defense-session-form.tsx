@@ -20,11 +20,12 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirestore, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { CalendarIcon, GraduationCap, Briefcase } from 'lucide-react';
+import { CalendarIcon, GraduationCap, Briefcase, UserCheck } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Rubric } from '@/lib/types';
+import { Separator } from './ui/separator';
 
 const NO_RUBRIC_VALUE = "__NONE__";
 
@@ -35,8 +36,10 @@ const formSchema = z.object({
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
   zaloGroupLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
   description: z.string().optional(),
-  graduationRubricId: z.string().optional(),
-  internshipRubricId: z.string().optional(),
+  councilGraduationRubricId: z.string().optional(),
+  councilInternshipRubricId: z.string().optional(),
+  supervisorGraduationRubricId: z.string().optional(),
+  companyInternshipRubricId: z.string().optional(),
 });
 
 interface AddDefenseSessionFormProps {
@@ -56,17 +59,23 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       name: '',
       description: '',
       zaloGroupLink: '',
-      graduationRubricId: '',
-      internshipRubricId: '',
+      councilGraduationRubricId: '',
+      councilInternshipRubricId: '',
+      supervisorGraduationRubricId: '',
+      companyInternshipRubricId: '',
     },
   });
+  
+  const cleanRubricId = (value: string | undefined) => value === NO_RUBRIC_VALUE ? '' : value;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const collectionRef = collection(firestore, 'graduationDefenseSessions');
     const newSessionData = {
       ...values,
-      graduationRubricId: values.graduationRubricId === NO_RUBRIC_VALUE ? '' : values.graduationRubricId,
-      internshipRubricId: values.internshipRubricId === NO_RUBRIC_VALUE ? '' : values.internshipRubricId,
+      councilGraduationRubricId: cleanRubricId(values.councilGraduationRubricId),
+      councilInternshipRubricId: cleanRubricId(values.councilInternshipRubricId),
+      supervisorGraduationRubricId: cleanRubricId(values.supervisorGraduationRubricId),
+      companyInternshipRubricId: cleanRubricId(values.companyInternshipRubricId),
       status: 'upcoming', // Default status for a new session
       createdAt: serverTimestamp(),
     };
@@ -88,6 +97,34 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
         errorEmitter.emit('permission-error', contextualError);
       });
   }
+
+  const RubricSelector = ({ name, label, icon }: { name: any, label: string, icon: React.ReactNode }) => (
+     <FormField
+        control={form.control}
+        name={name}
+        render={({ field }) => (
+            <FormItem>
+            <FormLabel className="flex items-center gap-2">{icon}{label}</FormLabel>
+            <Select onValueChange={field.onChange} defaultValue={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
+                <FormControl>
+                <SelectTrigger>
+                    <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
+                </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                <SelectItem value={NO_RUBRIC_VALUE}>Không sử dụng Rubric</SelectItem>
+                {rubrics?.map(rubric => (
+                    <SelectItem key={rubric.id} value={rubric.id}>
+                    {rubric.name}
+                    </SelectItem>
+                ))}
+                </SelectContent>
+            </Select>
+            <FormMessage />
+            </FormItem>
+        )}
+        />
+  );
 
   return (
     <Form {...form}>
@@ -224,58 +261,19 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
             </FormItem>
           )}
         />
+        
+        <Separator />
+        <p className="text-sm font-medium">Gán Rubric cho đợt báo cáo</p>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-             <FormField
-                control={form.control}
-                name="graduationRubricId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2"><GraduationCap className="h-4 w-4"/>Rubric Tốt nghiệp</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        <SelectItem value={NO_RUBRIC_VALUE}>Không sử dụng Rubric</SelectItem>
-                        {rubrics?.map(rubric => (
-                            <SelectItem key={rubric.id} value={rubric.id}>
-                            {rubric.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                 <FormField
-                control={form.control}
-                name="internshipRubricId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel className="flex items-center gap-2"><Briefcase className="h-4 w-4"/>Rubric Thực tập</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        <SelectItem value={NO_RUBRIC_VALUE}>Không sử dụng Rubric</SelectItem>
-                        {rubrics?.map(rubric => (
-                            <SelectItem key={rubric.id} value={rubric.id}>
-                            {rubric.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
+             <RubricSelector name="councilGraduationRubricId" label="Hội đồng chấm Tốt nghiệp" icon={<GraduationCap className="h-4 w-4" />} />
+             <RubricSelector name="councilInternshipRubricId" label="Hội đồng chấm Thực tập" icon={<Briefcase className="h-4 w-4" />} />
+             <RubricSelector name="supervisorGraduationRubricId" label="GVHD chấm Tốt nghiệp" icon={<GraduationCap className="h-4 w-4" />} />
+             <RubricSelector name="companyInternshipRubricId" label="Đơn vị chấm Thực tập" icon={<UserCheck className="h-4 w-4" />} />
         </div>
+        
+        <Separator />
+
         <FormField
           control={form.control}
           name="zaloGroupLink"

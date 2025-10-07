@@ -189,13 +189,21 @@
             "completed"
           ]
         },
-        "graduationRubricId": {
+        "councilGraduationRubricId": {
           "type": "string",
-          "description": "Reference to the Rubric used for graduation defense in this session."
+          "description": "Reference to the Rubric used for graduation defense by the council in this session."
         },
-        "internshipRubricId": {
+        "councilInternshipRubricId": {
           "type": "string",
-          "description": "Reference to the Rubric used for internship evaluation in this session."
+          "description": "Reference to the Rubric used for internship evaluation by the council in this session."
+        },
+        "supervisorGraduationRubricId": {
+          "type": "string",
+          "description": "Reference to the Rubric used for graduation defense by the project supervisor."
+        },
+        "companyInternshipRubricId": {
+          "type": "string",
+          "description": "Reference to the Rubric used for internship evaluation by the company supervisor."
         }
       },
       "required": [

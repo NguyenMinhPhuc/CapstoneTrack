@@ -35,8 +35,10 @@ export type GraduationDefenseSession = {
   zaloGroupLink?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
-  graduationRubricId?: string;
-  internshipRubricId?: string;
+  councilGraduationRubricId?: string; // Renamed from graduationRubricId
+  councilInternshipRubricId?: string; // Renamed from internshipRubricId
+  supervisorGraduationRubricId?: string; // New
+  companyInternshipRubricId?: string;    // New
 }
 
 export type Student = {

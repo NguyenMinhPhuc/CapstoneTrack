@@ -19,6 +19,7 @@ import { Dialog, DialogTrigger } from '@/components/ui/dialog';
 import { WithdrawnStudentsDialog } from '@/components/withdrawn-students-dialog';
 import { ExemptedStudentsDialog } from '@/components/exempted-students-dialog';
 import { ExportReportButton } from '@/components/export-report-button';
+import { Separator } from '@/components/ui/separator';
 
 
 export default function DefenseSessionDetailPage() {
@@ -38,18 +39,16 @@ export default function DefenseSessionDetailPage() {
   
   const { data: session, isLoading: isSessionLoading } = useDoc<GraduationDefenseSession>(sessionDocRef);
 
-  const gradRubricDocRef = useMemoFirebase(
-    () => (session?.graduationRubricId ? doc(firestore, 'rubrics', session.graduationRubricId) : null),
-    [firestore, session]
-  );
-  const { data: graduationRubric, isLoading: isGradRubricLoading } = useDoc<Rubric>(gradRubricDocRef);
+  // Fetch all 4 rubrics
+  const councilGradRubricDocRef = useMemoFirebase(() => (session?.councilGraduationRubricId ? doc(firestore, 'rubrics', session.councilGraduationRubricId) : null), [firestore, session]);
+  const councilInternRubricDocRef = useMemoFirebase(() => (session?.councilInternshipRubricId ? doc(firestore, 'rubrics', session.councilInternshipRubricId) : null), [firestore, session]);
+  const supervisorGradRubricDocRef = useMemoFirebase(() => (session?.supervisorGraduationRubricId ? doc(firestore, 'rubrics', session.supervisorGraduationRubricId) : null), [firestore, session]);
+  const companyInternRubricDocRef = useMemoFirebase(() => (session?.companyInternshipRubricId ? doc(firestore, 'rubrics', session.companyInternshipRubricId) : null), [firestore, session]);
 
-  const internRubricDocRef = useMemoFirebase(
-    () => (session?.internshipRubricId ? doc(firestore, 'rubrics', session.internshipRubricId) : null),
-    [firestore, session]
-  );
-  const { data: internshipRubric, isLoading: isInternRubricLoading } = useDoc<Rubric>(internRubricDocRef);
-
+  const { data: councilGraduationRubric, isLoading: isCouncilGradRubricLoading } = useDoc<Rubric>(councilGradRubricDocRef);
+  const { data: councilInternshipRubric, isLoading: isCouncilInternRubricLoading } = useDoc<Rubric>(councilInternRubricDocRef);
+  const { data: supervisorGraduationRubric, isLoading: isSupervisorGradRubricLoading } = useDoc<Rubric>(supervisorGradRubricDocRef);
+  const { data: companyInternshipRubric, isLoading: isCompanyInternRubricLoading } = useDoc<Rubric>(companyInternRubricDocRef);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -156,7 +155,8 @@ export default function DefenseSessionDetailPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading || isGradRubricLoading || isInternRubricLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading || 
+                    isCouncilGradRubricLoading || isCouncilInternRubricLoading || isSupervisorGradRubricLoading || isCompanyInternRubricLoading;
 
   if (isLoading || !user || !userData || userData.role !== 'admin') {
     return (
@@ -187,10 +187,21 @@ export default function DefenseSessionDetailPage() {
     return timestamp;
   };
 
-  const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
-    if (isLoading) return 'Đang tải...';
+  const getRubricName = (rubric: Rubric | null | undefined) => {
     return rubric ? rubric.name : 'Chưa gán';
   }
+
+  const RubricInfo = ({ icon, label, rubric, isLoading }: { icon: React.ReactNode, label: string, rubric: Rubric | null | undefined, isLoading: boolean }) => (
+      <div className="flex items-center gap-3">
+        {icon}
+        <div>
+            <p className="font-semibold">{label}</p>
+            <p className="text-primary hover:underline">
+                {isLoading ? 'Đang tải...' : getRubricName(rubric)}
+            </p>
+        </div>
+    </div>
+  );
 
   return (
     <main className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -247,24 +258,13 @@ export default function DefenseSessionDetailPage() {
                              </div>
                          </div>
                      )}
-                     <div className="flex items-center gap-3">
-                        <GraduationCap className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                            <p className="font-semibold">Rubric Tốt nghiệp</p>
-                            <p className="text-primary hover:underline">
-                                {getRubricName(graduationRubric, isGradRubricLoading)}
-                            </p>
-                        </div>
-                    </div>
-                     <div className="flex items-center gap-3">
-                        <Briefcase className="h-5 w-5 text-muted-foreground" />
-                        <div>
-                            <p className="font-semibold">Rubric Thực tập</p>
-                            <p className="text-primary hover:underline">
-                                {getRubricName(internshipRubric, isInternRubricLoading)}
-                            </p>
-                        </div>
-                    </div>
+                </div>
+                 <Separator />
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6 text-sm">
+                    <RubricInfo icon={<GraduationCap className="h-5 w-5 text-muted-foreground" />} label="HĐ chấm Tốt nghiệp" rubric={councilGraduationRubric} isLoading={isCouncilGradRubricLoading} />
+                    <RubricInfo icon={<Briefcase className="h-5 w-5 text-muted-foreground" />} label="HĐ chấm Thực tập" rubric={councilInternshipRubric} isLoading={isCouncilInternRubricLoading} />
+                    <RubricInfo icon={<GraduationCap className="h-5 w-5 text-muted-foreground" />} label="GVHD chấm Tốt nghiệp" rubric={supervisorGraduationRubric} isLoading={isSupervisorGradRubricLoading} />
+                    <RubricInfo icon={<UserCheck className="h-5 w-5 text-muted-foreground" />} label="ĐV chấm Thực tập" rubric={companyInternshipRubric} isLoading={isCompanyInternRubricLoading} />
                 </div>
             </CardContent>
         </Card>
