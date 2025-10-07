@@ -154,11 +154,16 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
       scoresToSave = rubric.criteria.map(criterion => {
         const proportion = criterion.maxScore / maxTotalScore;
         const calculatedScore = totalScoreToSave * proportion;
+        // Round to nearest 0.25
+        const roundedScore = Math.round(calculatedScore * 4) / 4; 
         return {
           criterionId: criterion.id,
-          score: Math.round(calculatedScore * 100) / 100, // Round to 2 decimal places
+          score: roundedScore,
         };
       });
+      // Recalculate total score from rounded parts to ensure consistency
+      totalScoreToSave = scoresToSave.reduce((sum, s) => sum + s.score, 0);
+
     } else {
       totalScoreToSave = totalScore;
       scoresToSave = Object.entries(values.scores).map(([criterionId, score]) => ({
