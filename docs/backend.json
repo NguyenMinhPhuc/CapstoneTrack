@@ -189,9 +189,13 @@
             "completed"
           ]
         },
-        "rubricId": {
+        "graduationRubricId": {
           "type": "string",
-          "description": "Reference to the Rubric used for this session."
+          "description": "Reference to the Rubric used for graduation defense in this session."
+        },
+        "internshipRubricId": {
+          "type": "string",
+          "description": "Reference to the Rubric used for internship evaluation in this session."
         }
       },
       "required": [
@@ -397,6 +401,11 @@
             "registrationId": {"type": "string", "description": "Reference to the student's registration for the session."},
             "evaluatorId": {"type": "string", "description": "The supervisor's ID who performed the evaluation."},
             "rubricId": {"type": "string", "description": "Reference to the rubric used for this evaluation."},
+            "evaluationType": {
+                "type": "string",
+                "description": "The type of evaluation (e.g., graduation or internship).",
+                "enum": ["graduation", "internship"]
+            },
             "scores": {
                 "type": "array",
                 "description": "The scores given for each criterion.",
@@ -413,7 +422,7 @@
             "comments": {"type": "string", "description": "General comments from the evaluator."},
             "evaluationDate": {"type": "string", "format": "date-time"}
         },
-        "required": ["id", "sessionId", "registrationId", "evaluatorId", "rubricId", "scores", "totalScore", "evaluationDate"]
+        "required": ["id", "sessionId", "registrationId", "evaluatorId", "rubricId", "evaluationType", "scores", "totalScore", "evaluationDate"]
     }
   },
   "auth": {
@@ -480,5 +489,3 @@
     }
   }
 }
-
-    

@@ -24,7 +24,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
-import type { Rubric, DefenseRegistration, StudentWithRegistrationDetails } from '@/lib/types';
+import type { Rubric, DefenseRegistration, StudentWithRegistrationDetails, Evaluation } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { useEffect, useMemo } from 'react';
@@ -38,12 +38,13 @@ interface ProjectGroup {
 interface GradingFormProps {
   projectGroup: ProjectGroup;
   rubric: Rubric;
+  evaluationType: 'graduation' | 'internship';
   supervisorId: string;
   sessionId: string;
   onFinished: () => void;
 }
 
-export function GradingForm({ projectGroup, rubric, supervisorId, sessionId, onFinished }: GradingFormProps) {
+export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId, sessionId, onFinished }: GradingFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -104,11 +105,12 @@ export function GradingForm({ projectGroup, rubric, supervisorId, sessionId, onF
 
     projectGroup.students.forEach(student => {
         const evaluationDoc = doc(evaluationsCollection);
-        const evaluationData = {
+        const evaluationData: Omit<Evaluation, 'id'> = {
             sessionId: sessionId,
             registrationId: student.id,
             evaluatorId: supervisorId,
             rubricId: rubric.id,
+            evaluationType: evaluationType,
             scores: Object.entries(values.scores).map(([criterionId, score]) => ({
                 criterionId,
                 score,
@@ -141,7 +143,7 @@ export function GradingForm({ projectGroup, rubric, supervisorId, sessionId, onF
   return (
      <>
         <DialogHeader>
-            <DialogTitle>Phiếu Chấm Điểm</DialogTitle>
+            <DialogTitle>Phiếu Chấm Điểm - {evaluationType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'}</DialogTitle>
             <DialogDescription>
                 Chấm điểm cho đề tài: "{projectGroup.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : projectGroup.projectTitle}"
             </DialogDescription>

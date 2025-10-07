@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, ChevronDown } from 'lucide-react';
+import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
@@ -41,17 +41,21 @@ interface ProjectGroup {
 function SubcommitteeGradingView({
     subcommittee, 
     registrations,
-    rubric,
+    graduationRubric,
+    internshipRubric,
     supervisorId,
     sessionId
 }: { 
     subcommittee: DefenseSubCommittee, 
     registrations: DefenseRegistration[],
-    rubric: Rubric | null,
+    graduationRubric: Rubric | null,
+    internshipRubric: Rubric | null,
     supervisorId: string,
     sessionId: string,
 }) {
     const [selectedGroup, setSelectedGroup] = useState<ProjectGroup | null>(null);
+    const [selectedRubric, setSelectedRubric] = useState<Rubric | null>(null);
+    const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
     const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
 
     const studentsInSubcommittee = useMemo(() => {
@@ -68,10 +72,9 @@ function SubcommitteeGradingView({
             groups.get(projectKey)!.push(reg);
         });
         return Array.from(groups.entries()).map(([projectTitle, students]) => {
-            // Find the student with the most complete information to use for display
             const representativeStudent = 
-                students.find(s => s.summary && s.objectives) || 
-                students.find(s => s.summary) || 
+                students.find(s => s.summary && s.reportLink) ||
+                students.find(s => s.summary) ||
                 students[0];
 
             return {
@@ -85,8 +88,10 @@ function SubcommitteeGradingView({
         });
     }, [studentsInSubcommittee]);
 
-    const handleGradeClick = (group: ProjectGroup) => {
+    const handleGradeClick = (group: ProjectGroup, rubric: Rubric, type: 'graduation' | 'internship') => {
         setSelectedGroup(group);
+        setSelectedRubric(rubric);
+        setSelectedEvalType(type);
         setIsGradingDialogOpen(true);
     };
 
@@ -100,8 +105,8 @@ function SubcommitteeGradingView({
                 <Accordion type="multiple" className="w-full space-y-4">
                     {projectGroups.map((group) => (
                         <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
-                            <div className="flex items-center">
-                                <AccordionTrigger className="hover:no-underline flex-1">
+                            <div className="flex items-center py-4">
+                                <AccordionTrigger className="hover:no-underline flex-1 p-0">
                                     <div className="text-left">
                                         <h4 className="font-semibold text-base">
                                             {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
@@ -116,16 +121,26 @@ function SubcommitteeGradingView({
                                         </div>
                                     </div>
                                 </AccordionTrigger>
-                                <Button 
-                                    variant="outline" 
-                                    size="sm"
-                                    disabled={!rubric}
-                                    onClick={() => handleGradeClick(group)}
-                                    className="ml-4"
-                                >
-                                    <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                    {rubric ? 'Chấm điểm' : 'Chưa có Rubric'}
-                                </Button>
+                                <div className="flex items-center gap-2 ml-auto pl-4">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        disabled={!graduationRubric}
+                                        onClick={() => graduationRubric && handleGradeClick(group, graduationRubric, 'graduation')}
+                                    >
+                                        <GraduationCap className="mr-2 h-4 w-4"/>
+                                        Chấm TN
+                                    </Button>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm"
+                                        disabled={!internshipRubric}
+                                        onClick={() => internshipRubric && handleGradeClick(group, internshipRubric, 'internship')}
+                                    >
+                                        <Briefcase className="mr-2 h-4 w-4"/>
+                                        Chấm TT
+                                    </Button>
+                                </div>
                             </div>
                             <AccordionContent>
                                 <div className="space-y-4 pt-2 border-t mt-2">
@@ -155,12 +170,13 @@ function SubcommitteeGradingView({
                     ))}
                 </Accordion>
             </CardContent>
-            {selectedGroup && rubric && (
+            {selectedGroup && selectedRubric && selectedEvalType && (
                  <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
                     <DialogContent className="sm:max-w-3xl">
                          <GradingForm 
                             projectGroup={selectedGroup}
-                            rubric={rubric}
+                            rubric={selectedRubric}
+                            evaluationType={selectedEvalType}
                             supervisorId={supervisorId}
                             sessionId={sessionId}
                             onFinished={() => setIsGradingDialogOpen(false)}
@@ -190,13 +206,11 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
       const assignments: SessionWithAssignments[] = [];
 
       for (const session of allSessions) {
-        // Skip if supervisorId is not yet available for this iteration
         if (!supervisorId) continue;
 
         let isCouncilMember = false;
         const assignedSubCommittees: DefenseSubCommittee[] = [];
 
-        // Fetch all data in parallel for the current session
         const [councilSnapshot, subCommitteesSnapshot, registrationsSnapshot] = await Promise.all([
             getDocs(collection(firestore, `graduationDefenseSessions/${session.id}/council`)),
             getDocs(collection(firestore, `graduationDefenseSessions/${session.id}/subCommittees`)),
@@ -236,11 +250,23 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
   
   const SessionAccordionItem = ({ sessionData }: { sessionData: SessionWithAssignments }) => {
     const { session, isCouncilMember, subCommittees, registrations } = sessionData;
-    const rubricDocRef = useMemoFirebase(
-      () => (session.rubricId ? doc(firestore, 'rubrics', session.rubricId) : null),
-      [firestore, session.rubricId]
+    
+    const gradRubricDocRef = useMemoFirebase(
+      () => (session.graduationRubricId ? doc(firestore, 'rubrics', session.graduationRubricId) : null),
+      [firestore, session.graduationRubricId]
     );
-    const { data: rubric, isLoading: isRubricLoading } = useDoc<Rubric>(rubricDocRef);
+    const { data: graduationRubric, isLoading: isLoadingGradRubric } = useDoc<Rubric>(gradRubricDocRef);
+    
+    const internRubricDocRef = useMemoFirebase(
+      () => (session.internshipRubricId ? doc(firestore, 'rubrics', session.internshipRubricId) : null),
+      [firestore, session.internshipRubricId]
+    );
+    const { data: internshipRubric, isLoading: isLoadingInternRubric } = useDoc<Rubric>(internRubricDocRef);
+
+    const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
+        if (isLoading) return 'Đang tải...';
+        return rubric ? rubric.name : 'Chưa gán';
+    }
 
     return (
         <AccordionItem key={session.id} value={session.id}>
@@ -265,17 +291,20 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
                 <Card key={sc.id}>
                     <CardHeader>
                         <CardTitle className="text-base">{sc.name}</CardTitle>
-                        <CardDescription>
-                            {sc.members.length} thành viên - Rubric: {isRubricLoading ? 'Đang tải...' : rubric ? rubric.name : 'Chưa có'}
+                        <CardDescription className="flex items-center gap-4 text-xs">
+                            <span>{sc.members.length} thành viên</span>
+                             <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> Rubric TN: {getRubricName(graduationRubric, isLoadingGradRubric)}</span>
+                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> Rubric TT: {getRubricName(internshipRubric, isLoadingInternRubric)}</span>
                         </CardDescription>
                     </CardHeader>
-                    {isRubricLoading ? (
+                    {(isLoadingGradRubric || isLoadingInternRubric) ? (
                         <div className="p-6"><Skeleton className="h-20 w-full" /></div>
                     ) : (
                          <SubcommitteeGradingView 
                             subcommittee={sc} 
                             registrations={registrations} 
-                            rubric={rubric || null}
+                            graduationRubric={graduationRubric || null}
+                            internshipRubric={internshipRubric || null}
                             supervisorId={supervisorId}
                             sessionId={session.id}
                         />

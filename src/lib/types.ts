@@ -35,7 +35,8 @@ export type GraduationDefenseSession = {
   zaloGroupLink?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
-  rubricId?: string;
+  graduationRubricId?: string;
+  internshipRubricId?: string;
 }
 
 export type Student = {
@@ -138,4 +139,18 @@ export type Rubric = {
     criteria: RubricCriterion[];
 }
 
-    
+export type Evaluation = {
+    id: string;
+    sessionId: string;
+    registrationId: string;
+    evaluatorId: string;
+    rubricId: string;
+    evaluationType: 'graduation' | 'internship';
+    scores: {
+        criterionId: string;
+        score: number;
+    }[];
+    totalScore: number;
+    comments?: string;
+    evaluationDate: any;
+}
