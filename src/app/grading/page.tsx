@@ -4,9 +4,8 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ClipboardCheck } from 'lucide-react';
+import { GradingDashboard } from '@/components/grading-dashboard';
 
 export default function GradingPage() {
   const router = useRouter();
@@ -26,7 +25,6 @@ export default function GradingPage() {
     if (!user) {
       router.push('/login');
     } else if (userData && userData.role !== 'supervisor' && userData.role !== 'admin') {
-      // Allow admin to see this page for now
       router.push('/');
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
@@ -39,30 +37,25 @@ export default function GradingPage() {
         <div className="p-8 space-y-4">
           <Skeleton className="h-10 w-1/2" />
           <Skeleton className="h-6 w-3/4" />
+          <div className="space-y-4 pt-4">
+            <Skeleton className="h-20 w-full" />
+            <Skeleton className="h-20 w-full" />
+          </div>
         </div>
       </main>
     );
   }
 
+  // Pass supervisorId if the user is a supervisor or admin for fetching relevant data
+  const supervisorId = (userData.role === 'supervisor' || userData.role === 'admin') ? user.uid : undefined;
+
   return (
     <main className="p-4 sm:p-6 lg:p-8">
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <ClipboardCheck />
-            Phiếu Chấm Điểm
-          </CardTitle>
-          <CardDescription>
-            Chức năng chấm điểm cho các hội đồng và tiểu ban sẽ được triển khai tại đây.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <p>Xin chào, {userData.email}.</p>
-          <p className="mt-2 text-muted-foreground">
-            Tính năng này đang trong quá trình phát triển. Bạn sẽ sớm có thể xem danh sách sinh viên và thực hiện chấm điểm tại đây.
-          </p>
-        </CardContent>
-      </Card>
+      {supervisorId ? (
+         <GradingDashboard supervisorId={supervisorId} userRole={userData.role} />
+      ) : (
+         <p>Bạn không có quyền truy cập chức năng này.</p>
+      )}
     </main>
   );
 }
