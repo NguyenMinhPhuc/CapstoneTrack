@@ -88,14 +88,14 @@ function SubcommitteeGradingView({
         return studentsInSubcommittee.filter(reg => reg.internshipStatus === 'reporting');
     }, [studentsInSubcommittee]);
     
-    // Find evaluations for each group/student
+    // Find evaluations for each group/student, specific to the evaluator and rubric
     const getEvaluationForGroup = (group: ProjectGroup) => {
-        // For a group, all students have the same registrationId for evaluation purposes
-        const studentId = group.students[0].id;
+        const studentId = group.students[0].id; // Use one student's ID for the group
         return evaluations.find(e => 
             e.registrationId === studentId && 
             e.evaluationType === 'graduation' &&
-            e.evaluatorId === supervisorId
+            e.evaluatorId === supervisorId && // Ensure it's this evaluator's score
+            e.rubricId === councilGraduationRubric?.id // Ensure it's for the correct rubric
         );
     }
     
@@ -103,7 +103,8 @@ function SubcommitteeGradingView({
         return evaluations.find(e => 
             e.registrationId === student.id &&
             e.evaluationType === 'internship' &&
-            e.evaluatorId === supervisorId
+            e.evaluatorId === supervisorId && // Ensure it's this evaluator's score
+            e.rubricId === councilInternshipRubric?.id // Ensure it's for the correct rubric
         );
     }
 
@@ -130,11 +131,6 @@ function SubcommitteeGradingView({
         setSelectedEvalType('internship');
         setIsGradingDialogOpen(true);
     };
-
-    if (projectGroups.length === 0 && internshipStudents.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào được phân công vào tiểu ban này.</p>;
-    }
-
 
     const InternshipInfo = ({ student }: { student: DefenseRegistration }) => (
         <div className="mt-2 space-y-3 text-xs">
@@ -201,8 +197,8 @@ function SubcommitteeGradingView({
 
                                     return (
                                         <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
-                                            <div className="flex items-center py-4">
-                                                <AccordionTrigger className="hover:no-underline flex-1 p-0">
+                                            <div className="flex items-center py-2">
+                                                <AccordionTrigger className="hover:no-underline flex-1 p-0 py-2">
                                                     <div className="text-left">
                                                         <h4 className="font-semibold text-base">
                                                             {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
@@ -488,3 +484,5 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     </div>
   );
 }
+
+    

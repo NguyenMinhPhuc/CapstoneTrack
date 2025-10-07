@@ -67,7 +67,8 @@ function GraduationGradingView({
         return evaluations.find(e => 
             e.registrationId === studentId && 
             e.evaluationType === 'graduation' &&
-            e.evaluatorId === supervisorId
+            e.evaluatorId === supervisorId &&
+            e.rubricId === rubric?.id
         );
     }
 
@@ -163,7 +164,8 @@ function InternshipGradingView({
         return evaluations.find(e => 
             e.registrationId === student.id &&
             e.evaluationType === 'internship' &&
-            e.evaluatorId === supervisorId
+            e.evaluatorId === supervisorId &&
+            e.rubricId === rubric?.id
         );
     }
 
@@ -393,3 +395,5 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     </div>
   );
 }
+
+    
