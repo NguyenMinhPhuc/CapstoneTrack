@@ -68,7 +68,7 @@ export function GradingForm({ projectGroup, rubric, supervisorId, sessionId, onF
   const form = useForm<GradingFormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      scores: rubric.criteria.reduce((acc, c) => ({ ...acc, [c.id]: 0 }), {}),
+      scores: rubric.criteria.reduce((acc, c) => ({ ...acc, [c.id]: c.maxScore }), {}),
       comments: '',
     },
   });
