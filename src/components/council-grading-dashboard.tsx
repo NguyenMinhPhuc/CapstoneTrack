@@ -181,7 +181,7 @@ function SubcommitteeGradingView({
     return (
         <>
             <CardContent>
-                 <Tabs defaultValue="graduation" className="w-full">
+                 <Tabs defaultValue={projectGroups.length > 0 ? "graduation" : "internship"} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="graduation" disabled={projectGroups.length === 0}>
                              <GraduationCap className="mr-2 h-4 w-4"/>
@@ -483,3 +483,4 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     </div>
   );
 }
+
