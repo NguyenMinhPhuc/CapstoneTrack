@@ -188,6 +188,10 @@
             "ongoing",
             "completed"
           ]
+        },
+        "rubricId": {
+          "type": "string",
+          "description": "Reference to the Rubric used for this session."
         }
       },
       "required": [

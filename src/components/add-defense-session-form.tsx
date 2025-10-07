@@ -18,11 +18,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useCollection, useFirestore, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import type { Rubric } from '@/lib/types';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên đợt là bắt buộc.' }),
@@ -31,6 +33,7 @@ const formSchema = z.object({
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
   zaloGroupLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
   description: z.string().optional(),
+  rubricId: z.string().optional(),
 });
 
 interface AddDefenseSessionFormProps {
@@ -41,12 +44,16 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
   const { toast } = useToast();
   const firestore = useFirestore();
 
+  const rubricsCollectionRef = useMemoFirebase(() => collection(firestore, 'rubrics'), [firestore]);
+  const { data: rubrics, isLoading: isLoadingRubrics } = useCollection<Rubric>(rubricsCollectionRef);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
       description: '',
       zaloGroupLink: '',
+      rubricId: '',
     },
   });
 
@@ -54,6 +61,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
     const collectionRef = collection(firestore, 'graduationDefenseSessions');
     const newSessionData = {
       ...values,
+      rubricId: values.rubricId || '',
       status: 'upcoming', // Default status for a new session
       createdAt: serverTimestamp(),
     };
@@ -207,6 +215,31 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
                   />
                 </PopoverContent>
               </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="rubricId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rubric chấm điểm</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingRubrics}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">Không sử dụng Rubric</SelectItem>
+                  {rubrics?.map(rubric => (
+                    <SelectItem key={rubric.id} value={rubric.id}>
+                      {rubric.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

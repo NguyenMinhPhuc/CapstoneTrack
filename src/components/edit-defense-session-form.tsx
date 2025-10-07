@@ -18,12 +18,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc, Timestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc, updateDoc, Timestamp, collection } from 'firebase/firestore';
 import { CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
-import type { GraduationDefenseSession } from '@/lib/types';
+import type { GraduationDefenseSession, Rubric } from '@/lib/types';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên đợt là bắt buộc.' }),
@@ -32,6 +33,7 @@ const formSchema = z.object({
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
   zaloGroupLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
   description: z.string().optional(),
+  rubricId: z.string().optional(),
 });
 
 interface EditDefenseSessionFormProps {
@@ -42,6 +44,9 @@ interface EditDefenseSessionFormProps {
 export function EditDefenseSessionForm({ session, onFinished }: EditDefenseSessionFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+
+  const rubricsCollectionRef = useMemoFirebase(() => collection(firestore, 'rubrics'), [firestore]);
+  const { data: rubrics, isLoading: isLoadingRubrics } = useCollection<Rubric>(rubricsCollectionRef);
 
   const toDate = (timestamp: any): Date | undefined => {
     if (timestamp instanceof Timestamp) {
@@ -62,14 +67,20 @@ export function EditDefenseSessionForm({ session, onFinished }: EditDefenseSessi
       expectedReportDate: toDate(session.expectedReportDate),
       zaloGroupLink: session.zaloGroupLink || '',
       description: session.description || '',
+      rubricId: session.rubricId || '',
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const sessionDocRef = doc(firestore, 'graduationDefenseSessions', session.id);
     
+    const dataToUpdate = {
+        ...values,
+        rubricId: values.rubricId || '',
+    };
+    
     try {
-      await updateDoc(sessionDocRef, values);
+      await updateDoc(sessionDocRef, dataToUpdate);
       toast({
         title: 'Thành công',
         description: `Thông tin đợt báo cáo "${values.name}" đã được cập nhật.`,
@@ -216,6 +227,31 @@ export function EditDefenseSessionForm({ session, onFinished }: EditDefenseSessi
                   />
                 </PopoverContent>
               </Popover>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="rubricId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Rubric chấm điểm</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value} disabled={isLoadingRubrics}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">Không sử dụng Rubric</SelectItem>
+                  {rubrics?.map(rubric => (
+                    <SelectItem key={rubric.id} value={rubric.id}>
+                      {rubric.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}

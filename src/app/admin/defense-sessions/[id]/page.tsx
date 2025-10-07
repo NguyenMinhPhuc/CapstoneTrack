@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -8,8 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle } from 'lucide-react';
-import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails } from '@/lib/types';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck } from 'lucide-react';
+import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails, type Rubric } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -36,6 +37,12 @@ export default function DefenseSessionDetailPage() {
   );
   
   const { data: session, isLoading: isSessionLoading } = useDoc<GraduationDefenseSession>(sessionDocRef);
+
+  const rubricDocRef = useMemoFirebase(
+    () => (session?.rubricId ? doc(firestore, 'rubrics', session.rubricId) : null),
+    [firestore, session]
+  );
+  const { data: rubric, isLoading: isRubricLoading } = useDoc<Rubric>(rubricDocRef);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -142,7 +149,7 @@ export default function DefenseSessionDetailPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isSessionLoading || areRegistrationsLoading || areStudentsLoading || isRubricLoading;
 
   if (isLoading || !user || !userData || userData.role !== 'admin') {
     return (
@@ -228,6 +235,15 @@ export default function DefenseSessionDetailPage() {
                              </div>
                          </div>
                      )}
+                     <div className="flex items-center gap-3">
+                        <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+                        <div>
+                            <p className="font-semibold">Rubric áp dụng</p>
+                            <p className="text-primary hover:underline">
+                                {rubric ? rubric.name : 'Chưa gán'}
+                            </p>
+                        </div>
+                    </div>
                 </div>
             </CardContent>
         </Card>
