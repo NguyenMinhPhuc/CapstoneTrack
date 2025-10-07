@@ -269,11 +269,19 @@
         },
         "supervisorId": {
             "type": "string",
-            "description": "Reference to the supervisor's document ID."
+            "description": "Reference to the graduation project supervisor's document ID."
         },
         "supervisorName": {
           "type": "string",
-          "description": "The name of the supervisor for the project/internship."
+          "description": "The name of the graduation project supervisor."
+        },
+        "internshipSupervisorId": {
+            "type": "string",
+            "description": "Reference to the internship supervisor's document ID."
+        },
+        "internshipSupervisorName": {
+          "type": "string",
+          "description": "The name of the internship supervisor."
         },
         "registrationStatus": {
           "type": "string",

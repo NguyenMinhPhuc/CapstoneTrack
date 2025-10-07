@@ -15,6 +15,13 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent } from './ui/dialog';
 import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+
 
 interface SupervisorGradingDashboardProps {
   supervisorId: string;
@@ -91,13 +98,26 @@ function SupervisedStudentsGradingView({
             <CardContent className="space-y-4">
                  {projectGroups.map((group) => (
                     <div key={group.projectTitle} className="border rounded-lg p-4">
-                        <h4 className="font-semibold mb-2">
-                           {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
-                        </h4>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <h4 className="font-semibold mb-2 truncate cursor-default">
+                                    {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                                    </h4>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>{group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+
                         <div className="space-y-3">
                             {group.students.map(student => (
-                                <div key={student.id} className="flex items-center justify-between pl-4 border-l-2">
-                                    <p className="text-sm">{student.studentName} ({student.studentId})</p>
+                                <div key={student.id} className="flex items-start justify-between pl-4 border-l-2">
+                                    <div>
+                                        <p className="text-sm">{student.studentName} ({student.studentId})</p>
+                                        <p className="text-xs text-muted-foreground">GVHD TT: {student.internshipSupervisorName || 'Chưa có'}</p>
+                                    </div>
                                     <Button
                                         variant="outline"
                                         size="sm"
@@ -159,14 +179,40 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
       const supervisedAssignmentsData: SessionWithSupervisedStudents[] = [];
 
       for (const session of allSessions) {
-        const registrationsQuery = query(
+        // Query for students supervised in graduation project OR internship
+        const gradSupervisorQuery = query(
             collection(firestore, 'defenseRegistrations'), 
             where('sessionId', '==', session.id),
             where('supervisorId', '==', supervisorId),
             where('registrationStatus', '==', 'reporting')
         );
-        const registrationsSnapshot = await getDocs(registrationsQuery);
-        const supervisedRegistrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
+        const internSupervisorQuery = query(
+            collection(firestore, 'defenseRegistrations'),
+            where('sessionId', '==', session.id),
+            where('internshipSupervisorId', '==', supervisorId),
+            where('registrationStatus', '==', 'reporting')
+        );
+        
+        const [gradSnapshot, internSnapshot] = await Promise.all([
+          getDocs(gradSupervisorQuery),
+          getDocs(internSupervisorQuery),
+        ]);
+
+        const registrationMap = new Map<string, DefenseRegistration>();
+        
+        gradSnapshot.docs.forEach(doc => {
+            if (!registrationMap.has(doc.id)) {
+                registrationMap.set(doc.id, { id: doc.id, ...doc.data() } as DefenseRegistration);
+            }
+        });
+
+        internSnapshot.docs.forEach(doc => {
+            if (!registrationMap.has(doc.id)) {
+                registrationMap.set(doc.id, { id: doc.id, ...doc.data() } as DefenseRegistration);
+            }
+        });
+
+        const supervisedRegistrations = Array.from(registrationMap.values());
         
         if (supervisedRegistrations.length > 0) {
             supervisedAssignmentsData.push({
