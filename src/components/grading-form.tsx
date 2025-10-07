@@ -24,11 +24,14 @@ import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
-import type { Rubric, DefenseRegistration, StudentWithRegistrationDetails, Evaluation } from '@/lib/types';
+import type { Rubric, DefenseRegistration, Evaluation } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { useEffect, useMemo } from 'react';
 import { Minus, Plus } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
 
 interface ProjectGroup {
     projectTitle: string;
@@ -113,7 +116,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
             evaluationType: evaluationType,
             scores: Object.entries(values.scores).map(([criterionId, score]) => ({
                 criterionId,
-                score,
+                score: Number(score),
             })),
             totalScore: totalScore,
             comments: values.comments || '',
@@ -161,7 +164,15 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
                                 <FormItem className="grid grid-cols-4 items-start gap-4">
                                     <div className="col-span-3 space-y-1">
                                         <FormLabel className="font-semibold">{criterion.name}</FormLabel>
-                                        <p className="text-xs text-muted-foreground">{criterion.description}</p>
+                                         <div className={cn(
+                                            "prose prose-sm text-muted-foreground max-w-none",
+                                            "[&_ul]:list-disc [&_ul]:pl-4",
+                                            "[&_ol]:list-decimal [&_ol]:pl-4"
+                                            )}>
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                                {criterion.description || ''}
+                                            </ReactMarkdown>
+                                        </div>
                                     </div>
                                     <div className="col-span-1">
                                     <FormControl>
