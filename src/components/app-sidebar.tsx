@@ -177,6 +177,11 @@ export function AppSidebar() {
                                         <Link href="/admin/users"><Shield /><span>Quản lý Tài khoản</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/settings")} tooltip="Settings">
+                                        <Link href="/admin/settings"><Settings /><span>Cài đặt hệ thống</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
                             </SidebarMenu>
                          </CollapsibleContent>
                     </SidebarGroup>

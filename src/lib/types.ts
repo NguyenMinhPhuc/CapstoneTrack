@@ -183,3 +183,8 @@ export type Evaluation = {
     comments?: string;
     evaluationDate: any;
 }
+
+export type SystemSettings = {
+    id: string;
+    enableOverallGrading?: boolean;
+}

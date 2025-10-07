@@ -22,9 +22,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError, useDoc, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, serverTimestamp, doc, setDoc } from 'firebase/firestore';
-import type { Rubric, DefenseRegistration, Evaluation } from '@/lib/types';
+import type { Rubric, DefenseRegistration, Evaluation, SystemSettings } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { useEffect, useMemo, useState } from 'react';
@@ -54,6 +54,10 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
   const { toast } = useToast();
   const firestore = useFirestore();
   const [isOverallMode, setIsOverallMode] = useState(false);
+
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  const enableOverallGrading = settings?.enableOverallGrading ?? false;
 
   // Dynamically create the schema based on the rubric
   const formSchema = useMemo(() => {
@@ -149,7 +153,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
     let scoresToSave: { criterionId: string; score: number }[];
     let totalScoreToSave: number;
 
-    if (isOverallMode) {
+    if (isOverallMode && enableOverallGrading) {
       const overallScore = Math.max(0, Math.min(values.overallScore || 0, maxTotalScore));
       
       // 1. Calculate unrounded scores and rounding errors
@@ -270,21 +274,25 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                 <div className="flex items-center space-x-2">
-                    <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
-                    <Label htmlFor="grading-mode" className={cn(isOverallMode && "text-muted-foreground")}>Chấm chi tiết</Label>
-                    <Switch
-                        id="grading-mode"
-                        checked={isOverallMode}
-                        onCheckedChange={setIsOverallMode}
-                    />
-                    <Label htmlFor="grading-mode" className={cn(!isOverallMode && "text-muted-foreground")}>Chấm điểm tổng</Label>
-                    <Settings2 className="h-4 w-4 text-muted-foreground" />
-                </div>
-                <Separator />
+                 {enableOverallGrading && (
+                    <>
+                        <div className="flex items-center space-x-2">
+                            <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+                            <Label htmlFor="grading-mode" className={cn(isOverallMode && "text-muted-foreground")}>Chấm chi tiết</Label>
+                            <Switch
+                                id="grading-mode"
+                                checked={isOverallMode}
+                                onCheckedChange={setIsOverallMode}
+                            />
+                            <Label htmlFor="grading-mode" className={cn(!isOverallMode && "text-muted-foreground")}>Chấm điểm tổng</Label>
+                            <Settings2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <Separator />
+                    </>
+                 )}
                  <ScrollArea className="h-[50vh] pr-6">
                     <div className="space-y-6">
-                       {isOverallMode ? (
+                       {isOverallMode && enableOverallGrading ? (
                            <FormField
                                 control={form.control}
                                 name="overallScore"

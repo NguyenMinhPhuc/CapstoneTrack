@@ -520,6 +520,18 @@
             "evaluationDate": {"type": "string", "format": "date-time"}
         },
         "required": ["id", "sessionId", "registrationId", "evaluatorId", "rubricId", "evaluationType", "scores", "totalScore", "evaluationDate"]
+    },
+    "SystemSettings": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "SystemSettings",
+      "type": "object",
+      "description": "Stores global system settings and feature flags.",
+      "properties": {
+        "enableOverallGrading": {
+          "type": "boolean",
+          "description": "If true, allows graders to input an overall score which is then distributed among criteria."
+        }
+      }
     }
   },
   "auth": {
@@ -583,6 +595,12 @@
             "$ref": "#/entities/Evaluation"
         },
         "description": "Stores individual evaluation records from supervisors."
+    },
+    "/systemSettings/{settingId}": {
+      "schema": {
+        "$ref": "#/entities/SystemSettings"
+      },
+      "description": "Stores global system-wide settings and feature flags."
     }
   }
 }
