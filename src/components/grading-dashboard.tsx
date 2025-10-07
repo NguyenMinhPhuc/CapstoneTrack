@@ -2,9 +2,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration, StudentWithRegistrationDetails } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -12,6 +12,8 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { ClipboardCheck, Info, Users, FileText } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
+import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
+import { GradingForm } from './grading-form';
 
 interface GradingDashboardProps {
   supervisorId: string;
@@ -25,8 +27,28 @@ interface SessionWithAssignments {
   subCommittees: DefenseSubCommittee[];
 }
 
+interface ProjectGroup {
+    projectTitle: string;
+    students: DefenseRegistration[];
+}
+
 // A new component to render the list for a single subcommittee
-function SubcommitteeGradingView({ subcommittee, registrations }: { subcommittee: DefenseSubCommittee, registrations: DefenseRegistration[] }) {
+function SubcommitteeGradingView({
+    subcommittee, 
+    registrations,
+    rubric,
+    supervisorId,
+    sessionId
+}: { 
+    subcommittee: DefenseSubCommittee, 
+    registrations: DefenseRegistration[],
+    rubric: Rubric | null,
+    supervisorId: string,
+    sessionId: string,
+}) {
+    const [selectedGroup, setSelectedGroup] = useState<ProjectGroup | null>(null);
+    const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+
     const studentsInSubcommittee = useMemo(() => {
         return registrations.filter(reg => reg.subCommitteeId === subcommittee.id && reg.registrationStatus === 'reporting');
     }, [registrations, subcommittee.id]);
@@ -40,41 +62,66 @@ function SubcommitteeGradingView({ subcommittee, registrations }: { subcommittee
             }
             groups.get(projectKey)!.push(reg);
         });
-        return Array.from(groups.entries());
+        return Array.from(groups.entries()).map(([projectTitle, students]) => ({projectTitle, students}));
     }, [studentsInSubcommittee]);
+
+    const handleGradeClick = (group: ProjectGroup) => {
+        setSelectedGroup(group);
+        setIsGradingDialogOpen(true);
+    };
 
     if (studentsInSubcommittee.length === 0) {
         return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào được phân công vào tiểu ban này.</p>;
     }
 
     return (
-        <CardContent>
-            <div className="space-y-4">
-                {projectGroups.map(([projectTitle, students]) => (
-                    <div key={projectTitle} className="border rounded-lg p-4">
-                        <div className="flex justify-between items-start">
-                             <div>
-                                <h4 className="font-semibold text-base">
-                                    {projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : projectTitle}
-                                </h4>
-                                <div className="mt-2 space-y-1">
-                                    {students.map(student => (
-                                        <div key={student.id} className="flex items-center gap-2 text-sm">
-                                            <Users className="h-4 w-4 text-muted-foreground" />
-                                            <span>{student.studentName} ({student.studentId})</span>
-                                        </div>
-                                    ))}
+        <>
+            <CardContent>
+                <div className="space-y-4">
+                    {projectGroups.map((group) => (
+                        <div key={group.projectTitle} className="border rounded-lg p-4">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <h4 className="font-semibold text-base">
+                                        {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                                    </h4>
+                                    <div className="mt-2 space-y-1">
+                                        {group.students.map(student => (
+                                            <div key={student.id} className="flex items-center gap-2 text-sm">
+                                                <Users className="h-4 w-4 text-muted-foreground" />
+                                                <span>{student.studentName} ({student.studentId})</span>
+                                            </div>
+                                        ))}
+                                    </div>
                                 </div>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    disabled={!rubric}
+                                    onClick={() => handleGradeClick(group)}
+                                >
+                                    <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                    {rubric ? 'Chấm điểm' : 'Chưa có Rubric'}
+                                </Button>
                             </div>
-                            <Button variant="outline" size="sm">
-                                <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                Chấm điểm
-                            </Button>
                         </div>
-                    </div>
-                ))}
-            </div>
-        </CardContent>
+                    ))}
+                </div>
+            </CardContent>
+            {selectedGroup && rubric && (
+                 <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
+                    <DialogContent className="sm:max-w-3xl">
+                         <GradingForm 
+                            projectGroup={selectedGroup}
+                            rubric={rubric}
+                            supervisorId={supervisorId}
+                            sessionId={sessionId}
+                            onFinished={() => setIsGradingDialogOpen(false)}
+                         />
+                    </DialogContent>
+                </Dialog>
+            )}
+        </>
     )
 }
 
@@ -82,7 +129,7 @@ function SubcommitteeGradingView({ subcommittee, registrations }: { subcommittee
 export function GradingDashboard({ supervisorId, userRole }: GradingDashboardProps) {
   const firestore = useFirestore();
 
-  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions')), [firestore]);
+  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore]);
   const { data: allSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
   const [assignedSessions, setAssignedSessions] = useState<SessionWithAssignments[]>([]);
@@ -106,28 +153,20 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
             getDocs(query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', session.id)))
         ]);
         
-        // Process council members
-        if (!councilSnapshot.empty) {
-          const members = councilSnapshot.docs.map(d => d.data() as DefenseCouncilMember);
-          if (members.some(m => m.supervisorId === supervisorId)) {
-            isCouncilMember = true;
+        const members = councilSnapshot.docs.map(d => d.data() as DefenseCouncilMember);
+        if (members.some(m => m.supervisorId === supervisorId)) {
+          isCouncilMember = true;
+        }
+        
+        const subCommittees = subCommitteesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as DefenseSubCommittee));
+        subCommittees.forEach(sc => {
+          if (sc.members.some(m => m.supervisorId === supervisorId)) {
+            assignedSubCommittees.push(sc);
           }
-        }
+        });
         
-        // Process subcommittees
-        if (!subCommitteesSnapshot.empty) {
-          subCommitteesSnapshot.forEach(doc => {
-            const sc = { id: doc.id, ...doc.data() } as DefenseSubCommittee;
-            if (sc.members.some(m => m.supervisorId === supervisorId)) {
-              assignedSubCommittees.push(sc);
-            }
-          });
-        }
-        
-        // Process registrations
         const registrations = registrationsSnapshot.docs.map(d => ({ id: d.id, ...d.data() }) as DefenseRegistration);
         
-        // If supervisor is part of this session, add it to the list
         if (isCouncilMember || assignedSubCommittees.length > 0) {
           assignments.push({
             session,
@@ -143,6 +182,61 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
 
     fetchAssignments();
   }, [allSessions, isLoadingSessions, supervisorId, firestore]);
+  
+  
+  const SessionAccordionItem = ({ sessionData }: { sessionData: SessionWithAssignments }) => {
+    const { session, isCouncilMember, subCommittees, registrations } = sessionData;
+    const rubricDocRef = useMemoFirebase(
+      () => (session.rubricId ? doc(firestore, 'rubrics', session.rubricId) : null),
+      [firestore, session.rubricId]
+    );
+    const { data: rubric, isLoading: isRubricLoading } = useDoc<Rubric>(rubricDocRef);
+
+    return (
+        <AccordionItem key={session.id} value={session.id}>
+            <AccordionTrigger>
+            <div className="flex items-center gap-4">
+                <h3 className="text-lg font-semibold">{session.name}</h3>
+                <Badge>{session.status}</Badge>
+            </div>
+            </AccordionTrigger>
+            <AccordionContent className="space-y-4">
+            {isCouncilMember && (
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base">Hội đồng chính</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground">Chức năng chấm điểm cho hội đồng chính sẽ được triển khai.</p>
+                    </CardContent>
+                </Card>
+            )}
+            {subCommittees.map(sc => (
+                <Card key={sc.id}>
+                    <CardHeader>
+                        <CardTitle className="text-base">{sc.name}</CardTitle>
+                        <CardDescription>
+                            {sc.members.length} thành viên - Rubric: {isRubricLoading ? 'Đang tải...' : rubric ? rubric.name : 'Chưa có'}
+                        </CardDescription>
+                    </CardHeader>
+                    {isRubricLoading ? (
+                        <div className="p-6"><Skeleton className="h-20 w-full" /></div>
+                    ) : (
+                         <SubcommitteeGradingView 
+                            subcommittee={sc} 
+                            registrations={registrations} 
+                            rubric={rubric || null}
+                            supervisorId={supervisorId}
+                            sessionId={session.id}
+                        />
+                    )}
+                </Card>
+            ))}
+            </AccordionContent>
+        </AccordionItem>
+    );
+  }
+
 
   const isLoading = isLoadingSessions || isLoadingAssignments;
 
@@ -155,7 +249,7 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
             Phiếu Chấm Điểm
           </CardTitle>
           <CardDescription>
-            Đây là danh sách các đợt báo cáo và tiểu ban mà bạn được phân công chấm điểm.
+            Đây là danh sách các đợt báo cáo và tiểu ban đang hoạt động mà bạn được phân công chấm điểm.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -167,36 +261,8 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
         </div>
       ) : assignedSessions.length > 0 ? (
         <Accordion type="multiple" defaultValue={assignedSessions.map(s => s.session.id)}>
-          {assignedSessions.map(({ session, isCouncilMember, subCommittees, registrations }) => (
-            <AccordionItem key={session.id} value={session.id}>
-              <AccordionTrigger>
-                <div className="flex items-center gap-4">
-                  <h3 className="text-lg font-semibold">{session.name}</h3>
-                  <Badge>{session.status}</Badge>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-4">
-                {isCouncilMember && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle className="text-base">Hội đồng chính</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                             <p className="text-sm text-muted-foreground">Chức năng chấm điểm cho hội đồng chính sẽ được triển khai.</p>
-                        </CardContent>
-                    </Card>
-                )}
-                 {subCommittees.map(sc => (
-                    <Card key={sc.id}>
-                        <CardHeader>
-                            <CardTitle className="text-base">{sc.name}</CardTitle>
-                            <CardDescription>{sc.members.length} thành viên</CardDescription>
-                        </CardHeader>
-                         <SubcommitteeGradingView subcommittee={sc} registrations={registrations} />
-                    </Card>
-                ))}
-              </AccordionContent>
-            </AccordionItem>
+          {assignedSessions.map((sessionData) => (
+            <SessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
           ))}
         </Accordion>
       ) : (
@@ -204,7 +270,7 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
           <Info className="h-4 w-4" />
           <AlertTitle>Chưa được phân công</AlertTitle>
           <AlertDescription>
-            Bạn hiện chưa được phân công vào bất kỳ hội đồng hoặc tiểu ban chấm điểm nào.
+            Bạn hiện chưa được phân công vào bất kỳ hội đồng hoặc tiểu ban chấm điểm nào trong các đợt đang diễn ra.
           </AlertDescription>
         </Alert>
       )}
