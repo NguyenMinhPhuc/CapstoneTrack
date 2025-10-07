@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -78,7 +79,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     if (reportType === 'graduation') {
         const subCommitteeMap = new Map(subCommittees.map(sc => [sc.id, { name: sc.name, members: sc.members }]));
         return registrations
-            .filter(reg => reg.registrationStatus === 'reporting')
+            .filter(reg => reg.graduationStatus === 'reporting')
             .map((reg): ProcessedGraduationData => {
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
             
@@ -126,7 +127,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         });
     } else { // internship report
         return registrations
-        .filter(reg => reg.registrationStatus === 'reporting')
+        .filter(reg => reg.internshipStatus === 'reporting')
         .map((reg): ProcessedInternshipData => {
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
 
@@ -355,3 +356,5 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     </Card>
   );
 }
+
+    
