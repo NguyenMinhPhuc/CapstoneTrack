@@ -28,81 +28,57 @@ interface SupervisorGradingDashboardProps {
   userRole: 'supervisor' | 'admin';
 }
 
-interface SessionWithSupervisedStudents {
-    session: GraduationDefenseSession;
-    registrations: DefenseRegistration[];
+interface SessionAssignments {
+  session: GraduationDefenseSession;
+  graduationRegistrations: DefenseRegistration[];
+  internshipRegistrations: DefenseRegistration[];
 }
 
-function SupervisedStudentsGradingView({
+// Component for grading Graduation Projects
+function GraduationGradingView({
     registrations,
-    supervisorGraduationRubric,
-    companyInternshipRubric,
+    rubric,
     supervisorId,
-    sessionId
+    sessionId,
 }: {
-    registrations: DefenseRegistration[],
-    supervisorGraduationRubric: Rubric | null,
-    companyInternshipRubric: Rubric | null,
-    supervisorId: string,
-    sessionId: string,
+    registrations: DefenseRegistration[];
+    rubric: Rubric | null;
+    supervisorId: string;
+    sessionId: string;
 }) {
-    const [selectedGroupForGrading, setSelectedGroupForGrading] = useState<ProjectGroup | null>(null);
-    const [selectedRubric, setSelectedRubric] = useState<Rubric | null>(null);
-    const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
-    const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
+    const [selectedGroup, setSelectedGroup] = useState<ProjectGroup | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
 
     const projectGroups = useMemo(() => {
         const groups = new Map<string, DefenseRegistration[]>();
         registrations.forEach(reg => {
             const projectKey = reg.projectTitle || `_individual_${reg.id}`;
-            if (!groups.has(projectKey)) {
-                groups.set(projectKey, []);
-            }
+            if (!groups.has(projectKey)) groups.set(projectKey, []);
             groups.get(projectKey)!.push(reg);
         });
-
-        return Array.from(groups.entries()).map(([projectTitle, students]) => ({
-            projectTitle,
-            students
-        }));
+        return Array.from(groups.entries()).map(([projectTitle, students]) => ({ projectTitle, students }));
     }, [registrations]);
 
-    const handleGradeGraduationClick = (group: (typeof projectGroups)[0]) => {
-        if (!supervisorGraduationRubric) return;
-        setSelectedGroupForGrading({
-            projectTitle: group.projectTitle,
-            students: group.students
-        });
-        setSelectedRubric(supervisorGraduationRubric);
-        setSelectedEvalType('graduation');
-        setIsGradingDialogOpen(true);
-    };
-
-    const handleGradeInternshipClick = (student: DefenseRegistration) => {
-        if (!companyInternshipRubric) return;
-        setSelectedGroupForGrading({
-            projectTitle: `Thực tập của ${student.studentName}`,
-            students: [student]
-        });
-        setSelectedRubric(companyInternshipRubric);
-        setSelectedEvalType('internship');
-        setIsGradingDialogOpen(true);
+    const handleGradeClick = (group: ProjectGroup) => {
+        if (!rubric) return;
+        setSelectedGroup(group);
+        setIsDialogOpen(true);
     };
 
     if (registrations.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn sinh viên nào trong đợt này.</p>;
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn đồ án tốt nghiệp nào trong đợt này.</p>;
     }
-    
+
     return (
         <>
             <CardContent className="space-y-4">
-                 {projectGroups.map((group) => (
-                    <div key={group.projectTitle} className="border rounded-lg p-4">
+                {projectGroups.map(group => (
+                    <div key={group.projectTitle} className="border rounded-lg p-4 space-y-3">
                         <TooltipProvider>
                             <Tooltip>
                                 <TooltipTrigger asChild>
-                                    <h4 className="font-semibold mb-2 truncate cursor-default">
-                                    {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
+                                    <h4 className="font-semibold truncate cursor-default">
+                                        {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
                                     </h4>
                                 </TooltipTrigger>
                                 <TooltipContent>
@@ -110,56 +86,94 @@ function SupervisedStudentsGradingView({
                                 </TooltipContent>
                             </Tooltip>
                         </TooltipProvider>
-
-                        <div className="space-y-3">
+                        <div className="space-y-2 pl-4 border-l-2">
                             {group.students.map(student => (
-                                <div key={student.id} className="flex items-start justify-between pl-4 border-l-2">
-                                    <div>
-                                        <p className="text-sm">{student.studentName} ({student.studentId})</p>
-                                        <p className="text-xs text-muted-foreground">GVHD TT: {student.internshipSupervisorName || 'Chưa có'}</p>
-                                    </div>
-                                    <Button
-                                        variant="outline"
-                                        size="sm"
-                                        disabled={!companyInternshipRubric}
-                                        onClick={() => handleGradeInternshipClick(student)}
-                                    >
-                                        <Briefcase className="mr-2 h-4 w-4" />
-                                        Chấm TT
-                                    </Button>
-                                </div>
+                                <p key={student.id} className="text-sm text-muted-foreground">{student.studentName} ({student.studentId})</p>
                             ))}
                         </div>
-                        <Separator className="my-3"/>
-                         <Button
-                            className="w-full"
-                            variant="secondary"
-                            disabled={!supervisorGraduationRubric}
-                            onClick={() => handleGradeGraduationClick(group)}
-                        >
+                        <Separator />
+                        <Button className="w-full" variant="secondary" disabled={!rubric} onClick={() => handleGradeClick(group)}>
                             <GraduationCap className="mr-2 h-4 w-4" />
-                            Chấm điểm Đồ án Tốt nghiệp cho nhóm
+                            Chấm điểm Đồ án Tốt nghiệp
                         </Button>
                     </div>
                 ))}
             </CardContent>
-
-             {selectedGroupForGrading && selectedRubric && selectedEvalType && (
-                 <Dialog open={isGradingDialogOpen} onOpenChange={setIsGradingDialogOpen}>
+            {selectedGroup && rubric && (
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogContent className="sm:max-w-3xl">
-                         <GradingForm 
-                            projectGroup={selectedGroupForGrading}
-                            rubric={selectedRubric}
-                            evaluationType={selectedEvalType}
+                        <GradingForm 
+                            projectGroup={selectedGroup}
+                            rubric={rubric}
+                            evaluationType="graduation"
                             supervisorId={supervisorId}
                             sessionId={sessionId}
-                            onFinished={() => setIsGradingDialogOpen(false)}
-                         />
+                            onFinished={() => setIsDialogOpen(false)}
+                        />
                     </DialogContent>
                 </Dialog>
             )}
         </>
     );
+}
+
+// Component for grading Internships
+function InternshipGradingView({
+    registrations,
+    rubric,
+    supervisorId,
+    sessionId,
+}: {
+    registrations: DefenseRegistration[];
+    rubric: Rubric | null;
+    supervisorId: string;
+    sessionId: string;
+}) {
+    const [selectedStudent, setSelectedStudent] = useState<DefenseRegistration | null>(null);
+    const [isDialogOpen, setIsDialogOpen] = useState(false);
+
+    const handleGradeClick = (student: DefenseRegistration) => {
+        if (!rubric) return;
+        setSelectedStudent(student);
+        setIsDialogOpen(true);
+    };
+
+    if (registrations.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn thực tập cho sinh viên nào trong đợt này.</p>;
+    }
+
+    return (
+        <>
+            <CardContent className="space-y-4">
+                {registrations.map(student => (
+                     <div key={student.id} className="border rounded-lg p-4 flex items-center justify-between">
+                        <div>
+                           <p className="font-semibold">{student.studentName} ({student.studentId})</p>
+                           <p className="text-xs text-muted-foreground">ĐVTT: {student.internship_companyName || 'Chưa có thông tin'}</p>
+                        </div>
+                        <Button variant="outline" size="sm" disabled={!rubric} onClick={() => handleGradeClick(student)}>
+                            <Briefcase className="mr-2 h-4 w-4" />
+                            Chấm Thực tập
+                        </Button>
+                    </div>
+                ))}
+            </CardContent>
+             {selectedStudent && rubric && (
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogContent className="sm:max-w-3xl">
+                        <GradingForm 
+                            projectGroup={{ projectTitle: `Thực tập của ${selectedStudent.studentName}`, students: [selectedStudent] }}
+                            rubric={rubric}
+                            evaluationType="internship"
+                            supervisorId={supervisorId}
+                            sessionId={sessionId}
+                            onFinished={() => setIsDialogOpen(false)}
+                        />
+                    </DialogContent>
+                </Dialog>
+            )}
+        </>
+    )
 }
 
 export function SupervisorGradingDashboard({ supervisorId, userRole }: SupervisorGradingDashboardProps) {
@@ -168,7 +182,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
   const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore]);
   const { data: allSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
   
-  const [supervisedAssignments, setSupervisedAssignments] = useState<SessionWithSupervisedStudents[]>([]);
+  const [supervisedAssignments, setSupervisedAssignments] = useState<SessionAssignments[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
 
   useEffect(() => {
@@ -176,10 +190,9 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
 
     const fetchAssignments = async () => {
       setIsLoadingAssignments(true);
-      const supervisedAssignmentsData: SessionWithSupervisedStudents[] = [];
+      const assignmentsData: SessionAssignments[] = [];
 
       for (const session of allSessions) {
-        // Query for students supervised in graduation project OR internship
         const gradSupervisorQuery = query(
             collection(firestore, 'defenseRegistrations'), 
             where('sessionId', '==', session.id),
@@ -198,30 +211,18 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
           getDocs(internSupervisorQuery),
         ]);
 
-        const registrationMap = new Map<string, DefenseRegistration>();
+        const graduationRegistrations = gradSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as DefenseRegistration);
+        const internshipRegistrations = internSnapshot.docs.map(d => ({id: d.id, ...d.data()}) as DefenseRegistration);
         
-        gradSnapshot.docs.forEach(doc => {
-            if (!registrationMap.has(doc.id)) {
-                registrationMap.set(doc.id, { id: doc.id, ...doc.data() } as DefenseRegistration);
-            }
-        });
-
-        internSnapshot.docs.forEach(doc => {
-            if (!registrationMap.has(doc.id)) {
-                registrationMap.set(doc.id, { id: doc.id, ...doc.data() } as DefenseRegistration);
-            }
-        });
-
-        const supervisedRegistrations = Array.from(registrationMap.values());
-        
-        if (supervisedRegistrations.length > 0) {
-            supervisedAssignmentsData.push({
+        if (graduationRegistrations.length > 0 || internshipRegistrations.length > 0) {
+            assignmentsData.push({
                 session,
-                registrations: supervisedRegistrations,
+                graduationRegistrations,
+                internshipRegistrations,
             });
         }
       }
-      setSupervisedAssignments(supervisedAssignmentsData);
+      setSupervisedAssignments(assignmentsData);
       setIsLoadingAssignments(false);
     };
 
@@ -229,49 +230,68 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
   }, [allSessions, isLoadingSessions, supervisorId, firestore]);
   
 
-  const SupervisedSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithSupervisedStudents }) => {
-    const { session, registrations } = sessionData;
+  const SessionAccordionItem = ({ sessionData }: { sessionData: SessionAssignments }) => {
+    const { session, graduationRegistrations, internshipRegistrations } = sessionData;
 
-    const supervisorGradRubricDocRef = useMemoFirebase(() => (session.supervisorGraduationRubricId ? doc(firestore, 'rubrics', session.supervisorGraduationRubricId) : null), [firestore, session.supervisorGraduationRubricId]);
-    const { data: supervisorGraduationRubric, isLoading: isLoadingSupGradRubric } = useDoc<Rubric>(supervisorGradRubricDocRef);
+    // Fetch rubrics
+    const supGradRubricRef = useMemoFirebase(() => (session.supervisorGraduationRubricId ? doc(firestore, 'rubrics', session.supervisorGraduationRubricId) : null), [firestore, session.supervisorGraduationRubricId]);
+    const { data: supervisorGraduationRubric, isLoading: isLoadingSupGradRubric } = useDoc<Rubric>(supGradRubricRef);
 
-    const companyInternRubricDocRef = useMemoFirebase(() => (session.companyInternshipRubricId ? doc(firestore, 'rubrics', session.companyInternshipRubricId) : null), [firestore, session.companyInternshipRubricId]);
-    const { data: companyInternshipRubric, isLoading: isLoadingCompInternRubric } = useDoc<Rubric>(companyInternRubricDocRef);
+    const compInternRubricRef = useMemoFirebase(() => (session.companyInternshipRubricId ? doc(firestore, 'rubrics', session.companyInternshipRubricId) : null), [firestore, session.companyInternshipRubricId]);
+    const { data: companyInternshipRubric, isLoading: isLoadingCompInternRubric } = useDoc<Rubric>(compInternRubricRef);
     
-     const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
+    const getRubricName = (rubric: Rubric | null | undefined, isLoading: boolean) => {
         if (isLoading) return 'Đang tải...';
         return rubric ? rubric.name : 'Chưa gán';
     }
 
+    const isLoadingRubrics = isLoadingSupGradRubric || isLoadingCompInternRubric;
+
     return (
-        <AccordionItem key={session.id} value={`supervisor-${session.id}`}>
+        <AccordionItem key={session.id} value={`session-${session.id}`}>
             <AccordionTrigger>
                 <div className="flex items-center gap-4">
                     <h3 className="text-lg font-semibold">{session.name}</h3>
                     <Badge>{session.status}</Badge>
                 </div>
             </AccordionTrigger>
-            <AccordionContent>
+            <AccordionContent className="space-y-6">
+                {/* Graduation Section */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base">Danh sách sinh viên</CardTitle>
-                         <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                             <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> GVHD chấm TN: {getRubricName(supervisorGraduationRubric, isLoadingSupGradRubric)}</span>
-                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> ĐV chấm TT: {getRubricName(companyInternshipRubric, isLoadingCompInternRubric)}</span>
-                        </CardDescription>
+                        <CardTitle className="text-base flex items-center gap-2"><GraduationCap /> Đồ án Tốt nghiệp bạn hướng dẫn</CardTitle>
+                        <CardDescription className="text-xs">Rubric sử dụng: {getRubricName(supervisorGraduationRubric, isLoadingSupGradRubric)}</CardDescription>
                     </CardHeader>
-                     {(isLoadingSupGradRubric || isLoadingCompInternRubric) ? (
+                    {isLoadingRubrics ? (
                         <div className="p-6"><Skeleton className="h-20 w-full" /></div>
                     ) : (
-                        <SupervisedStudentsGradingView
-                            registrations={registrations}
-                            supervisorGraduationRubric={supervisorGraduationRubric}
-                            companyInternshipRubric={companyInternshipRubric}
+                        <GraduationGradingView
+                            registrations={graduationRegistrations}
+                            rubric={supervisorGraduationRubric}
                             supervisorId={supervisorId}
                             sessionId={session.id}
                         />
                     )}
                 </Card>
+
+                {/* Internship Section */}
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2"><Briefcase /> Thực tập Doanh nghiệp bạn hướng dẫn</CardTitle>
+                        <CardDescription className="text-xs">Rubric sử dụng: {getRubricName(companyInternshipRubric, isLoadingCompInternRubric)}</CardDescription>
+                    </CardHeader>
+                    {isLoadingRubrics ? (
+                        <div className="p-6"><Skeleton className="h-20 w-full" /></div>
+                    ) : (
+                        <InternshipGradingView
+                            registrations={internshipRegistrations}
+                            rubric={companyInternshipRubric}
+                            supervisorId={supervisorId}
+                            sessionId={session.id}
+                        />
+                    )}
+                </Card>
+
             </AccordionContent>
         </AccordionItem>
     );
@@ -296,7 +316,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                 <CardTitle className="flex items-center gap-2"><Info /> Chưa có sinh viên hướng dẫn</CardTitle>
             </CardHeader>
             <CardContent>
-                <p>Bạn hiện không hướng dẫn sinh viên nào trong các đợt báo cáo đang diễn ra.</p>
+                <p>Bạn hiện không được phân công hướng dẫn sinh viên nào trong các đợt báo cáo đang diễn ra.</p>
             </CardContent>
         </Card>
     );
@@ -304,9 +324,9 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
 
   return (
     <div className="space-y-6">
-        <Accordion type="multiple" defaultValue={supervisedAssignments.map(s => `supervisor-${s.session.id}`)}>
+        <Accordion type="multiple" defaultValue={supervisedAssignments.map(s => `session-${s.session.id}`)}>
             {supervisedAssignments.map((sessionData) => (
-                <SupervisedSessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
+                <SessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
             ))}
         </Accordion>
     </div>
