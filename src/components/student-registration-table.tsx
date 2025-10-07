@@ -23,6 +23,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -36,7 +46,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2 } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
@@ -110,9 +120,11 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [isAssignSubcommitteeDialogOpen, setIsAssignSubcommitteeDialogOpen] = useState(false);
   const [isAssignManualDialogOpen, setIsAssignManualDialogOpen] = useState(false);
   const [isAssignInternshipSupervisorDialogOpen, setIsAssignInternshipSupervisorDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
 
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const [registrationToDelete, setRegistrationToDelete] = useState<DefenseRegistration | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -250,23 +262,46 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     }
   };
 
-  const handleDelete = async (registrationId: string) => {
-    const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
-    
-    deleteDoc(registrationDocRef)
-        .then(() => {
-            toast({
-                title: 'Thành công',
-                description: 'Đã xóa sinh viên khỏi đợt báo cáo.',
-            });
-        })
-        .catch(error => {
-            const contextualError = new FirestorePermissionError({
-                path: registrationDocRef.path,
-                operation: 'delete',
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        });
+  const handleDeleteClick = (registration: DefenseRegistration) => {
+    setRegistrationToDelete(registration);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDelete = async () => {
+    const batch = writeBatch(firestore);
+    let count = 0;
+
+    if (selectedRowIds.length > 0) {
+      selectedRowIds.forEach(id => {
+        const registrationDocRef = doc(firestore, 'defenseRegistrations', id);
+        batch.delete(registrationDocRef);
+      });
+      count = selectedRowIds.length;
+    } else if (registrationToDelete) {
+      const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationToDelete.id);
+      batch.delete(registrationDocRef);
+      count = 1;
+    }
+
+    if (count === 0) return;
+
+    try {
+      await batch.commit();
+      toast({
+        title: 'Thành công',
+        description: `Đã xóa ${count} sinh viên khỏi đợt báo cáo.`,
+      });
+    } catch (error) {
+      const contextualError = new FirestorePermissionError({
+        path: 'batch delete on defenseRegistrations',
+        operation: 'delete',
+      });
+      errorEmitter.emit('permission-error', contextualError);
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setRegistrationToDelete(null);
+      setSelectedRowIds([]);
+    }
   };
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
@@ -354,7 +389,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         </Dialog>
                         <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button variant="destructive" size="sm">
+                                <Button variant="outline" size="sm">
                                     <XCircle className="mr-2 h-4 w-4" />
                                     Bỏ báo cáo ({selectedRowIds.length})
                                 </Button>
@@ -392,6 +427,11 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
+
+                        <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Xóa ({selectedRowIds.length})
+                        </Button>
                     </>
                 )}
             </div>
@@ -628,7 +668,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                                 </DropdownMenuSubContent>
                             </DropdownMenuSub>
                           <DropdownMenuSeparator />
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(reg.id)}>
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(reg)}>
                             Xóa
                           </DropdownMenuItem>
                         </DropdownMenuContent>
@@ -647,6 +687,24 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
           </Table>
         </CardContent>
       </Card>
+      
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Bạn có chắc chắn không?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Hành động này không thể hoàn tác. Thao tác này sẽ xóa vĩnh viễn đăng ký của 
+              {selectedRowIds.length > 0 ? ` ${selectedRowIds.length} sinh viên đã chọn` : (registrationToDelete ? ` sinh viên ${registrationToDelete.studentName}` : ' sinh viên này')}
+              khỏi đợt báo cáo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => { setRegistrationToDelete(null); setIsDeleteDialogOpen(false); }}>Hủy</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Xóa</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       {/* Dialog for single edit */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
