@@ -68,14 +68,19 @@ function SubcommitteeGradingView({
             groups.get(projectKey)!.push(reg);
         });
         return Array.from(groups.entries()).map(([projectTitle, students]) => {
-            const firstStudent = students[0];
+            // Find the student with the most complete information to use for display
+            const representativeStudent = 
+                students.find(s => s.summary && s.objectives) || 
+                students.find(s => s.summary) || 
+                students[0];
+
             return {
                 projectTitle, 
                 students,
-                summary: firstStudent?.summary,
-                objectives: firstStudent?.objectives,
-                expectedResults: firstStudent?.expectedResults,
-                reportLink: firstStudent?.reportLink,
+                summary: representativeStudent?.summary,
+                objectives: representativeStudent?.objectives,
+                expectedResults: representativeStudent?.expectedResults,
+                reportLink: representativeStudent?.reportLink,
             }
         });
     }, [studentsInSubcommittee]);
