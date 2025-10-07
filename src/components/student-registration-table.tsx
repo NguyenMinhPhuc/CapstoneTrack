@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -60,6 +59,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 
 interface StudentRegistrationTableProps {
@@ -517,7 +522,24 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">{reg.studentName}</TableCell>
                     <TableCell>{reg.studentId}</TableCell>
-                    <TableCell>{reg.projectTitle || 'Chưa có'}</TableCell>
+                    <TableCell>
+                      {reg.projectTitle ? (
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <p className="line-clamp-2 max-w-xs cursor-default">
+                                {reg.projectTitle}
+                              </p>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-md">{reg.projectTitle}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      ) : (
+                        'Chưa có'
+                      )}
+                    </TableCell>
                     <TableCell>{reg.supervisorName || 'Chưa có'}</TableCell>
                     <TableCell>
                         <Select
