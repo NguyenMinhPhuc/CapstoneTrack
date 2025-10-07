@@ -618,4 +618,3 @@ export function GradingDashboard({ supervisorId, userRole }: GradingDashboardPro
     </div>
   );
 }
-
