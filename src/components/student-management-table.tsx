@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -65,6 +64,7 @@ import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { AssignClassDialog } from './assign-class-dialog';
 import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
+import { StudentStatusDetailsDialog } from './student-status-details-dialog';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -104,6 +104,8 @@ export function StudentManagementTable() {
   const [classFilter, setClassFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
+  const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
 
 
   const studentsCollectionRef = useMemoFirebase(
@@ -176,6 +178,21 @@ export function StudentManagementTable() {
       return (nameMatch || idMatch || emailMatch) && classMatch && courseMatch;
     });
   }, [students, searchTerm, classFilter, courseFilter]);
+
+  const handleStatusClick = (className: string, status: Student['status']) => {
+    if (!students) return;
+
+    const filtered = students.filter(student => {
+      const studentClassName = student.className || 'Chưa xếp lớp';
+      return studentClassName === className && student.status === status;
+    });
+
+    setStatusDetailData({
+      title: `Danh sách sinh viên ${statusLabel[status]} - Lớp ${className}`,
+      students: filtered,
+    });
+    setIsStatusDetailOpen(true);
+  };
   
   const handleEditClick = (student: Student) => {
     setSelectedStudent(student);
@@ -317,28 +334,28 @@ export function StudentManagementTable() {
                             <CardDescription>{stat.total} sinh viên</CardDescription>
                         </CardHeader>
                         <CardContent className="text-xs space-y-1">
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
                                 <span className="flex items-center gap-1.5">
                                     <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
                                     {statusLabel.studying}
                                 </span>
                                 <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
                                 <span className="flex items-center gap-1.5">
                                     <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
                                     {statusLabel.reserved}
                                 </span>
                                 <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
                                 <span className="flex items-center gap-1.5">
                                     <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
                                     {statusLabel.dropped_out}
                                 </span>
                                 <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
                             </div>
-                            <div className="flex items-center justify-between">
+                            <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
                                 <span className="flex items-center gap-1.5">
                                     <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
                                     {statusLabel.graduated}
@@ -620,12 +637,14 @@ export function StudentManagementTable() {
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
+
+    <Dialog open={isStatusDetailOpen} onOpenChange={setIsStatusDetailOpen}>
+        <StudentStatusDetailsDialog 
+            title={statusDetailData.title}
+            students={statusDetailData.students}
+            onFinished={() => setIsStatusDetailOpen(false)}
+        />
+    </Dialog>
     </div>
   );
 }
-
-    
-
-    
-
-
