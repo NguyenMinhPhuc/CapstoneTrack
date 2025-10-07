@@ -258,12 +258,6 @@ export function DefenseSessionsTable() {
       <Card>
         <CardHeader>
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-              <CardTitle>Danh sách các Đợt báo cáo</CardTitle>
-              <CardDescription>
-                Tạo và quản lý các đợt tổ chức báo cáo tốt nghiệp.
-              </CardDescription>
-            </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 <div className="flex w-full sm:w-auto gap-2">
                     <div className="relative w-full sm:w-auto">
