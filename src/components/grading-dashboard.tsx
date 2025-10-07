@@ -95,8 +95,8 @@ function SubcommitteeGradingView({
                 <Accordion type="multiple" className="w-full space-y-4">
                     {projectGroups.map((group) => (
                         <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
-                            <AccordionTrigger className="hover:no-underline">
-                                 <div className="flex justify-between items-center w-full">
+                            <div className="flex items-center">
+                                <AccordionTrigger className="hover:no-underline flex-1">
                                     <div className="text-left">
                                         <h4 className="font-semibold text-base">
                                             {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
@@ -110,18 +110,18 @@ function SubcommitteeGradingView({
                                             ))}
                                         </div>
                                     </div>
-                                     <Button 
-                                        variant="outline" 
-                                        size="sm"
-                                        disabled={!rubric}
-                                        onClick={(e) => { e.stopPropagation(); handleGradeClick(group); }}
-                                        className="mr-4"
-                                    >
-                                        <ClipboardCheck className="mr-2 h-4 w-4"/>
-                                        {rubric ? 'Chấm điểm' : 'Chưa có Rubric'}
-                                    </Button>
-                                 </div>
-                            </AccordionTrigger>
+                                </AccordionTrigger>
+                                <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    disabled={!rubric}
+                                    onClick={() => handleGradeClick(group)}
+                                    className="ml-4"
+                                >
+                                    <ClipboardCheck className="mr-2 h-4 w-4"/>
+                                    {rubric ? 'Chấm điểm' : 'Chưa có Rubric'}
+                                </Button>
+                            </div>
                             <AccordionContent>
                                 <div className="space-y-4 pt-2 border-t mt-2">
                                      <div className="space-y-2">
