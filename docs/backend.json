@@ -290,7 +290,7 @@
         },
         "graduationStatusNote": {
             "type": "string",
-            "description": "A note explaining the reason for the 'withdrawn' status for graduation."
+            "description": "A note explaining the reason for the 'withdrawn' or other status for graduation."
         },
         "graduationExemptionDecisionNumber": {
           "type": "string",
@@ -313,7 +313,7 @@
         },
         "internshipStatusNote": {
             "type": "string",
-            "description": "A note explaining the reason for the 'withdrawn' status for internship."
+            "description": "A note explaining the reason for the 'withdrawn' or other status for internship."
         },
         "internshipExemptionDecisionNumber": {
           "type": "string",
