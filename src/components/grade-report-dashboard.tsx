@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -17,6 +16,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { BookCheck } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
 
 export function GradeReportDashboard() {
   const firestore = useFirestore();
@@ -82,12 +83,30 @@ export function GradeReportDashboard() {
         isLoading ? (
           <Skeleton className="h-[400px] w-full" />
         ) : (
-          <GradeReportTable
-            session={selectedSession}
-            registrations={registrations || []}
-            evaluations={evaluations || []}
-            subCommittees={subCommittees || []}
-          />
+          <Tabs defaultValue="graduation">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="graduation">Điểm Tốt nghiệp</TabsTrigger>
+              <TabsTrigger value="internship">Điểm Thực tập</TabsTrigger>
+            </TabsList>
+            <TabsContent value="graduation">
+              <GradeReportTable
+                reportType="graduation"
+                session={selectedSession}
+                registrations={registrations || []}
+                evaluations={evaluations || []}
+                subCommittees={subCommittees || []}
+              />
+            </TabsContent>
+            <TabsContent value="internship">
+              <GradeReportTable
+                reportType="internship"
+                session={selectedSession}
+                registrations={registrations || []}
+                evaluations={evaluations || []}
+                subCommittees={subCommittees || []}
+              />
+            </TabsContent>
+          </Tabs>
         )
       )}
 
