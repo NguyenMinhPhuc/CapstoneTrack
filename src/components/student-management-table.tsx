@@ -299,6 +299,11 @@ export function StudentManagementTable() {
   const isAllSelected = filteredStudents && selectedRowIds.length === filteredStudents.length;
   const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredStudents?.length ?? 0);
 
+  const getPercentage = (value: number, total: number) => {
+    if (total === 0) return '0%';
+    return `${((value / total) * 100).toFixed(1)}%`;
+  }
+
   return (
     <div className="space-y-4">
         {classStats.length > 0 && (
@@ -311,22 +316,34 @@ export function StudentManagementTable() {
                             <CardTitle className="text-base">{stat.className}</CardTitle>
                             <CardDescription>{stat.total} sinh viên</CardDescription>
                         </CardHeader>
-                        <CardContent className="text-xs">
+                        <CardContent className="text-xs space-y-1">
                             <div className="flex items-center justify-between">
-                                <span>{statusLabel.studying}</span>
-                                <Badge variant="outline" className={cn(statusColorClass.studying)}>{stat.studying}</Badge>
+                                <span className="flex items-center gap-1.5">
+                                    <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
+                                    {statusLabel.studying}
+                                </span>
+                                <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
                             </div>
-                             <div className="flex items-center justify-between mt-1">
-                                <span>{statusLabel.reserved}</span>
-                                <Badge variant="outline" className={cn(statusColorClass.reserved)}>{stat.reserved}</Badge>
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
+                                    {statusLabel.reserved}
+                                </span>
+                                <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
                             </div>
-                             <div className="flex items-center justify-between mt-1">
-                                <span>{statusLabel.dropped_out}</span>
-                                <Badge variant="outline" className={cn(statusColorClass.dropped_out)}>{stat.dropped_out}</Badge>
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
+                                    {statusLabel.dropped_out}
+                                </span>
+                                <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
                             </div>
-                             <div className="flex items-center justify-between mt-1">
-                                <span>{statusLabel.graduated}</span>
-                                <Badge variant="outline" className={cn(statusColorClass.graduated)}>{stat.graduated}</Badge>
+                            <div className="flex items-center justify-between">
+                                <span className="flex items-center gap-1.5">
+                                    <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
+                                    {statusLabel.graduated}
+                                </span>
+                                <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
                             </div>
                         </CardContent>
                     </Card>
@@ -610,4 +627,5 @@ export function StudentManagementTable() {
     
 
     
+
 
