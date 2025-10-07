@@ -259,6 +259,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
                                             step="0.25"
                                             {...field}
                                             className="text-center text-xl h-14"
+                                            onFocus={(e) => e.target.select()}
                                             onBlur={(e) => {
                                                 const val = parseFloat(e.target.value);
                                                 if (!isNaN(val)) {
@@ -311,6 +312,7 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
                                                 step="0.25"
                                                 {...field}
                                                 className="z-10 rounded-none border-x-0 text-center"
+                                                onFocus={(e) => e.target.select()}
                                                 onBlur={(e) => {
                                                   const val = parseFloat(e.target.value);
                                                   if (!isNaN(val)) {
