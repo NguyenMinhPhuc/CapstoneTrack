@@ -334,6 +334,61 @@
         }
       },
       "required": ["id", "sessionId", "name", "members"]
+    },
+    "Rubric": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Rubric",
+        "type": "object",
+        "description": "Defines a grading rubric for evaluating projects.",
+        "properties": {
+            "id": {"type": "string"},
+            "name": {"type": "string", "description": "Name of the rubric (e.g., 'Final Project Defense Rubric')."},
+            "description": {"type": "string", "description": "A brief description of the rubric's purpose."},
+            "criteria": {
+                "type": "array",
+                "description": "The list of criteria that make up this rubric.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "id": {"type": "string"},
+                        "name": {"type": "string", "description": "Name of the criterion (e.g., 'Problem Statement')."},
+                        "description": {"type": "string", "description": "Detailed explanation of the criterion."},
+                        "maxScore": {"type": "number", "description": "The maximum possible score for this criterion."}
+                    },
+                    "required": ["id", "name", "maxScore"]
+                }
+            }
+        },
+        "required": ["id", "name", "criteria"]
+    },
+    "Evaluation": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "Evaluation",
+        "type": "object",
+        "description": "Stores a single evaluation of a student's registration by a supervisor.",
+        "properties": {
+            "id": {"type": "string"},
+            "sessionId": {"type": "string", "description": "Reference to the defense session."},
+            "registrationId": {"type": "string", "description": "Reference to the student's registration for the session."},
+            "evaluatorId": {"type": "string", "description": "The supervisor's ID who performed the evaluation."},
+            "rubricId": {"type": "string", "description": "Reference to the rubric used for this evaluation."},
+            "scores": {
+                "type": "array",
+                "description": "The scores given for each criterion.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "criterionId": {"type": "string"},
+                        "score": {"type": "number"}
+                    },
+                    "required": ["criterionId", "score"]
+                }
+            },
+            "totalScore": {"type": "number"},
+            "comments": {"type": "string", "description": "General comments from the evaluator."},
+            "evaluationDate": {"type": "string", "format": "date-time"}
+        },
+        "required": ["id", "sessionId", "registrationId", "evaluatorId", "rubricId", "scores", "totalScore", "evaluationDate"]
     }
   },
   "auth": {
@@ -385,8 +440,18 @@
         "$ref": "#/entities/DefenseSubCommittee"
       },
       "description": "Stores the sub-committees (panels) for a specific defense session."
+    },
+    "/rubrics/{rubricId}": {
+        "schema": {
+            "$ref": "#/entities/Rubric"
+        },
+        "description": "Stores the grading rubric templates."
+    },
+    "/evaluations/{evaluationId}": {
+        "schema": {
+            "$ref": "#/entities/Evaluation"
+        },
+        "description": "Stores individual evaluation records from supervisors."
     }
   }
 }
-
-    
