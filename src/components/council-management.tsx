@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -67,6 +68,17 @@ export function CouncilManagement({ session, sessionId }: CouncilManagementProps
   );
   const { data: councilMembers, isLoading: isLoadingCouncil } = useCollection<DefenseCouncilMember>(councilCollectionRef);
   
+  const sortedCouncilMembers = useMemo(() => {
+    if (!councilMembers) return [];
+    const roleOrder: Record<DefenseCouncilMember['role'], number> = {
+        'President': 1,
+        'Vice President': 2,
+        'Member': 3,
+        'Secretary': 4,
+    };
+    return [...councilMembers].sort((a, b) => roleOrder[a.role] - roleOrder[b.role]);
+  }, [councilMembers]);
+
   const subcommitteesCollectionRef = useMemoFirebase(
     () => collection(firestore, `graduationDefenseSessions/${sessionId}/subCommittees`),
     [firestore, sessionId]
@@ -168,7 +180,7 @@ export function CouncilManagement({ session, sessionId }: CouncilManagementProps
                             </TableRow>
                             </TableHeader>
                             <TableBody>
-                            {councilMembers?.map((member, index) => (
+                            {sortedCouncilMembers.map((member, index) => (
                                 <TableRow key={member.id}>
                                 <TableCell>{index + 1}</TableCell>
                                 <TableCell className="font-medium">{member.name}</TableCell>
