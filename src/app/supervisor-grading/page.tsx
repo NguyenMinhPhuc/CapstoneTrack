@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect } from 'react';
@@ -6,9 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
-import { GradingDashboard } from '@/components/grading-dashboard';
+import { SupervisorGradingDashboard } from '@/components/supervisor-grading-dashboard';
+import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
-export default function GradingPage() {
+export default function SupervisorGradingPage() {
   const router = useRouter();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
@@ -47,14 +47,18 @@ export default function GradingPage() {
     );
   }
 
-  // Pass supervisorId if the user is a supervisor or admin for fetching relevant data
   const supervisorId = (userData.role === 'supervisor' || userData.role === 'admin') ? user.uid : undefined;
 
   return (
     <main className="p-4 sm:p-6 lg:p-8 space-y-6">
-      <h1 className="text-2xl font-bold">Nghiệp vụ Chấm điểm</h1>
+        <Card>
+            <CardHeader>
+                <CardTitle>Chấm điểm Hướng dẫn</CardTitle>
+                <CardDescription>Chấm điểm với tư cách là giáo viên hướng dẫn trực tiếp cho các sinh viên/đề tài dưới đây.</CardDescription>
+            </CardHeader>
+        </Card>
       {supervisorId ? (
-         <GradingDashboard supervisorId={supervisorId} userRole={userData.role} />
+         <SupervisorGradingDashboard supervisorId={supervisorId} userRole={userData.role} />
       ) : (
          <p>Bạn không có quyền truy cập chức năng này.</p>
       )}

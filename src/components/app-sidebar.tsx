@@ -26,6 +26,7 @@ import {
   ClipboardCheck,
   ChevronDown,
   FileUp,
+  UserCheck,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -115,11 +116,18 @@ export function AppSidebar() {
             )}
             
             {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
-              <SidebarMenuItem>
-                  <SidebarMenuButton asChild isActive={isActive("/grading")} tooltip="Nghiệp vụ Chấm điểm">
-                      <Link href="/grading"><ClipboardCheck /><span>Nghiệp vụ Chấm điểm</span></Link>
-                  </SidebarMenuButton>
-              </SidebarMenuItem>
+              <>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/supervisor-grading")} tooltip="Chấm điểm Hướng dẫn">
+                        <Link href="/supervisor-grading"><UserCheck /><span>Chấm điểm Hướng dẫn</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/council-grading")} tooltip="Chấm điểm Hội đồng">
+                        <Link href="/council-grading"><ClipboardCheck /><span>Chấm điểm Hội đồng</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+              </>
             )}
 
             <div className="px-2 py-2"><SidebarSeparator /></div>
