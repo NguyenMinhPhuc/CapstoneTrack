@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck, GraduationCap, Briefcase } from 'lucide-react';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck, GraduationCap, Briefcase, Building } from 'lucide-react';
 import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails, type Rubric } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
@@ -98,6 +98,7 @@ export default function DefenseSessionDetailPage() {
           exemptedGraduationCount: 0,
           withdrawnGraduationCount: 0,
           withdrawnInternshipCount: 0,
+          internshipCompanyCount: 0,
           supervisorDetails: [],
           withdrawnStudents: [], // This can be refined later if needed
           exemptedStudents: [], // This can be refined later if needed
@@ -138,6 +139,7 @@ export default function DefenseSessionDetailPage() {
     }));
     
     const projectCount = new Set(combinedRegistrationData.filter(r => r.projectTitle).map(r => r.projectTitle)).size;
+    const internshipCompanyCount = new Set(combinedRegistrationData.filter(r => r.internship_companyName).map(r => r.internship_companyName)).size;
 
     return {
       studentCount,
@@ -148,6 +150,7 @@ export default function DefenseSessionDetailPage() {
       exemptedGraduationCount,
       withdrawnGraduationCount,
       withdrawnInternshipCount,
+      internshipCompanyCount,
       supervisorDetails,
       withdrawnStudents,
       exemptedStudents,
@@ -382,12 +385,24 @@ export default function DefenseSessionDetailPage() {
           </Card>
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Số đề tài</CardTitle>
+              <CardTitle className="text-sm font-medium">Thống kê Đề tài & Thực tập</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.projectCount}</div>
-               <p className="text-xs text-muted-foreground">Tổng số đề tài đã được nhập</p>
+            <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <FileText className="h-4 w-4" />
+                        <span>Số đề tài</span>
+                    </div>
+                    <div className="text-2xl font-bold">{stats.projectCount}</div>
+                </div>
+                <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                        <Building className="h-4 w-4" />
+                        <span>Số công ty thực tập</span>
+                    </div>
+                    <div className="text-2xl font-bold">{stats.internshipCompanyCount}</div>
+                </div>
             </CardContent>
           </Card>
         </div>
@@ -401,4 +416,3 @@ export default function DefenseSessionDetailPage() {
     </main>
   );
 }
-
