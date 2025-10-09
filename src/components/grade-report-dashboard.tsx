@@ -64,13 +64,6 @@ export function GradeReportDashboard() {
   const { data: supervisorGraduationRubric, isLoading: isLoadingSupervisorGradRubric } = useDoc<Rubric>(supervisorGradRubricDocRef);
   const { data: companyInternshipRubric, isLoading: isLoadingCompanyInternRubric } = useDoc<Rubric>(companyInternRubricDocRef);
   
-  const sessionRubrics = useMemo(() => ({
-    councilGraduation: councilGraduationRubric,
-    councilInternship: councilInternshipRubric,
-    supervisorGraduation: supervisorGraduationRubric,
-    companyInternship: companyInternshipRubric,
-  }), [councilGraduationRubric, councilInternshipRubric, supervisorGraduationRubric, companyInternshipRubric]);
-  
   // --- End of data fetching ---
 
   const isLoading = isLoadingRegistrations || isLoadingEvaluations || isLoadingSubCommittees || isLoadingCouncilGradRubric || isLoadingCouncilInternRubric || isLoadingSupervisorGradRubric || isLoadingCompanyInternRubric;
@@ -137,25 +130,47 @@ export function GradeReportDashboard() {
                 </Tabs>
             </TabsContent>
             <TabsContent value="plo">
-               <Tabs defaultValue="graduation-plo" className="w-full">
-                    <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="graduation-plo">CĐR Tốt nghiệp</TabsTrigger>
-                        <TabsTrigger value="internship-plo">CĐR Thực tập</TabsTrigger>
+               <Tabs defaultValue="council-graduation-plo" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4">
+                        <TabsTrigger value="council-graduation-plo">HĐ chấm Tốt nghiệp</TabsTrigger>
+                        <TabsTrigger value="supervisor-graduation-plo">GVHD chấm Tốt nghiệp</TabsTrigger>
+                        <TabsTrigger value="council-internship-plo">HĐ chấm Thực tập</TabsTrigger>
+                        <TabsTrigger value="company-internship-plo">ĐV chấm Thực tập</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="graduation-plo">
+                    <TabsContent value="council-graduation-plo">
                         <GradeReportPloTable 
                             reportType="graduation"
+                            evaluationSource="council"
                             registrations={registrations || []}
                             evaluations={evaluations || []}
-                            rubrics={sessionRubrics}
+                            rubric={councilGraduationRubric}
                         />
                     </TabsContent>
-                    <TabsContent value="internship-plo">
+                    <TabsContent value="supervisor-graduation-plo">
                         <GradeReportPloTable 
-                            reportType="internship"
+                            reportType="graduation"
+                            evaluationSource="supervisor"
                             registrations={registrations || []}
                             evaluations={evaluations || []}
-                            rubrics={sessionRubrics}
+                            rubric={supervisorGraduationRubric}
+                        />
+                    </TabsContent>
+                     <TabsContent value="council-internship-plo">
+                        <GradeReportPloTable 
+                            reportType="internship"
+                            evaluationSource="council"
+                            registrations={registrations || []}
+                            evaluations={evaluations || []}
+                            rubric={councilInternshipRubric}
+                        />
+                    </TabsContent>
+                    <TabsContent value="company-internship-plo">
+                         <GradeReportPloTable 
+                            reportType="internship"
+                            evaluationSource="company"
+                            registrations={registrations || []}
+                            evaluations={evaluations || []}
+                            rubric={companyInternshipRubric}
                         />
                     </TabsContent>
                 </Tabs>

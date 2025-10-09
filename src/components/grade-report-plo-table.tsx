@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -28,16 +27,14 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { BarChart3 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
+type EvaluationSource = 'council' | 'supervisor' | 'company';
+
 interface GradeReportPloTableProps {
   reportType: 'graduation' | 'internship';
+  evaluationSource: EvaluationSource;
   registrations: DefenseRegistration[];
   evaluations: Evaluation[];
-  rubrics: {
-    councilGraduation?: Rubric | null;
-    councilInternship?: Rubric | null;
-    supervisorGraduation?: Rubric | null;
-    companyInternship?: Rubric | null;
-  };
+  rubric: Rubric | null | undefined;
 }
 
 interface ProcessedPloData {
@@ -53,19 +50,17 @@ interface HeaderStructure {
 }
 
 
-export function GradeReportPloTable({ reportType, registrations, evaluations, rubrics }: GradeReportPloTableProps) {
+export function GradeReportPloTable({ reportType, evaluationSource, registrations, evaluations, rubric }: GradeReportPloTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data, headers } = useMemo(() => {
-    const councilRubric = reportType === 'graduation' ? rubrics.councilGraduation : rubrics.councilInternship;
-
-    if (!councilRubric) return { data: [], headers: [] };
+    if (!rubric) return { data: [], headers: [] };
 
     const cloToPiMap = new Map<string, string>();
     const piToCloMap = new Map<string, Set<string>>();
     const criterionToCloMap = new Map<string, string>();
 
-    councilRubric.criteria.forEach(criterion => {
+    rubric.criteria.forEach(criterion => {
         if (criterion.CLO && criterion.PI) {
             const clo = criterion.CLO.trim();
             const pi = criterion.PI.trim();
@@ -87,21 +82,32 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
         clos: Array.from(piToCloMap.get(pi)!).sort(),
     }));
 
-    const councilRubricId = councilRubric.id;
+    const rubricId = rubric.id;
 
     const processedData: ProcessedPloData[] = registrations
         .filter(reg => reportType === 'graduation' ? reg.graduationStatus === 'reporting' : reg.internshipStatus === 'reporting')
         .map(reg => {
-            // Filter evaluations to only include those from the council for the specific report type
-            const studentCouncilEvals = evaluations.filter(e => 
-                e.registrationId === reg.id && 
-                e.evaluationType === reportType && 
-                e.rubricId === councilRubricId
-            );
+            // Filter evaluations based on the source (council or supervisor)
+            const studentEvals = evaluations.filter(e => {
+                if (e.registrationId !== reg.id || e.evaluationType !== reportType || e.rubricId !== rubricId) {
+                    return false;
+                }
+                if (evaluationSource === 'supervisor') {
+                    return e.evaluatorId === reg.supervisorId;
+                }
+                 if (evaluationSource === 'company') {
+                    return e.evaluatorId === reg.internshipSupervisorId;
+                }
+                // For council, we don't filter by a single evaluatorId, we average them
+                if (evaluationSource === 'council') {
+                    return true;
+                }
+                return false;
+            });
 
             const studentCloScores: Record<string, { total: number; count: number }> = {};
 
-            studentCouncilEvals.forEach(evaluation => {
+            studentEvals.forEach(evaluation => {
                 evaluation.scores.forEach(scoreItem => {
                     const clo = criterionToCloMap.get(scoreItem.criterionId);
                     if (clo) {
@@ -132,7 +138,7 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
         data: processedData, 
         headers: headerStructure,
     };
-  }, [registrations, evaluations, rubrics, reportType]);
+  }, [registrations, evaluations, rubric, reportType, evaluationSource]);
 
   const filteredData = useMemo(() => {
     if (!data) return [];
@@ -146,7 +152,7 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
   const allClos = headers.flatMap(h => h.clos);
 
   const exportToExcel = () => {
-    const reportName = reportType === 'graduation' ? 'TotNghiep' : 'ThucTap';
+    const reportName = `${reportType === 'graduation' ? 'TotNghiep' : 'ThucTap'}_${evaluationSource}`;
     const fileName = `BangDiem_CDR_${reportName}.xlsx`;
 
     // Create header rows
@@ -203,6 +209,17 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
     saveAs(blob, fileName);
   };
 
+  const getCardDescription = () => {
+    let typeDesc = reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập';
+    let sourceDesc = '';
+    switch(evaluationSource) {
+        case 'council': sourceDesc = 'Hội đồng'; break;
+        case 'supervisor': sourceDesc = 'GVHD'; break;
+        case 'company': sourceDesc = 'Đơn vị thực tập'; break;
+    }
+    return `Điểm trung bình của sinh viên cho từng CLO được định nghĩa trong rubric của ${sourceDesc} chấm ${typeDesc}.`;
+  }
+
   return (
     <Card className="mt-4">
       <CardHeader>
@@ -210,7 +227,7 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
           <div>
             <CardTitle>Báo cáo điểm theo Chuẩn đầu ra (CĐR)</CardTitle>
             <CardDescription>
-              Điểm trung bình của sinh viên cho từng CLO được định nghĩa trong các rubric của học phần {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'}.
+              {getCardDescription()}
             </CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
@@ -283,7 +300,7 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
                 <BarChart3 className="h-4 w-4" />
                 <AlertTitle>Không có dữ liệu CĐR</AlertTitle>
                 <AlertDescription>
-                    Không tìm thấy rubric hoặc thông tin PI/CLO nào được gán cho hội đồng chấm {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'} của đợt báo cáo này.
+                    Không tìm thấy rubric hoặc thông tin PI/CLO nào được gán cho nguồn đánh giá này trong đợt báo cáo.
                 </AlertDescription>
             </Alert>
         )}
