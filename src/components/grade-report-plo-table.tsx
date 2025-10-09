@@ -57,21 +57,15 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data, headers } = useMemo(() => {
-    let relevantRubrics: Rubric[] = [];
-    if (reportType === 'graduation') {
-        relevantRubrics = [rubrics.councilGraduation, rubrics.supervisorGraduation].filter((r): r is Rubric => !!r);
-    } else { // internship
-        relevantRubrics = [rubrics.councilInternship, rubrics.companyInternship].filter((r): r is Rubric => !!r);
-    }
+    const councilRubric = reportType === 'graduation' ? rubrics.councilGraduation : rubrics.councilInternship;
 
-    if (relevantRubrics.length === 0) return { data: [], headers: [] };
+    if (!councilRubric) return { data: [], headers: [] };
 
     const cloToPiMap = new Map<string, string>();
     const piToCloMap = new Map<string, Set<string>>();
     const criterionToCloMap = new Map<string, string>();
 
-    relevantRubrics.forEach(rubric => {
-      rubric.criteria.forEach(criterion => {
+    councilRubric.criteria.forEach(criterion => {
         if (criterion.CLO && criterion.PI) {
             const clo = criterion.CLO.trim();
             const pi = criterion.PI.trim();
@@ -84,9 +78,8 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
             }
             piToCloMap.get(pi)!.add(clo);
         }
-      });
     });
-
+    
     const sortedPis = Array.from(piToCloMap.keys()).sort();
     
     const headerStructure: HeaderStructure[] = sortedPis.map(pi => ({
@@ -94,15 +87,21 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
         clos: Array.from(piToCloMap.get(pi)!).sort(),
     }));
 
-    const relevantRubricIds = new Set(relevantRubrics.map(r => r.id));
+    const councilRubricId = councilRubric.id;
 
     const processedData: ProcessedPloData[] = registrations
         .filter(reg => reportType === 'graduation' ? reg.graduationStatus === 'reporting' : reg.internshipStatus === 'reporting')
         .map(reg => {
-            const studentEvals = evaluations.filter(e => e.registrationId === reg.id && e.evaluationType === reportType && relevantRubricIds.has(e.rubricId));
+            // Filter evaluations to only include those from the council for the specific report type
+            const studentCouncilEvals = evaluations.filter(e => 
+                e.registrationId === reg.id && 
+                e.evaluationType === reportType && 
+                e.rubricId === councilRubricId
+            );
+
             const studentCloScores: Record<string, { total: number; count: number }> = {};
 
-            studentEvals.forEach(evaluation => {
+            studentCouncilEvals.forEach(evaluation => {
                 evaluation.scores.forEach(scoreItem => {
                     const clo = criterionToCloMap.get(scoreItem.criterionId);
                     if (clo) {
@@ -284,7 +283,7 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
                 <BarChart3 className="h-4 w-4" />
                 <AlertTitle>Không có dữ liệu CĐR</AlertTitle>
                 <AlertDescription>
-                    Không tìm thấy thông tin PI hoặc CLO nào trong các rubric được gán cho học phần {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'} của đợt báo cáo này.
+                    Không tìm thấy rubric hoặc thông tin PI/CLO nào được gán cho hội đồng chấm {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'} của đợt báo cáo này.
                 </AlertDescription>
             </Alert>
         )}
