@@ -27,6 +27,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { BarChart3 } from 'lucide-react';
 
 interface GradeReportPloTableProps {
+  reportType: 'graduation' | 'internship';
   registrations: DefenseRegistration[];
   evaluations: Evaluation[];
   rubrics: {
@@ -44,17 +45,23 @@ interface ProcessedPloData {
     [key: string]: any; // For dynamic PLO/PI/CLO columns
 }
 
-export function GradeReportPloTable({ registrations, evaluations, rubrics }: GradeReportPloTableProps) {
+export function GradeReportPloTable({ reportType, registrations, evaluations, rubrics }: GradeReportPloTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
 
   const { data, headers } = useMemo(() => {
-    const allRubrics = Object.values(rubrics).filter((r): r is Rubric => !!r);
-    if (allRubrics.length === 0) return { data: [], headers: { PLO: [], PI: [], CLO: [] } };
+    let relevantRubrics: Rubric[] = [];
+    if (reportType === 'graduation') {
+        relevantRubrics = [rubrics.councilGraduation, rubrics.supervisorGraduation].filter((r): r is Rubric => !!r);
+    } else { // internship
+        relevantRubrics = [rubrics.councilInternship, rubrics.companyInternship].filter((r): r is Rubric => !!r);
+    }
+
+    if (relevantRubrics.length === 0) return { data: [], headers: { PLO: [], PI: [], CLO: [] } };
 
     const uniqueHeaders = { PLO: new Set<string>(), PI: new Set<string>(), CLO: new Set<string>() };
     const rubricMap = new Map<string, { type: 'PLO' | 'PI' | 'CLO', value: string }[]>();
 
-    allRubrics.forEach(rubric => {
+    relevantRubrics.forEach(rubric => {
       rubric.criteria.forEach(criterion => {
         if (!rubricMap.has(criterion.id)) {
             rubricMap.set(criterion.id, []);
@@ -67,38 +74,42 @@ export function GradeReportPloTable({ registrations, evaluations, rubrics }: Gra
       });
     });
 
-    const processedData: ProcessedPloData[] = registrations.map(reg => {
-      const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
-      const studentPloScores: Record<string, { total: number; count: number }> = {};
+    const relevantRubricIds = new Set(relevantRubrics.map(r => r.id));
 
-      studentEvals.forEach(evaluation => {
-        evaluation.scores.forEach(scoreItem => {
-          const mappings = rubricMap.get(scoreItem.criterionId);
-          if (mappings) {
-            mappings.forEach(mapping => {
-              const key = `${mapping.type}_${mapping.value}`;
-              if (!studentPloScores[key]) {
-                studentPloScores[key] = { total: 0, count: 0 };
-              }
-              studentPloScores[key].total += scoreItem.score;
-              studentPloScores[key].count += 1;
+    const processedData: ProcessedPloData[] = registrations
+        .filter(reg => reportType === 'graduation' ? reg.graduationStatus === 'reporting' : reg.internshipStatus === 'reporting')
+        .map(reg => {
+            const studentEvals = evaluations.filter(e => e.registrationId === reg.id && e.evaluationType === reportType && relevantRubricIds.has(e.rubricId));
+            const studentPloScores: Record<string, { total: number; count: number }> = {};
+
+            studentEvals.forEach(evaluation => {
+                evaluation.scores.forEach(scoreItem => {
+                const mappings = rubricMap.get(scoreItem.criterionId);
+                if (mappings) {
+                    mappings.forEach(mapping => {
+                    const key = `${mapping.type}_${mapping.value}`;
+                    if (!studentPloScores[key]) {
+                        studentPloScores[key] = { total: 0, count: 0 };
+                    }
+                    studentPloScores[key].total += scoreItem.score;
+                    studentPloScores[key].count += 1;
+                    });
+                }
+                });
             });
-          }
-        });
-      });
-      
-      const resultRow: ProcessedPloData = {
-          id: reg.id,
-          studentId: reg.studentId,
-          studentName: reg.studentName,
-      };
+            
+            const resultRow: ProcessedPloData = {
+                id: reg.id,
+                studentId: reg.studentId,
+                studentName: reg.studentName,
+            };
 
-      Object.keys(studentPloScores).forEach(key => {
-          const { total, count } = studentPloScores[key];
-          resultRow[key] = count > 0 ? total / count : null;
-      });
+            Object.keys(studentPloScores).forEach(key => {
+                const { total, count } = studentPloScores[key];
+                resultRow[key] = count > 0 ? total / count : null;
+            });
 
-      return resultRow;
+            return resultRow;
     });
 
     return { 
@@ -109,7 +120,7 @@ export function GradeReportPloTable({ registrations, evaluations, rubrics }: Gra
             CLO: Array.from(uniqueHeaders.CLO).sort(),
         }
     };
-  }, [registrations, evaluations, rubrics]);
+  }, [registrations, evaluations, rubrics, reportType]);
 
   const filteredData = useMemo(() => {
     if (!data) return [];
@@ -127,9 +138,9 @@ export function GradeReportPloTable({ registrations, evaluations, rubrics }: Gra
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <CardTitle>Bảng điểm theo Chuẩn đầu ra (CĐR)</CardTitle>
+            <CardTitle>Báo cáo điểm theo Chuẩn đầu ra (CĐR)</CardTitle>
             <CardDescription>
-              Điểm trung bình của sinh viên cho từng PLO, PI, CLO được định nghĩa trong các rubric.
+              Điểm trung bình của sinh viên cho từng PLO, PI, CLO được định nghĩa trong các rubric của học phần {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'}.
             </CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
@@ -170,9 +181,9 @@ export function GradeReportPloTable({ registrations, evaluations, rubrics }: Gra
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>{item.studentId}</TableCell>
                         <TableCell className="font-medium">{item.studentName}</TableCell>
-                         {headers.PLO.map(h => <TableCell key={`PLO_${h}`} className="text-center">{item[`PLO_${h}`]?.toFixed(2) ?? '-'}</TableCell>)}
-                         {headers.PI.map(h => <TableCell key={`PI_${h}`} className="text-center">{item[`PI_${h}`]?.toFixed(2) ?? '-'}</TableCell>)}
-                         {headers.CLO.map(h => <TableCell key={`CLO_${h}`} className="text-center">{item[`CLO_${h}`]?.toFixed(2) ?? '-'}</TableCell>)}
+                         {headers.PLO.map(h => <TableCell key={`PLO_${h}`} className="text-center">{item[`PLO_${h}`] !== undefined && item[`PLO_${h}`] !== null ? item[`PLO_${h}`].toFixed(2) : '-'}</TableCell>)}
+                         {headers.PI.map(h => <TableCell key={`PI_${h}`} className="text-center">{item[`PI_${h}`] !== undefined && item[`PI_${h}`] !== null ? item[`PI_${h}`].toFixed(2) : '-'}</TableCell>)}
+                         {headers.CLO.map(h => <TableCell key={`CLO_${h}`} className="text-center">{item[`CLO_${h}`] !== undefined && item[`CLO_${h}`] !== null ? item[`CLO_${h}`].toFixed(2) : '-'}</TableCell>)}
                     </TableRow>
                 ))}
                 </TableBody>
@@ -183,7 +194,7 @@ export function GradeReportPloTable({ registrations, evaluations, rubrics }: Gra
                 <BarChart3 className="h-4 w-4" />
                 <AlertTitle>Không có dữ liệu CĐR</AlertTitle>
                 <AlertDescription>
-                    Không tìm thấy thông tin PLO, PI, hoặc CLO nào trong các rubric được gán cho đợt báo cáo này.
+                    Không tìm thấy thông tin PLO, PI, hoặc CLO nào trong các rubric được gán cho học phần {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'} của đợt báo cáo này.
                 </AlertDescription>
             </Alert>
         )}

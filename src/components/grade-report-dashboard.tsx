@@ -105,36 +105,60 @@ export function GradeReportDashboard() {
         isLoading ? (
           <Skeleton className="h-[400px] w-full" />
         ) : (
-          <Tabs defaultValue="graduation">
-            <TabsList className="grid w-full grid-cols-3">
-              <TabsTrigger value="graduation">Điểm Tốt nghiệp</TabsTrigger>
-              <TabsTrigger value="internship">Điểm Thực tập</TabsTrigger>
-              <TabsTrigger value="plo">Điểm theo CĐR</TabsTrigger>
+          <Tabs defaultValue="summary" className="w-full">
+            <TabsList className="grid w-full grid-cols-2">
+              <TabsTrigger value="summary">Bảng điểm tổng hợp</TabsTrigger>
+              <TabsTrigger value="plo">Bảng điểm CĐR</TabsTrigger>
             </TabsList>
-            <TabsContent value="graduation">
-              <GradeReportTable
-                reportType="graduation"
-                session={selectedSession}
-                registrations={registrations || []}
-                evaluations={evaluations || []}
-                subCommittees={subCommittees || []}
-              />
-            </TabsContent>
-            <TabsContent value="internship">
-              <GradeReportTable
-                reportType="internship"
-                session={selectedSession}
-                registrations={registrations || []}
-                evaluations={evaluations || []}
-                subCommittees={subCommittees || []}
-              />
+            <TabsContent value="summary">
+                <Tabs defaultValue="graduation" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="graduation">Điểm Tốt nghiệp</TabsTrigger>
+                        <TabsTrigger value="internship">Điểm Thực tập</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="graduation">
+                        <GradeReportTable
+                            reportType="graduation"
+                            session={selectedSession}
+                            registrations={registrations || []}
+                            evaluations={evaluations || []}
+                            subCommittees={subCommittees || []}
+                        />
+                    </TabsContent>
+                    <TabsContent value="internship">
+                        <GradeReportTable
+                            reportType="internship"
+                            session={selectedSession}
+                            registrations={registrations || []}
+                            evaluations={evaluations || []}
+                            subCommittees={subCommittees || []}
+                        />
+                    </TabsContent>
+                </Tabs>
             </TabsContent>
             <TabsContent value="plo">
-               <GradeReportPloTable 
-                 registrations={registrations || []}
-                 evaluations={evaluations || []}
-                 rubrics={sessionRubrics}
-               />
+               <Tabs defaultValue="graduation-plo" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="graduation-plo">CĐR Tốt nghiệp</TabsTrigger>
+                        <TabsTrigger value="internship-plo">CĐR Thực tập</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="graduation-plo">
+                        <GradeReportPloTable 
+                            reportType="graduation"
+                            registrations={registrations || []}
+                            evaluations={evaluations || []}
+                            rubrics={sessionRubrics}
+                        />
+                    </TabsContent>
+                    <TabsContent value="internship-plo">
+                        <GradeReportPloTable 
+                            reportType="internship"
+                            registrations={registrations || []}
+                            evaluations={evaluations || []}
+                            rubrics={sessionRubrics}
+                        />
+                    </TabsContent>
+                </Tabs>
             </TabsContent>
           </Tabs>
         )
