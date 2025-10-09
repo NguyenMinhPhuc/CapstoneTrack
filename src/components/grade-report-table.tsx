@@ -139,6 +139,13 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
             const subCommitteeMembers = subCommitteeDetails?.members || [];
 
+            const companySupervisorEval = studentEvals.find(e =>
+                e.evaluatorId === reg.internshipSupervisorId &&
+                e.evaluationType === 'internship' &&
+                e.rubricId === session.companyInternshipRubricId
+            );
+            const companySupervisorScore = companySupervisorEval ? companySupervisorEval.totalScore : null;
+
             const councilScores: CouncilScore[] = COUNCIL_ROLES.map(role => {
                 const member = subCommitteeMembers.find(m => m.role === role);
                 if (!member) return { role, score: null };
@@ -153,13 +160,6 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
             const validCouncilScores = councilScores.filter(s => s.score !== null).map(s => s.score as number);
             const councilInternAvg = validCouncilScores.length > 0 ? validCouncilScores.reduce((sum, score) => sum + score, 0) / validCouncilScores.length : null;
-
-            const companySupervisorEval = studentEvals.find(e =>
-                e.evaluatorId === reg.internshipSupervisorId &&
-                e.evaluationType === 'internship' &&
-                e.rubricId === session.companyInternshipRubricId
-            );
-            const companySupervisorScore = companySupervisorEval ? companySupervisorEval.totalScore : null;
 
             let finalInternScore: number | null = null;
             if (councilInternAvg !== null && companySupervisorScore !== null) {
@@ -222,7 +222,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 'Họ và Tên': item.studentName,
                 'Công ty Thực tập': item.companyName || 'N/A',
                 'Tiểu ban': item.subCommitteeName,
-                'Điểm Đơn vị TT': item.companySupervisorScore?.toFixed(2) ?? 'N/A',
+                'Điểm ĐVTT': item.companySupervisorScore?.toFixed(2) ?? 'N/A',
             };
             COUNCIL_ROLES.forEach(role => {
                 const score = item.councilScores.find(s => s.role === role);
@@ -305,7 +305,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   <TableHead>Họ và Tên</TableHead>
                   <TableHead>Công ty Thực tập</TableHead>
                   <TableHead>Tiểu ban</TableHead>
-                  <TableHead className="text-center">Điểm Đơn vị</TableHead>
+                  <TableHead className="text-center">Điểm ĐVTT</TableHead>
                   {COUNCIL_ROLES.map(role => (
                     <TableHead key={role} className="text-center">Điểm {roleDisplayNames[role]}</TableHead>
                   ))}

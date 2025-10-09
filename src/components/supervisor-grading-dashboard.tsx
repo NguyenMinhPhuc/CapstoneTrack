@@ -340,7 +340,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                  <Card>
                     <CardHeader>
                         <CardTitle className="text-base flex items-center gap-2"><Briefcase /> Thực tập Doanh nghiệp bạn hướng dẫn</CardTitle>
-                        <CardDescription className="text-xs">Rubric sử dụng: {getRubricName(companyInternshipRubric, isLoadingCompInternRubric)}</CardDescription>
+                        <CardDescription className="text-xs">Rubric sử dụng (dành cho đơn vị): {getRubricName(companyInternshipRubric, isLoadingCompInternRubric)}</CardDescription>
                     </CardHeader>
                     {isLoadingRubrics ? (
                         <div className="p-6"><Skeleton className="h-20 w-full" /></div>
@@ -395,5 +395,3 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     </div>
   );
 }
-
-    
