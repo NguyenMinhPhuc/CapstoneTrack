@@ -47,9 +47,10 @@ interface ProcessedInternshipData {
     studentId: string;
     studentName: string;
     companyName?: string;
-    internshipSupervisorName?: string;
-    councilInternAvg: number | null;
+    subCommitteeName: string;
     companySupervisorScore: number | null;
+    councilScores: CouncilScore[];
+    councilInternAvg: number | null;
     finalInternScore: number | null;
 }
 
@@ -75,11 +76,12 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
   const processedData = useMemo(() => {
     if (!session) return [];
+    const subCommitteeMap = new Map(subCommittees.map(sc => [sc.id, { name: sc.name, members: sc.members }]));
 
     if (reportType === 'graduation') {
         const gradCouncilWeight = (session.graduationCouncilWeight ?? 80) / 100;
         const gradSupervisorWeight = 1 - gradCouncilWeight;
-        const subCommitteeMap = new Map(subCommittees.map(sc => [sc.id, { name: sc.name, members: sc.members }]));
+        
         return registrations
             .filter(reg => reg.graduationStatus === 'reporting')
             .map((reg): ProcessedGraduationData => {
@@ -134,15 +136,24 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         .filter(reg => reg.internshipStatus === 'reporting')
         .map((reg): ProcessedInternshipData => {
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
+            const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
+            const subCommitteeMembers = subCommitteeDetails?.members || [];
 
-            const councilInternEvals = studentEvals.filter(e => 
-                e.evaluationType === 'internship' &&
-                e.rubricId === session.councilInternshipRubricId
-            );
-            const councilInternAvg = councilInternEvals.length > 0
-                ? councilInternEvals.reduce((sum, e) => sum + e.totalScore, 0) / councilInternEvals.length
-                : null;
-            
+            const councilScores: CouncilScore[] = COUNCIL_ROLES.map(role => {
+                const member = subCommitteeMembers.find(m => m.role === role);
+                if (!member) return { role, score: null };
+
+                const evalRecord = studentEvals.find(e => 
+                    e.evaluatorId === member.supervisorId &&
+                    e.evaluationType === 'internship' &&
+                    e.rubricId === session.councilInternshipRubricId
+                );
+                return { role, score: evalRecord ? evalRecord.totalScore : null };
+            });
+
+            const validCouncilScores = councilScores.filter(s => s.score !== null).map(s => s.score as number);
+            const councilInternAvg = validCouncilScores.length > 0 ? validCouncilScores.reduce((sum, score) => sum + score, 0) / validCouncilScores.length : null;
+
             const companySupervisorEval = studentEvals.find(e =>
                 e.evaluatorId === reg.internshipSupervisorId &&
                 e.evaluationType === 'internship' &&
@@ -160,9 +171,10 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 studentId: reg.studentId,
                 studentName: reg.studentName,
                 companyName: reg.internship_companyName,
-                internshipSupervisorName: reg.internshipSupervisorName,
-                councilInternAvg: councilInternAvg,
+                subCommitteeName: subCommitteeDetails?.name || 'Chưa phân công',
                 companySupervisorScore: companySupervisorScore,
+                councilScores: councilScores,
+                councilInternAvg: councilInternAvg,
                 finalInternScore: finalInternScore,
             };
         });
@@ -204,15 +216,22 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         });
     } else {
         fileName = `BangDiem_ThucTap_${session?.name.replace(/\s+/g, '_') || 'report'}.xlsx`;
-        dataToExport = (filteredData as ProcessedInternshipData[]).map(item => ({
-            'MSSV': item.studentId,
-            'Họ và Tên': item.studentName,
-            'Công ty Thực tập': item.companyName || 'N/A',
-            'GVHD Thực tập': item.internshipSupervisorName || 'N/A',
-            'Điểm TB HĐ Thực tập': item.councilInternAvg?.toFixed(2) ?? 'N/A',
-            'Điểm Đơn vị TT': item.companySupervisorScore?.toFixed(2) ?? 'N/A',
-            'Điểm Tổng kết TT': item.finalInternScore?.toFixed(2) ?? 'N/A',
-        }));
+        dataToExport = (filteredData as ProcessedInternshipData[]).map(item => {
+             const row: {[key: string]: any} = {
+                'MSSV': item.studentId,
+                'Họ và Tên': item.studentName,
+                'Công ty Thực tập': item.companyName || 'N/A',
+                'Tiểu ban': item.subCommitteeName,
+                'Điểm Đơn vị TT': item.companySupervisorScore?.toFixed(2) ?? 'N/A',
+            };
+            COUNCIL_ROLES.forEach(role => {
+                const score = item.councilScores.find(s => s.role === role);
+                row[`Điểm ${roleDisplayNames[role]}`] = score?.score !== null ? score?.score?.toFixed(2) : 'N/A';
+            });
+            row['Điểm TB Hội đồng'] = item.councilInternAvg?.toFixed(2) ?? 'N/A';
+            row['Điểm Tổng kết TT'] = item.finalInternScore?.toFixed(2) ?? 'N/A';
+            return row;
+        });
     }
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -285,9 +304,12 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   <TableHead>MSSV</TableHead>
                   <TableHead>Họ và Tên</TableHead>
                   <TableHead>Công ty Thực tập</TableHead>
-                  <TableHead>GVHD Thực tập</TableHead>
-                  <TableHead className="text-center">Điểm TB HĐ</TableHead>
+                  <TableHead>Tiểu ban</TableHead>
                   <TableHead className="text-center">Điểm Đơn vị</TableHead>
+                  {COUNCIL_ROLES.map(role => (
+                    <TableHead key={role} className="text-center">Điểm {roleDisplayNames[role]}</TableHead>
+                  ))}
+                  <TableHead className="text-center">Điểm TB HĐ</TableHead>
                   <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
               </TableRow>
           </TableHeader>
@@ -299,12 +321,20 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                           <TableCell>{item.studentId}</TableCell>
                           <TableCell className="font-medium">{item.studentName}</TableCell>
                           <TableCell>{item.companyName || 'N/A'}</TableCell>
-                          <TableCell>{item.internshipSupervisorName || 'N/A'}</TableCell>
-                          <TableCell className="text-center">
-                              {item.councilInternAvg !== null ? item.councilInternAvg.toFixed(2) : '-'}
-                          </TableCell>
+                          <TableCell>{item.subCommitteeName}</TableCell>
                            <TableCell className="text-center">
                               {item.companySupervisorScore !== null ? item.companySupervisorScore.toFixed(2) : '-'}
+                          </TableCell>
+                           {COUNCIL_ROLES.map(role => {
+                                const scoreItem = item.councilScores.find(s => s.role === role);
+                                return (
+                                    <TableCell key={role} className="text-center">
+                                        {scoreItem && scoreItem.score !== null ? scoreItem.score.toFixed(2) : '-'}
+                                    </TableCell>
+                                )
+                            })}
+                           <TableCell className="text-center">
+                              {item.councilInternAvg !== null ? item.councilInternAvg.toFixed(2) : '-'}
                           </TableCell>
                           <TableCell className="text-center font-bold text-primary">
                               {item.finalInternScore !== null ? item.finalInternScore.toFixed(2) : '-'}
@@ -313,7 +343,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   ))
               ) : (
                   <TableRow>
-                      <TableCell colSpan={8} className="text-center h-24">
+                      <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
                           Không có dữ liệu để hiển thị.
                       </TableCell>
                   </TableRow>
