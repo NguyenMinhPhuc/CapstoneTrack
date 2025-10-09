@@ -54,8 +54,15 @@ export function EditRubricForm({ rubric, onFinished }: EditRubricFormProps) {
     resolver: zodResolver(rubricSchema),
     defaultValues: {
       name: rubric.name,
-      description: rubric.description,
-      criteria: rubric.criteria.map(c => ({...c, id: c.id || uuidv4()})), // Ensure ID exists
+      description: rubric.description || '',
+      criteria: rubric.criteria.map(c => ({
+          ...c, 
+          id: c.id || uuidv4(),
+          description: c.description || '',
+          PLO: c.PLO || '',
+          PI: c.PI || '',
+          CLO: c.CLO || '',
+      })),
     },
   });
 
