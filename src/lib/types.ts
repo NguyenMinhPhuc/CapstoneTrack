@@ -159,6 +159,9 @@ export type RubricCriterion = {
     name: string;
     description?: string;
     maxScore: number;
+    PLO?: string;
+    PI?: string;
+    CLO?: string;
 }
 
 export type Rubric = {

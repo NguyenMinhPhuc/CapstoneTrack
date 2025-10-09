@@ -479,7 +479,10 @@
                         "id": {"type": "string"},
                         "name": {"type": "string", "description": "Name of the criterion (e.g., 'Problem Statement')."},
                         "description": {"type": "string", "description": "Detailed explanation of the criterion."},
-                        "maxScore": {"type": "number", "description": "The maximum possible score for this criterion."}
+                        "maxScore": {"type": "number", "description": "The maximum possible score for this criterion."},
+                        "PLO": {"type": "string", "description": "Program Learning Outcome."},
+                        "PI": {"type": "string", "description": "Performance Indicator."},
+                        "CLO": {"type": "string", "description": "Course Learning Outcome."}
                     },
                     "required": ["id", "name", "maxScore"]
                 }

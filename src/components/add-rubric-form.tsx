@@ -27,6 +27,9 @@ const criterionSchema = z.object({
   name: z.string().min(1, { message: 'Tên tiêu chí là bắt buộc.' }),
   description: z.string().optional(),
   maxScore: z.coerce.number().min(1, { message: 'Điểm phải lớn hơn 0.' }),
+  PLO: z.string().optional(),
+  PI: z.string().optional(),
+  CLO: z.string().optional(),
 });
 
 const rubricSchema = z.object({
@@ -118,62 +121,107 @@ export function AddRubricForm({ onFinished }: AddRubricFormProps) {
                 <div className="space-y-4">
                     {fields.map((field, index) => (
                         <div key={field.id} className="grid grid-cols-12 gap-x-4 gap-y-2 p-4 border rounded-lg relative">
-                        <div className="col-span-12 md:col-span-4">
-                            <FormField
-                            control={form.control}
-                            name={`criteria.${index}.name`}
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Tên tiêu chí</FormLabel>
-                                <FormControl>
-                                    <Input placeholder="Ví dụ: Nội dung báo cáo" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-                        <div className="col-span-12 md:col-span-6">
-                            <FormField
-                            control={form.control}
-                            name={`criteria.${index}.description`}
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Mô tả chi tiết (tùy chọn)</FormLabel>
-                                <FormControl>
-                                    <Textarea placeholder="Giải thích rõ hơn về tiêu chí này" {...field} className="h-10 resize-none"/>
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-                        <div className="col-span-8 md:col-span-1">
-                            <FormField
-                            control={form.control}
-                            name={`criteria.${index}.maxScore`}
-                            render={({ field }) => (
-                                <FormItem>
-                                <FormLabel>Điểm tối đa</FormLabel>
-                                <FormControl>
-                                    <Input type="number" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                                </FormItem>
-                            )}
-                            />
-                        </div>
-                        <div className="col-span-4 md:col-span-1 flex items-end justify-end">
-                            <Button
-                                type="button"
-                                variant="destructive"
-                                size="icon"
-                                onClick={() => remove(index)}
-                                className="h-10 w-10"
-                            >
-                                <Trash2 className="h-4 w-4" />
-                            </Button>
-                        </div>
+                            <div className="col-span-12 md:col-span-4">
+                                <FormField
+                                control={form.control}
+                                name={`criteria.${index}.name`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Tên tiêu chí</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="Ví dụ: Nội dung báo cáo" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
+                            <div className="col-span-12 md:col-span-6">
+                                <FormField
+                                control={form.control}
+                                name={`criteria.${index}.description`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Mô tả chi tiết (tùy chọn)</FormLabel>
+                                    <FormControl>
+                                        <Textarea placeholder="Giải thích rõ hơn về tiêu chí này" {...field} className="h-10 resize-none"/>
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
+                            <div className="col-span-8 md:col-span-1">
+                                <FormField
+                                control={form.control}
+                                name={`criteria.${index}.maxScore`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>Điểm tối đa</FormLabel>
+                                    <FormControl>
+                                        <Input type="number" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
+                             <div className="col-span-4 md:col-span-1 flex items-end justify-end">
+                                <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="icon"
+                                    onClick={() => remove(index)}
+                                    className="h-10 w-10"
+                                >
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <div className="col-span-4">
+                               <FormField
+                                control={form.control}
+                                name={`criteria.${index}.PLO`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>PLO</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="PLO 1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
+                             <div className="col-span-4">
+                               <FormField
+                                control={form.control}
+                                name={`criteria.${index}.PI`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>PI</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="PI 1.1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
+                             <div className="col-span-4">
+                               <FormField
+                                control={form.control}
+                                name={`criteria.${index}.CLO`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                    <FormLabel>CLO</FormLabel>
+                                    <FormControl>
+                                        <Input placeholder="CLO 1" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                    </FormItem>
+                                )}
+                                />
+                            </div>
                         </div>
                     ))}
                 </div>
@@ -181,7 +229,7 @@ export function AddRubricForm({ onFinished }: AddRubricFormProps) {
           <Button
             type="button"
             variant="outline"
-            onClick={() => append({ id: uuidv4(), name: '', description: '', maxScore: 10 })}
+            onClick={() => append({ id: uuidv4(), name: '', description: '', maxScore: 10, PLO: '', PI: '', CLO: '' })}
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Thêm tiêu chí
