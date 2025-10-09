@@ -8,15 +8,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where } from 'firebase/firestore';
-import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, where, doc } from 'firebase/firestore';
+import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, Rubric } from '@/lib/types';
 import { GradeReportTable } from './grade-report-table';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Skeleton } from './ui/skeleton';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { BookCheck } from 'lucide-react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { GradeReportPloTable } from './grade-report-plo-table';
 
 
 export function GradeReportDashboard() {
@@ -29,6 +30,11 @@ export function GradeReportDashboard() {
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
+  const selectedSession = useMemo(() => {
+      return sessions?.find(s => s.id === selectedSessionId) || null;
+  }, [sessions, selectedSessionId])
+
+  // --- Data fetching moved up for reuse ---
   const registrationsQuery = useMemoFirebase(
     () => selectedSessionId ? query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', selectedSessionId)) : null,
     [firestore, selectedSessionId]
@@ -46,12 +52,28 @@ export function GradeReportDashboard() {
     [firestore, selectedSessionId]
   );
   const { data: subCommittees, isLoading: isLoadingSubCommittees } = useCollection<DefenseSubCommittee>(subCommitteesQuery);
+  
+  // Fetch all rubrics associated with the session
+  const councilGradRubricDocRef = useMemoFirebase(() => (selectedSession?.councilGraduationRubricId ? doc(firestore, 'rubrics', selectedSession.councilGraduationRubricId) : null), [firestore, selectedSession]);
+  const councilInternRubricDocRef = useMemoFirebase(() => (selectedSession?.councilInternshipRubricId ? doc(firestore, 'rubrics', selectedSession.councilInternshipRubricId) : null), [firestore, selectedSession]);
+  const supervisorGradRubricDocRef = useMemoFirebase(() => (selectedSession?.supervisorGraduationRubricId ? doc(firestore, 'rubrics', selectedSession.supervisorGraduationRubricId) : null), [firestore, selectedSession]);
+  const companyInternRubricDocRef = useMemoFirebase(() => (selectedSession?.companyInternshipRubricId ? doc(firestore, 'rubrics', selectedSession.companyInternshipRubricId) : null), [firestore, selectedSession]);
 
-  const selectedSession = useMemo(() => {
-      return sessions?.find(s => s.id === selectedSessionId) || null;
-  }, [sessions, selectedSessionId])
+  const { data: councilGraduationRubric, isLoading: isLoadingCouncilGradRubric } = useDoc<Rubric>(councilGradRubricDocRef);
+  const { data: councilInternshipRubric, isLoading: isLoadingCouncilInternRubric } = useDoc<Rubric>(councilInternRubricDocRef);
+  const { data: supervisorGraduationRubric, isLoading: isLoadingSupervisorGradRubric } = useDoc<Rubric>(supervisorGradRubricDocRef);
+  const { data: companyInternshipRubric, isLoading: isLoadingCompanyInternRubric } = useDoc<Rubric>(companyInternRubricDocRef);
+  
+  const sessionRubrics = useMemo(() => ({
+    councilGraduation: councilGraduationRubric,
+    councilInternship: councilInternshipRubric,
+    supervisorGraduation: supervisorGraduationRubric,
+    companyInternship: companyInternshipRubric,
+  }), [councilGraduationRubric, councilInternshipRubric, supervisorGraduationRubric, companyInternshipRubric]);
+  
+  // --- End of data fetching ---
 
-  const isLoading = isLoadingRegistrations || isLoadingEvaluations || isLoadingSubCommittees;
+  const isLoading = isLoadingRegistrations || isLoadingEvaluations || isLoadingSubCommittees || isLoadingCouncilGradRubric || isLoadingCouncilInternRubric || isLoadingSupervisorGradRubric || isLoadingCompanyInternRubric;
 
   return (
     <div className="space-y-6">
@@ -84,9 +106,10 @@ export function GradeReportDashboard() {
           <Skeleton className="h-[400px] w-full" />
         ) : (
           <Tabs defaultValue="graduation">
-            <TabsList className="grid w-full grid-cols-2">
+            <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="graduation">Điểm Tốt nghiệp</TabsTrigger>
               <TabsTrigger value="internship">Điểm Thực tập</TabsTrigger>
+              <TabsTrigger value="plo">Điểm theo CĐR</TabsTrigger>
             </TabsList>
             <TabsContent value="graduation">
               <GradeReportTable
@@ -105,6 +128,13 @@ export function GradeReportDashboard() {
                 evaluations={evaluations || []}
                 subCommittees={subCommittees || []}
               />
+            </TabsContent>
+            <TabsContent value="plo">
+               <GradeReportPloTable 
+                 registrations={registrations || []}
+                 evaluations={evaluations || []}
+                 rubrics={sessionRubrics}
+               />
             </TabsContent>
           </Tabs>
         )
