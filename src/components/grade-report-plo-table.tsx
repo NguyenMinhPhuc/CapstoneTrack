@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -145,6 +146,64 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
   
   const allClos = headers.flatMap(h => h.clos);
 
+  const exportToExcel = () => {
+    const reportName = reportType === 'graduation' ? 'TotNghiep' : 'ThucTap';
+    const fileName = `BangDiem_CDR_${reportName}.xlsx`;
+
+    // Create header rows
+    const headerRow1: any[] = [{ v: 'STT', s: { font: { bold: true }}}, { v: 'MSSV', s: { font: { bold: true }}}, { v: 'Họ và Tên', s: { font: { bold: true }}}];
+    const headerRow2: any[] = [null, null, null];
+    const merges: XLSX.Range[] = [];
+
+    let colIndex = 3;
+    headers.forEach(header => {
+      if (header.clos.length > 0) {
+        headerRow1[colIndex] = { v: header.pi, s: { font: { bold: true }, alignment: { horizontal: 'center' }}};
+        merges.push({ s: { r: 0, c: colIndex }, e: { r: 0, c: colIndex + header.clos.length - 1 }});
+        header.clos.forEach(clo => {
+          headerRow1[colIndex + 1] = null; // Placeholder for merge
+          headerRow2[colIndex] = { v: clo, s: { font: { bold: true }}};
+          colIndex++;
+        });
+      }
+    });
+
+    // Create data rows
+    const dataRows = filteredData.map((item, index) => {
+        const row = [index + 1, item.studentId, item.studentName];
+        headers.forEach(header => {
+            header.clos.forEach(clo => {
+                const score = item[clo];
+                row.push(score !== undefined && score !== null ? score.toFixed(2) : '-');
+            })
+        })
+        return row;
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet([headerRow1, headerRow2, ...dataRows]);
+    worksheet['!merges'] = merges;
+    
+    // Set column widths (optional but good for readability)
+    const colWidths = [
+      { wch: 5 }, // STT
+      { wch: 12 }, // MSSV
+      { wch: 25 }, // Họ và Tên
+    ];
+     headers.forEach(header => {
+        header.clos.forEach(() => {
+          colWidths.push({ wch: 10 }); // Width for CLO columns
+        });
+      });
+    worksheet['!cols'] = colWidths;
+
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Diem_CDR');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, fileName);
+  };
+
   return (
     <Card className="mt-4">
       <CardHeader>
@@ -166,7 +225,7 @@ export function GradeReportPloTable({ reportType, registrations, evaluations, ru
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="w-full sm:w-auto" disabled>
+            <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto" disabled={headers.length === 0}>
               <FileDown className="mr-2 h-4 w-4" />
               Xuất Excel
             </Button>
