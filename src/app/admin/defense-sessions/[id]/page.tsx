@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
@@ -86,26 +87,35 @@ export default function DefenseSessionDetailPage() {
     });
   }, [registrations, allStudents]);
 
-  const stats = useMemo(() => {
+ const stats = useMemo(() => {
     if (!combinedRegistrationData) {
       return { 
           studentCount: 0, 
           supervisorCount: 0, 
           projectCount: 0,
-          reportingCount: 0,
-          exemptedCount: 0,
-          withdrawnCount: 0,
+          reportingGraduationCount: 0,
+          reportingInternshipCount: 0,
+          exemptedGraduationCount: 0,
+          withdrawnGraduationCount: 0,
+          withdrawnInternshipCount: 0,
           supervisorDetails: [],
-          withdrawnStudents: [],
-          exemptedStudents: [],
+          withdrawnStudents: [], // This can be refined later if needed
+          exemptedStudents: [], // This can be refined later if needed
        };
     }
+
     const studentCount = combinedRegistrationData.length;
-    const reportingCount = combinedRegistrationData.filter(r => r.registrationStatus === 'reporting').length;
-    const exemptedCount = combinedRegistrationData.filter(r => r.registrationStatus === 'exempted').length;
-    const withdrawnCount = combinedRegistrationData.filter(r => r.registrationStatus === 'withdrawn').length;
-    const withdrawnStudents = combinedRegistrationData.filter(r => r.registrationStatus === 'withdrawn');
-    const exemptedStudents = combinedRegistrationData.filter(r => r.registrationStatus === 'exempted');
+    const reportingGraduationCount = combinedRegistrationData.filter(r => r.graduationStatus === 'reporting').length;
+    const exemptedGraduationCount = combinedRegistrationData.filter(r => r.graduationStatus === 'exempted').length;
+    const withdrawnGraduationCount = combinedRegistrationData.filter(r => r.graduationStatus === 'withdrawn').length;
+    
+    const reportingInternshipCount = combinedRegistrationData.filter(r => r.internshipStatus === 'reporting').length;
+    const withdrawnInternshipCount = combinedRegistrationData.filter(r => r.internshipStatus === 'withdrawn').length;
+
+    // For dialogs: you might want to specify which list to show
+    const withdrawnStudents = combinedRegistrationData.filter(r => r.graduationStatus === 'withdrawn' || r.internshipStatus === 'withdrawn');
+    const exemptedStudents = combinedRegistrationData.filter(r => r.graduationStatus === 'exempted');
+
 
     const supervisorMap = new Map<string, { projects: Set<string>, studentCount: number }>();
     combinedRegistrationData.forEach(reg => {
@@ -129,14 +139,15 @@ export default function DefenseSessionDetailPage() {
     
     const projectCount = new Set(combinedRegistrationData.filter(r => r.projectTitle).map(r => r.projectTitle)).size;
 
-
     return {
       studentCount,
       supervisorCount: supervisorMap.size,
       projectCount,
-      reportingCount,
-      exemptedCount,
-      withdrawnCount,
+      reportingGraduationCount,
+      reportingInternshipCount,
+      exemptedGraduationCount,
+      withdrawnGraduationCount,
+      withdrawnInternshipCount,
       supervisorDetails,
       withdrawnStudents,
       exemptedStudents,
@@ -287,44 +298,62 @@ export default function DefenseSessionDetailPage() {
             <CardContent>
                 <div className="text-2xl font-bold">{stats.studentCount}</div>
                 <p className="text-xs text-muted-foreground">Tổng số sinh viên đã đăng ký</p>
-                <div className="mt-4 space-y-2 text-sm">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <FileCheck2 className="h-4 w-4 text-green-500" />
-                            <span>Báo cáo</span>
+                <div className="mt-4 space-y-4 text-sm">
+                    <div>
+                        <h4 className="font-semibold flex items-center gap-2 mb-2"><GraduationCap className="h-4 w-4" /> Tốt nghiệp</h4>
+                        <div className="space-y-1 pl-6">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2 text-muted-foreground"><FileCheck2 className="h-4 w-4" /> Báo cáo TN</div>
+                                <span className="font-semibold">{stats.reportingGraduationCount}</span>
+                            </div>
+                            <Dialog open={isExemptedDialogOpen} onOpenChange={setIsExemptedDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                         <div className="flex items-center gap-2 text-muted-foreground"><Star className="h-4 w-4" /> Đặc cách TN</div>
+                                        <span className="font-semibold">{stats.exemptedGraduationCount}</span>
+                                    </div>
+                                </DialogTrigger>
+                                <ExemptedStudentsDialog
+                                    students={stats.exemptedStudents}
+                                    onFinished={() => setIsExemptedDialogOpen(false)}
+                                />
+                            </Dialog>
+                             <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                        <div className="flex items-center gap-2 text-muted-foreground"><XCircle className="h-4 w-4" /> Bỏ báo cáo TN</div>
+                                        <span className="font-semibold">{stats.withdrawnGraduationCount}</span>
+                                    </div>
+                                 </DialogTrigger>
+                                <WithdrawnStudentsDialog
+                                    students={stats.withdrawnStudents}
+                                    onFinished={() => setIsWithdrawnDialogOpen(false)}
+                                />
+                            </Dialog>
                         </div>
-                        <span className="font-semibold">{stats.reportingCount}</span>
                     </div>
-                    <Dialog open={isExemptedDialogOpen} onOpenChange={setIsExemptedDialogOpen}>
-                        <DialogTrigger asChild>
-                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
-                                <div className="flex items-center gap-2">
-                                    <Star className="h-4 w-4 text-yellow-500" />
-                                    <span>Đặc cách</span>
-                                </div>
-                                <span className="font-semibold">{stats.exemptedCount}</span>
+                     <Separator />
+                     <div>
+                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Briefcase className="h-4 w-4" /> Thực tập</h4>
+                         <div className="space-y-1 pl-6">
+                            <div className="flex items-center justify-between">
+                                 <div className="flex items-center gap-2 text-muted-foreground"><FileCheck2 className="h-4 w-4" /> Báo cáo TT</div>
+                                <span className="font-semibold">{stats.reportingInternshipCount}</span>
                             </div>
-                        </DialogTrigger>
-                        <ExemptedStudentsDialog
-                            students={stats.exemptedStudents}
-                            onFinished={() => setIsExemptedDialogOpen(false)}
-                        />
-                    </Dialog>
-                    <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
-                        <DialogTrigger asChild>
-                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
-                                <div className="flex items-center gap-2">
-                                    <XCircle className="h-4 w-4 text-red-500" />
-                                    <span>Bỏ báo cáo</span>
-                                </div>
-                                <span className="font-semibold">{stats.withdrawnCount}</span>
-                            </div>
-                        </DialogTrigger>
-                        <WithdrawnStudentsDialog
-                            students={stats.withdrawnStudents}
-                            onFinished={() => setIsWithdrawnDialogOpen(false)}
-                        />
-                    </Dialog>
+                             <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
+                                <DialogTrigger asChild>
+                                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                        <div className="flex items-center gap-2 text-muted-foreground"><XCircle className="h-4 w-4" /> Bỏ báo cáo TT</div>
+                                        <span className="font-semibold">{stats.withdrawnInternshipCount}</span>
+                                    </div>
+                                 </DialogTrigger>
+                                <WithdrawnStudentsDialog
+                                    students={stats.withdrawnStudents}
+                                    onFinished={() => setIsWithdrawnDialogOpen(false)}
+                                />
+                            </Dialog>
+                        </div>
+                    </div>
                 </div>
             </CardContent>
           </Card>
@@ -372,3 +401,4 @@ export default function DefenseSessionDetailPage() {
     </main>
   );
 }
+
