@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
-import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck, GraduationCap, Briefcase, Building } from 'lucide-react';
+import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck, GraduationCap, Briefcase, Building, ChevronDown, ChevronUp } from 'lucide-react';
 import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails, type Rubric } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { WithdrawnStudentsDialog } from '@/components/withdrawn-students-dialog'
 import { ExemptedStudentsDialog } from '@/components/exempted-students-dialog';
 import { ExportReportButton } from '@/components/export-report-button';
 import { Separator } from '@/components/ui/separator';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 
 export default function DefenseSessionDetailPage() {
@@ -30,6 +31,7 @@ export default function DefenseSessionDetailPage() {
   const firestore = useFirestore();
   const [isWithdrawnDialogOpen, setIsWithdrawnDialogOpen] = useState(false);
   const [isExemptedDialogOpen, setIsExemptedDialogOpen] = useState(false);
+  const [isStatsOpen, setIsStatsOpen] = useState(true);
   
   const sessionId = params.id as string;
 
@@ -292,120 +294,130 @@ export default function DefenseSessionDetailPage() {
             </CardContent>
         </Card>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Số sinh viên</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-                <div className="text-2xl font-bold">{stats.studentCount}</div>
-                <p className="text-xs text-muted-foreground">Tổng số sinh viên đã đăng ký</p>
-                <div className="mt-4 space-y-4 text-sm">
-                    <div>
-                        <h4 className="font-semibold flex items-center gap-2 mb-2"><GraduationCap className="h-4 w-4" /> Tốt nghiệp</h4>
-                        <div className="space-y-1 pl-6">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-2 text-muted-foreground"><FileCheck2 className="h-4 w-4" /> Báo cáo TN</div>
-                                <span className="font-semibold">{stats.reportingGraduationCount}</span>
+        <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen}>
+            <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 text-xl font-semibold w-full">
+                    {isStatsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    Thống kê tổng quan
+                </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-4">
+                <div className="grid gap-4 md:grid-cols-3">
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Số sinh viên</CardTitle>
+                      <Users className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{stats.studentCount}</div>
+                        <p className="text-xs text-muted-foreground">Tổng số sinh viên đã đăng ký</p>
+                        <div className="mt-4 space-y-4 text-sm">
+                            <div>
+                                <h4 className="font-semibold flex items-center gap-2 mb-2"><GraduationCap className="h-4 w-4" /> Tốt nghiệp</h4>
+                                <div className="space-y-1 pl-6">
+                                    <div className="flex items-center justify-between">
+                                        <div className="flex items-center gap-2 text-muted-foreground"><FileCheck2 className="h-4 w-4" /> Báo cáo TN</div>
+                                        <span className="font-semibold">{stats.reportingGraduationCount}</span>
+                                    </div>
+                                    <Dialog open={isExemptedDialogOpen} onOpenChange={setIsExemptedDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                                 <div className="flex items-center gap-2 text-muted-foreground"><Star className="h-4 w-4" /> Đặc cách TN</div>
+                                                <span className="font-semibold">{stats.exemptedGraduationCount}</span>
+                                            </div>
+                                        </DialogTrigger>
+                                        <ExemptedStudentsDialog
+                                            students={stats.exemptedStudents}
+                                            onFinished={() => setIsExemptedDialogOpen(false)}
+                                        />
+                                    </Dialog>
+                                     <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                                <div className="flex items-center gap-2 text-muted-foreground"><XCircle className="h-4 w-4" /> Bỏ báo cáo TN</div>
+                                                <span className="font-semibold">{stats.withdrawnGraduationCount}</span>
+                                            </div>
+                                         </DialogTrigger>
+                                        <WithdrawnStudentsDialog
+                                            students={stats.withdrawnStudents}
+                                            onFinished={() => setIsWithdrawnDialogOpen(false)}
+                                        />
+                                    </Dialog>
+                                </div>
                             </div>
-                            <Dialog open={isExemptedDialogOpen} onOpenChange={setIsExemptedDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
-                                         <div className="flex items-center gap-2 text-muted-foreground"><Star className="h-4 w-4" /> Đặc cách TN</div>
-                                        <span className="font-semibold">{stats.exemptedGraduationCount}</span>
+                             <Separator />
+                             <div>
+                                <h4 className="font-semibold flex items-center gap-2 mb-2"><Briefcase className="h-4 w-4" /> Thực tập</h4>
+                                 <div className="space-y-1 pl-6">
+                                    <div className="flex items-center justify-between">
+                                         <div className="flex items-center gap-2 text-muted-foreground"><FileCheck2 className="h-4 w-4" /> Báo cáo TT</div>
+                                        <span className="font-semibold">{stats.reportingInternshipCount}</span>
                                     </div>
-                                </DialogTrigger>
-                                <ExemptedStudentsDialog
-                                    students={stats.exemptedStudents}
-                                    onFinished={() => setIsExemptedDialogOpen(false)}
-                                />
-                            </Dialog>
-                             <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
-                                        <div className="flex items-center gap-2 text-muted-foreground"><XCircle className="h-4 w-4" /> Bỏ báo cáo TN</div>
-                                        <span className="font-semibold">{stats.withdrawnGraduationCount}</span>
-                                    </div>
-                                 </DialogTrigger>
-                                <WithdrawnStudentsDialog
-                                    students={stats.withdrawnStudents}
-                                    onFinished={() => setIsWithdrawnDialogOpen(false)}
-                                />
-                            </Dialog>
-                        </div>
-                    </div>
-                     <Separator />
-                     <div>
-                        <h4 className="font-semibold flex items-center gap-2 mb-2"><Briefcase className="h-4 w-4" /> Thực tập</h4>
-                         <div className="space-y-1 pl-6">
-                            <div className="flex items-center justify-between">
-                                 <div className="flex items-center gap-2 text-muted-foreground"><FileCheck2 className="h-4 w-4" /> Báo cáo TT</div>
-                                <span className="font-semibold">{stats.reportingInternshipCount}</span>
+                                     <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
+                                        <DialogTrigger asChild>
+                                            <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
+                                                <div className="flex items-center gap-2 text-muted-foreground"><XCircle className="h-4 w-4" /> Bỏ báo cáo TT</div>
+                                                <span className="font-semibold">{stats.withdrawnInternshipCount}</span>
+                                            </div>
+                                         </DialogTrigger>
+                                        <WithdrawnStudentsDialog
+                                            students={stats.withdrawnStudents}
+                                            onFinished={() => setIsWithdrawnDialogOpen(false)}
+                                        />
+                                    </Dialog>
+                                </div>
                             </div>
-                             <Dialog open={isWithdrawnDialogOpen} onOpenChange={setIsWithdrawnDialogOpen}>
-                                <DialogTrigger asChild>
-                                    <div className="flex items-center justify-between cursor-pointer hover:bg-muted/50 rounded-md -mx-2 px-2 py-1">
-                                        <div className="flex items-center gap-2 text-muted-foreground"><XCircle className="h-4 w-4" /> Bỏ báo cáo TT</div>
-                                        <span className="font-semibold">{stats.withdrawnInternshipCount}</span>
-                                    </div>
-                                 </DialogTrigger>
-                                <WithdrawnStudentsDialog
-                                    students={stats.withdrawnStudents}
-                                    onFinished={() => setIsWithdrawnDialogOpen(false)}
-                                />
-                            </Dialog>
                         </div>
-                    </div>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Số GVHD ({stats.supervisorCount})</CardTitle>
+                      <UserCheck className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <ScrollArea className="h-40">
+                        <div className="space-y-4">
+                          {stats.supervisorDetails.length > 0 ? stats.supervisorDetails.map(sv => (
+                            <div key={sv.name} className="text-sm">
+                              <p className="font-semibold truncate">{sv.name}</p>
+                              <div className="flex justify-between text-xs text-muted-foreground">
+                                <span>{sv.projectCount} đề tài</span>
+                                <span>{sv.studentCount} sinh viên</span>
+                              </div>
+                            </div>
+                          )) : (
+                            <p className="text-sm text-muted-foreground text-center py-4">Chưa có GVHD nào.</p>
+                          )}
+                        </div>
+                      </ScrollArea>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-sm font-medium">Thống kê Đề tài & Thực tập</CardTitle>
+                      <FileText className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <FileText className="h-4 w-4" />
+                                <span>Số đề tài</span>
+                            </div>
+                            <div className="text-2xl font-bold">{stats.projectCount}</div>
+                        </div>
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                                <Building className="h-4 w-4" />
+                                <span>Số công ty thực tập</span>
+                            </div>
+                            <div className="text-2xl font-bold">{stats.internshipCompanyCount}</div>
+                        </div>
+                    </CardContent>
+                  </Card>
                 </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Số GVHD ({stats.supervisorCount})</CardTitle>
-              <UserCheck className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-40">
-                <div className="space-y-4">
-                  {stats.supervisorDetails.length > 0 ? stats.supervisorDetails.map(sv => (
-                    <div key={sv.name} className="text-sm">
-                      <p className="font-semibold truncate">{sv.name}</p>
-                      <div className="flex justify-between text-xs text-muted-foreground">
-                        <span>{sv.projectCount} đề tài</span>
-                        <span>{sv.studentCount} sinh viên</span>
-                      </div>
-                    </div>
-                  )) : (
-                    <p className="text-sm text-muted-foreground text-center py-4">Chưa có GVHD nào.</p>
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Thống kê Đề tài & Thực tập</CardTitle>
-              <FileText className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <FileText className="h-4 w-4" />
-                        <span>Số đề tài</span>
-                    </div>
-                    <div className="text-2xl font-bold">{stats.projectCount}</div>
-                </div>
-                <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                        <Building className="h-4 w-4" />
-                        <span>Số công ty thực tập</span>
-                    </div>
-                    <div className="text-2xl font-bold">{stats.internshipCompanyCount}</div>
-                </div>
-            </CardContent>
-          </Card>
-        </div>
+            </CollapsibleContent>
+        </Collapsible>
 
         <StudentRegistrationTable 
             sessionId={sessionId} 
