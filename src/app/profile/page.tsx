@@ -1,5 +1,6 @@
 'use client';
 
+import { ChangePasswordForm } from '@/components/change-password-form';
 import { ProfileForm } from '@/components/profile-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -38,7 +39,7 @@ export default function ProfilePage() {
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto space-y-8">
         <Card>
           <CardHeader>
             <CardTitle>Hồ sơ cá nhân</CardTitle>
@@ -48,6 +49,17 @@ export default function ProfilePage() {
           </CardHeader>
           <CardContent>
             <ProfileForm user={user} userData={userData} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Đổi mật khẩu</CardTitle>
+            <CardDescription>
+                Để bảo mật, vui lòng không chia sẻ mật khẩu của bạn cho bất kỳ ai.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             <ChangePasswordForm />
           </CardContent>
         </Card>
       </div>
