@@ -39,17 +39,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuCheckboxItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2 } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, StudentWithRegistrationDetails, Student, DefenseSubCommittee } from '@/lib/types';
+import type { DefenseRegistration, StudentWithRegistrationDetails, DefenseSubCommittee } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
@@ -57,7 +55,6 @@ import { EditStudentRegistrationForm } from './edit-student-registration-form';
 import { Input } from './ui/input';
 import { AddStudentsByClassDialog } from './add-students-by-class-dialog';
 import { Badge } from './ui/badge';
-import { cn } from '@/lib/utils';
 import { Checkbox } from './ui/checkbox';
 import { MoveRegistrationsDialog } from './move-registrations-dialog';
 import { EditGroupRegistrationForm } from './edit-group-registration-form';
@@ -440,86 +437,51 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 )}
             </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-              <div className="flex w-full sm:w-auto gap-2">
-                <div className="relative w-full sm:w-auto">
+              <div className="flex w-full sm:w-auto flex-wrap gap-2">
+                <div className="relative w-full sm:w-auto flex-grow">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                       type="search"
                       placeholder="Tìm theo tên hoặc MSSV..."
-                      className="pl-8 w-full sm:w-48"
+                      className="pl-8 w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
-                 <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
-                            <ListFilter className="h-3.5 w-3.5" />
-                            <span className="sr-only sm:not-sr-only">Lọc</span>
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Lọc theo Tiểu ban</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                            checked={subcommitteeFilter === 'all'}
-                            onCheckedChange={() => setSubcommitteeFilter('all')}
-                        >
-                            Tất cả tiểu ban
-                        </DropdownMenuCheckboxItem>
-                        <DropdownMenuCheckboxItem
-                            checked={subcommitteeFilter === UNASSIGNED_VALUE}
-                            onCheckedChange={() => setSubcommitteeFilter(UNASSIGNED_VALUE)}
-                        >
-                            Chưa phân công
-                        </DropdownMenuCheckboxItem>
+                 <Select value={subcommitteeFilter} onValueChange={setSubcommitteeFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Lọc theo tiểu ban" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả tiểu ban</SelectItem>
+                        <SelectItem value={UNASSIGNED_VALUE}>Chưa phân công</SelectItem>
                         {subCommittees?.map(sc => (
-                             <DropdownMenuCheckboxItem
-                                key={sc.id}
-                                checked={subcommitteeFilter === sc.id}
-                                onCheckedChange={() => setSubcommitteeFilter(sc.id)}
-                            >
-                                {sc.name}
-                            </DropdownMenuCheckboxItem>
+                            <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>
                         ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Lọc theo GVHD</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                            checked={supervisorFilter === 'all'}
-                            onCheckedChange={() => setSupervisorFilter('all')}
-                        >
-                            Tất cả GVHD
-                        </DropdownMenuCheckboxItem>
+                    </SelectContent>
+                 </Select>
+                 <Select value={supervisorFilter} onValueChange={setSupervisorFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Lọc theo GVHD" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả GVHD</SelectItem>
                         {uniqueSupervisors.map(supervisor => (
-                            <DropdownMenuCheckboxItem
-                                key={supervisor}
-                                checked={supervisorFilter === supervisor}
-                                onCheckedChange={() => setSupervisorFilter(supervisor)}
-                            >
-                                {supervisor}
-                            </DropdownMenuCheckboxItem>
+                            <SelectItem key={supervisor} value={supervisor}>{supervisor}</SelectItem>
                         ))}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuLabel>Lọc theo trạng thái</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuCheckboxItem
-                            checked={statusFilter === 'all'}
-                            onCheckedChange={() => setStatusFilter('all')}
-                        >
-                            Tất cả
-                        </DropdownMenuCheckboxItem>
+                    </SelectContent>
+                 </Select>
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-full sm:w-[180px]">
+                        <SelectValue placeholder="Lọc theo trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả trạng thái</SelectItem>
                         {Object.entries(registrationStatusLabel).map(([key, label]) => (
-                             <DropdownMenuCheckboxItem
-                                key={key}
-                                checked={statusFilter === key}
-                                onCheckedChange={() => setStatusFilter(key)}
-                            >
-                                {label}
-                            </DropdownMenuCheckboxItem>
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
                         ))}
-                    </DropdownMenuContent>
-                </DropdownMenu>
+                    </SelectContent>
+                 </Select>
               </div>
               <div className="flex w-full sm:w-auto gap-2">
                   <Dialog open={isAssignSubcommitteeDialogOpen} onOpenChange={setIsAssignSubcommitteeDialogOpen}>
