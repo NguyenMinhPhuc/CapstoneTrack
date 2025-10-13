@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -21,9 +20,11 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileDown } from 'lucide-react';
+import { Search, FileDown, Copy } from 'lucide-react';
 import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
+import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
+import { CopyEvaluationDialog } from './copy-evaluation-dialog';
 
 interface CouncilScore {
     role: string;
@@ -73,6 +74,9 @@ const roleDisplayNames: Record<SubCommitteeMember['role'], string> = {
 
 export function GradeReportTable({ reportType, session, registrations, evaluations, subCommittees }: GradeReportTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+
 
   const processedData = useMemo(() => {
     if (!session) return [];
@@ -241,6 +245,15 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
     saveAs(blob, fileName);
   };
+  
+  const openCopyDialog = (registrationId: string) => {
+    const registration = registrations.find(r => r.id === registrationId);
+    if (registration) {
+        setSelectedRegistration(registration);
+        setIsCopyDialogOpen(true);
+    }
+  }
+
 
   const renderGraduationTable = () => (
     <Table>
@@ -256,6 +269,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             ))}
             <TableHead className="text-center">Điểm TB HĐ</TableHead>
             <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
+            <TableHead className="text-center">Sao chép</TableHead>
         </TableRow>
         </TableHeader>
         <TableBody>
@@ -283,11 +297,16 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 <TableCell className="text-center font-bold text-primary">
                 {item.finalGradScore !== null ? item.finalGradScore.toFixed(2) : '-'}
                 </TableCell>
+                <TableCell className="text-center">
+                    <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
+                        <Copy className="h-4 w-4" />
+                    </Button>
+                </TableCell>
             </TableRow>
             ))
         ) : (
             <TableRow>
-            <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
+            <TableCell colSpan={9 + COUNCIL_ROLES.length} className="text-center h-24">
                 Không có dữ liệu để hiển thị.
             </TableCell>
             </TableRow>
@@ -311,6 +330,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   ))}
                   <TableHead className="text-center">Điểm TB HĐ</TableHead>
                   <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
+                   <TableHead className="text-center">Sao chép</TableHead>
               </TableRow>
           </TableHeader>
           <TableBody>
@@ -339,11 +359,16 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                           <TableCell className="text-center font-bold text-primary">
                               {item.finalInternScore !== null ? item.finalInternScore.toFixed(2) : '-'}
                           </TableCell>
+                          <TableCell className="text-center">
+                            <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
+                                <Copy className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
                       </TableRow>
                   ))
               ) : (
                   <TableRow>
-                      <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
+                      <TableCell colSpan={9 + COUNCIL_ROLES.length} className="text-center h-24">
                           Không có dữ liệu để hiển thị.
                       </TableCell>
                   </TableRow>
@@ -354,38 +379,54 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
 
   return (
-    <Card className="mt-4">
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle>Bảng điểm chi tiết: {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'}</CardTitle>
-            <CardDescription>
-              Tổng hợp điểm {reportType === 'graduation' ? 'tốt nghiệp' : 'thực tập'} của sinh viên trong đợt báo cáo này.
-            </CardDescription>
-          </div>
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Tìm kiếm..."
-                className="pl-8 w-full sm:w-64"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <>
+        <Card className="mt-4">
+        <CardHeader>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div>
+                <CardTitle>Bảng điểm chi tiết: {reportType === 'graduation' ? 'Tốt nghiệp' : 'Thực tập'}</CardTitle>
+                <CardDescription>
+                Tổng hợp điểm {reportType === 'graduation' ? 'tốt nghiệp' : 'thực tập'} của sinh viên trong đợt báo cáo này.
+                </CardDescription>
             </div>
-            <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
-              <FileDown className="mr-2 h-4 w-4" />
-              Xuất Excel
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        <ScrollArea className="h-[60vh] w-full">
-          {reportType === 'graduation' ? renderGraduationTable() : renderInternshipTable()}
-        </ScrollArea>
-      </CardContent>
-    </Card>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Tìm kiếm..."
+                    className="pl-8 w-full sm:w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+                </div>
+                <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
+                <FileDown className="mr-2 h-4 w-4" />
+                Xuất Excel
+                </Button>
+            </div>
+            </div>
+        </CardHeader>
+        <CardContent>
+            <ScrollArea className="h-[60vh] w-full">
+            {reportType === 'graduation' ? renderGraduationTable() : renderInternshipTable()}
+            </ScrollArea>
+        </CardContent>
+        </Card>
+        <Dialog open={isCopyDialogOpen} onOpenChange={setIsCopyDialogOpen}>
+            <DialogContent>
+                {selectedRegistration && session && (
+                    <CopyEvaluationDialog
+                        registration={selectedRegistration}
+                        session={session}
+                        evaluations={evaluations}
+                        subCommittees={subCommittees}
+                        reportType={reportType}
+                        onFinished={() => setIsCopyDialogOpen(false)}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    </>
   );
 }
