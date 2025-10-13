@@ -128,6 +128,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [searchTerm, setSearchTerm] = useState('');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [subcommitteeFilter, setSubcommitteeFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   
   useEffect(() => {
@@ -166,10 +167,13 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
 
       const supervisorMatch = supervisorFilter === 'all' || reg.supervisorName === supervisorFilter;
       const statusMatch = statusFilter === 'all' || reg.graduationStatus === statusFilter || reg.internshipStatus === statusFilter;
+      const subcommitteeMatch = subcommitteeFilter === 'all' 
+          || (subcommitteeFilter === UNASSIGNED_VALUE && !reg.subCommitteeId)
+          || reg.subCommitteeId === subcommitteeFilter;
 
-      return searchMatch && supervisorMatch && statusMatch;
+      return searchMatch && supervisorMatch && statusMatch && subcommitteeMatch;
     });
-  }, [initialData, searchTerm, supervisorFilter, statusFilter]);
+  }, [initialData, searchTerm, supervisorFilter, statusFilter, subcommitteeFilter]);
 
   const handleSubcommitteeChange = async (registrationId: string, newSubCommitteeId: string) => {
       const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
@@ -455,6 +459,30 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Lọc theo Tiểu ban</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                            checked={subcommitteeFilter === 'all'}
+                            onCheckedChange={() => setSubcommitteeFilter('all')}
+                        >
+                            Tất cả tiểu ban
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                            checked={subcommitteeFilter === UNASSIGNED_VALUE}
+                            onCheckedChange={() => setSubcommitteeFilter(UNASSIGNED_VALUE)}
+                        >
+                            Chưa phân công
+                        </DropdownMenuCheckboxItem>
+                        {subCommittees?.map(sc => (
+                             <DropdownMenuCheckboxItem
+                                key={sc.id}
+                                checked={subcommitteeFilter === sc.id}
+                                onCheckedChange={() => setSubcommitteeFilter(sc.id)}
+                            >
+                                {sc.name}
+                            </DropdownMenuCheckboxItem>
+                        ))}
+                        <DropdownMenuSeparator />
                         <DropdownMenuLabel>Lọc theo GVHD</DropdownMenuLabel>
                         <DropdownMenuSeparator />
                         <DropdownMenuCheckboxItem
