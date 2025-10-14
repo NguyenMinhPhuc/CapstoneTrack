@@ -78,16 +78,16 @@ export default function DefenseSessionDetailPage() {
       return null;
     }
     const studentMap = new Map(allStudents.map(s => [s.id, s]));
-
+    
     return registrations.map(reg => {
-      const studentData = studentMap.get(reg.studentDocId);
-      return {
-        ...reg,
-        status: studentData?.status || 'studying', // Default to 'studying' if not found
-        className: studentData?.className || '', // Add className
-      };
-    });
-  }, [registrations, allStudents]);
+        const studentData = studentMap.get(reg.studentDocId);
+        return {
+            ...reg,
+            status: studentData?.status || 'studying', // Default to 'studying' if not found
+            className: studentData?.className || '', // Add className
+        };
+    }).filter(reg => reg.status === 'studying'); // Only include students with 'studying' status
+}, [registrations, allStudents]);
 
  const stats = useMemo(() => {
     if (!combinedRegistrationData) {
