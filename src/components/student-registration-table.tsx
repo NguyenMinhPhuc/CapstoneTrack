@@ -342,7 +342,9 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       'GVHD TN': reg.supervisorName || 'Chưa có',
       'Tiểu ban': subCommitteeMap.get(reg.subCommitteeId || '') || 'Chưa phân công',
       'Trạng thái TN': registrationStatusLabel[reg.graduationStatus],
+      'Ghi chú TN': reg.graduationStatusNote || '',
       'Trạng thái TT': registrationStatusLabel[reg.internshipStatus],
+      'Ghi chú TT': reg.internshipStatusNote || '',
     }));
 
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
@@ -358,7 +360,9 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       { wch: 25 }, // GVHD TN
       { wch: 20 }, // Tiểu ban
       { wch: 15 }, // Trạng thái TN
+      { wch: 30 }, // Ghi chú TN
       { wch: 15 }, // Trạng thái TT
+      { wch: 30 }, // Ghi chú TT
     ];
 
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
