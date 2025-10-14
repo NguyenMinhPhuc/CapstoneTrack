@@ -16,11 +16,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
-import { doc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Student } from '@/lib/types';
 
@@ -78,40 +78,58 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
 
       // 2. Create 'users' collection document
       const userDocRef = doc(firestore, 'users', user.uid);
-      batch.set(userDocRef, {
+      const userData = {
         id: user.uid,
         email: values.email,
-        role: 'student',
-        status: 'active',
+        role: 'student' as const,
+        status: 'active' as const,
         createdAt: serverTimestamp(),
-      });
+      };
+      batch.set(userDocRef, userData);
+
 
       // 3. Create 'students' collection document
       const studentDocRef = doc(firestore, 'students', user.uid);
-      batch.set(studentDocRef, {
+      const studentData = {
         ...values,
         id: user.uid,
         userId: user.uid,
         enrollmentYear: values.enrollmentYear || null,
         createdAt: serverTimestamp(),
-      });
+      };
+      batch.set(studentDocRef, studentData);
       
-      // Commit the batch
-      await batch.commit();
+      // Commit the batch and handle potential errors
+      batch.commit()
+        .then(() => {
+            toast({
+                title: 'Thành công',
+                description: `Sinh viên ${values.firstName} ${values.lastName} đã được tạo. Mật khẩu tạm thời: ${password}`,
+                duration: 9000,
+            });
+            onFinished();
+        })
+        .catch(error => {
+            console.error("Error committing batch:", error);
+            // Create and emit a contextual error for debugging security rules
+            const contextualError = new FirestorePermissionError({
+                path: 'batch write (users, students)',
+                operation: 'write',
+                requestResourceData: { 
+                    user: { path: userDocRef.path, data: userData },
+                    student: { path: studentDocRef.path, data: studentData }
+                },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
 
-      toast({
-        title: 'Thành công',
-        description: `Sinh viên ${values.firstName} ${values.lastName} đã được tạo. Mật khẩu tạm thời: ${password}`,
-        duration: 9000, // Make toast last longer to show password
-      });
-      onFinished();
-    } catch (error: any) {
-      console.error("Error creating student:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: error.code === 'auth/email-already-in-use' ? 'Email này đã được sử dụng.' : `Không thể tạo sinh viên: ${error.message}`,
-      });
+    } catch (authError: any) {
+        console.error("Error creating student auth user:", authError);
+        toast({
+            variant: 'destructive',
+            title: 'Lỗi tạo tài khoản',
+            description: authError.code === 'auth/email-already-in-use' ? 'Email này đã được sử dụng.' : `Không thể tạo tài khoản: ${authError.message}`,
+        });
     } finally {
         if (tempAuth.currentUser) {
             await signOut(tempAuth);
