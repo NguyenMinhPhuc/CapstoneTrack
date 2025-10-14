@@ -33,9 +33,9 @@ import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
 
 const formSchema = z.object({
-  exemptionDecisionNumber: z.string().min(1, { message: 'Số quyết định là bắt buộc.' }),
-  exemptionDecisionDate: z.date({ required_error: 'Ngày quyết định là bắt buộc.' }),
-  exemptionProofLink: z.string().url({ message: 'Vui lòng nhập URL hợp lệ.' }).optional().or(z.literal('')),
+  graduationExemptionDecisionNumber: z.string().min(1, { message: 'Số quyết định là bắt buộc.' }),
+  graduationExemptionDecisionDate: z.date({ required_error: 'Ngày quyết định là bắt buộc.' }),
+  graduationExemptionProofLink: z.string().url({ message: 'Vui lòng nhập URL hợp lệ.' }).optional().or(z.literal('')),
 });
 
 interface SpecialExemptionFormProps {
@@ -50,8 +50,8 @@ export function SpecialExemptionForm({ registrations, onFinished }: SpecialExemp
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      exemptionDecisionNumber: '',
-      exemptionProofLink: '',
+      graduationExemptionDecisionNumber: '',
+      graduationExemptionProofLink: '',
     },
   });
 
@@ -69,7 +69,7 @@ export function SpecialExemptionForm({ registrations, onFinished }: SpecialExemp
     
     const dataToUpdate = {
         ...values,
-        registrationStatus: 'exempted' as const,
+        graduationStatus: 'exempted' as const,
     };
 
     registrations.forEach(reg => {
@@ -117,7 +117,7 @@ export function SpecialExemptionForm({ registrations, onFinished }: SpecialExemp
                 </div>
                 <FormField
                 control={form.control}
-                name="exemptionDecisionNumber"
+                name="graduationExemptionDecisionNumber"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Số quyết định</FormLabel>
@@ -130,7 +130,7 @@ export function SpecialExemptionForm({ registrations, onFinished }: SpecialExemp
                 />
                  <FormField
                     control={form.control}
-                    name="exemptionDecisionDate"
+                    name="graduationExemptionDecisionDate"
                     render={({ field }) => (
                         <FormItem className="flex flex-col">
                         <FormLabel>Ngày quyết định</FormLabel>
@@ -169,7 +169,7 @@ export function SpecialExemptionForm({ registrations, onFinished }: SpecialExemp
                 />
                 <FormField
                 control={form.control}
-                name="exemptionProofLink"
+                name="graduationExemptionProofLink"
                 render={({ field }) => (
                     <FormItem>
                     <FormLabel>Link minh chứng (tùy chọn)</FormLabel>
