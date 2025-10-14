@@ -2,6 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Table,
   TableBody,
@@ -44,7 +46,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2, FileDown } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, DefenseSubCommittee } from '@/lib/types';
@@ -331,6 +333,39 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     setSelectedRowIds([]);
   };
 
+  const exportToExcel = () => {
+    const dataToExport = filteredRegistrations.map((reg, index) => ({
+      'STT': index + 1,
+      'MSSV': reg.studentId,
+      'Họ và Tên': reg.studentName,
+      'Tên đề tài': reg.projectTitle || 'Chưa có',
+      'GVHD TN': reg.supervisorName || 'Chưa có',
+      'Tiểu ban': subCommitteeMap.get(reg.subCommitteeId || '') || 'Chưa phân công',
+      'Trạng thái TN': registrationStatusLabel[reg.graduationStatus],
+      'Trạng thái TT': registrationStatusLabel[reg.internshipStatus],
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachSV');
+
+    // Set column widths
+    worksheet['!cols'] = [
+      { wch: 5 }, // STT
+      { wch: 15 }, // MSSV
+      { wch: 25 }, // Họ và Tên
+      { wch: 40 }, // Tên đề tài
+      { wch: 25 }, // GVHD TN
+      { wch: 20 }, // Tiểu ban
+      { wch: 15 }, // Trạng thái TN
+      { wch: 15 }, // Trạng thái TT
+    ];
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(data, `Danh_sach_sinh_vien_dot_${sessionId}.xlsx`);
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -484,6 +519,10 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                  </Select>
               </div>
               <div className="flex w-full sm:w-auto gap-2">
+                  <Button variant="outline" className="w-full" onClick={exportToExcel}>
+                      <FileDown className="mr-2 h-4 w-4" />
+                      Xuất Excel
+                  </Button>
                   <Dialog open={isAssignSubcommitteeDialogOpen} onOpenChange={setIsAssignSubcommitteeDialogOpen}>
                       <DialogTrigger asChild>
                           <Button variant="outline" className="w-full">
