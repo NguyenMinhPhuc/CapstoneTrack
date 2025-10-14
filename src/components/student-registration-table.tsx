@@ -46,7 +46,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2, FileDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2, FileDown, ArrowUpDown } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, StudentWithRegistrationDetails, DefenseSubCommittee } from '@/lib/types';
@@ -85,6 +85,9 @@ interface StudentRegistrationTableProps {
   initialData: StudentWithRegistrationDetails[] | null;
   isLoading: boolean;
 }
+
+type SortKey = 'studentName' | 'projectTitle' | 'supervisorName' | 'internshipSupervisorName' | 'subCommitteeName';
+type SortDirection = 'asc' | 'desc';
 
 type ReportStatusType = 'graduationStatus' | 'internshipStatus';
 
@@ -129,6 +132,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [subcommitteeFilter, setSubcommitteeFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   
   useEffect(() => {
     setSelectedRowIds([]);
@@ -156,9 +160,10 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     return Array.from(supervisorSet).sort();
   }, [initialData]);
 
-  const filteredRegistrations = useMemo(() => {
+  const sortedAndFilteredRegistrations = useMemo(() => {
     if (!initialData) return [];
-    return initialData.filter(reg => {
+    
+    let filtered = initialData.filter(reg => {
       const term = searchTerm.toLowerCase();
       const nameMatch = reg.studentName.toLowerCase().includes(term);
       const idMatch = reg.studentId.toLowerCase().includes(term);
@@ -166,13 +171,59 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
 
       const supervisorMatch = supervisorFilter === 'all' || reg.supervisorName === supervisorFilter;
       const statusMatch = statusFilter === 'all' || reg.graduationStatus === statusFilter || reg.internshipStatus === statusFilter;
+      
+      const subcommitteeName = subCommitteeMap.get(reg.subCommitteeId || '') || '';
       const subcommitteeMatch = subcommitteeFilter === 'all' 
           || (subcommitteeFilter === UNASSIGNED_VALUE && !reg.subCommitteeId)
           || reg.subCommitteeId === subcommitteeFilter;
 
       return searchMatch && supervisorMatch && statusMatch && subcommitteeMatch;
     });
-  }, [initialData, searchTerm, supervisorFilter, statusFilter, subcommitteeFilter]);
+
+    if (sortConfig !== null) {
+      filtered.sort((a, b) => {
+        let aValue: string | undefined;
+        let bValue: string | undefined;
+        
+        if (sortConfig.key === 'subCommitteeName') {
+            aValue = subCommitteeMap.get(a.subCommitteeId || '');
+            bValue = subCommitteeMap.get(b.subCommitteeId || '');
+        } else {
+            aValue = a[sortConfig.key];
+            bValue = b[sortConfig.key];
+        }
+
+        aValue = aValue || '';
+        bValue = bValue || '';
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    return filtered;
+
+  }, [initialData, searchTerm, supervisorFilter, statusFilter, subcommitteeFilter, sortConfig, subCommitteeMap]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+    }
+    return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
 
   const handleSubcommitteeChange = async (registrationId: string, newSubCommitteeId: string) => {
       const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
@@ -309,7 +360,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-        setSelectedRowIds(filteredRegistrations?.map(s => s.id) || []);
+        setSelectedRowIds(sortedAndFilteredRegistrations?.map(s => s.id) || []);
     } else {
         setSelectedRowIds([]);
     }
@@ -334,7 +385,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
   };
 
   const exportToExcel = () => {
-    const dataToExport = filteredRegistrations.map((reg, index) => ({
+    const dataToExport = sortedAndFilteredRegistrations.map((reg, index) => ({
       'STT': index + 1,
       'MSSV': reg.studentId,
       'Họ và Tên': reg.studentName,
@@ -391,8 +442,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     );
   }
 
-  const isAllSelected = filteredRegistrations && selectedRowIds.length > 0 && selectedRowIds.length === filteredRegistrations.length;
-  const isSomeSelected = selectedRowIds.length > 0 && (!filteredRegistrations || selectedRowIds.length < filteredRegistrations.length);
+  const isAllSelected = sortedAndFilteredRegistrations && selectedRowIds.length > 0 && selectedRowIds.length === sortedAndFilteredRegistrations.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!sortedAndFilteredRegistrations || selectedRowIds.length < sortedAndFilteredRegistrations.length);
 
   return (
     <>
@@ -584,18 +635,38 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                     />
                 </TableHead>
                 <TableHead>STT</TableHead>
-                <TableHead>Tên sinh viên</TableHead>
-                <TableHead>Tên đề tài</TableHead>
-                <TableHead>GVHD TN</TableHead>
-                <TableHead>GVHD TT</TableHead>
-                <TableHead>Tiểu ban</TableHead>
+                 <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0">
+                        Tên sinh viên {getSortIcon('studentName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('projectTitle')} className="px-0 text-left">
+                        Tên đề tài {getSortIcon('projectTitle')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('supervisorName')} className="px-0">
+                        GVHD TN {getSortIcon('supervisorName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('internshipSupervisorName')} className="px-0">
+                        GVHD TT {getSortIcon('internshipSupervisorName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0">
+                        Tiểu ban {getSortIcon('subCommitteeName')}
+                    </Button>
+                </TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredRegistrations && filteredRegistrations.length > 0 ? (
-                filteredRegistrations.map((reg, index) => (
+              {sortedAndFilteredRegistrations && sortedAndFilteredRegistrations.length > 0 ? (
+                sortedAndFilteredRegistrations.map((reg, index) => (
                   <TableRow key={reg.id} data-state={selectedRowIds.includes(reg.id) && "selected"}>
                     <TableCell>
                         <Checkbox
