@@ -190,4 +190,7 @@ export type Evaluation = {
 export type SystemSettings = {
     id: string;
     enableOverallGrading?: boolean;
+    allowStudentRegistration?: boolean;
 }
+
+    

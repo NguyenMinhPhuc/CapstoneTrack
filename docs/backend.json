@@ -533,6 +533,10 @@
         "enableOverallGrading": {
           "type": "boolean",
           "description": "If true, allows graders to input an overall score which is then distributed among criteria."
+        },
+        "allowStudentRegistration": {
+          "type": "boolean",
+          "description": "If true, allows new students to register for an account."
         }
       }
     }
@@ -607,3 +611,5 @@
     }
   }
 }
+
+    

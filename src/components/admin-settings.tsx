@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from './ui/separator';
 
 export function AdminSettings() {
     const firestore = useFirestore();
@@ -42,7 +43,8 @@ export function AdminSettings() {
                     <Skeleton className="h-6 w-1/3" />
                     <Skeleton className="h-4 w-2/3" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
                     <Skeleton className="h-10 w-full" />
                 </CardContent>
             </Card>
@@ -53,12 +55,28 @@ export function AdminSettings() {
         <div className="space-y-6">
             <Card>
                 <CardHeader>
-                    <CardTitle>Tính năng Chấm điểm</CardTitle>
+                    <CardTitle>Cài đặt chung</CardTitle>
                     <CardDescription>
-                        Bật hoặc tắt các tính năng hỗ trợ trong quá trình chấm điểm.
+                        Bật hoặc tắt các tính năng của hệ thống.
                     </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-4">
+                    <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="registration-switch" className="text-base">
+                                Cho phép sinh viên đăng ký
+                            </Label>
+                             <p className="text-sm text-muted-foreground">
+                                Nếu tắt, trang đăng ký sẽ bị khóa đối với người dùng mới.
+                            </p>
+                        </div>
+                        <Switch
+                            id="registration-switch"
+                            checked={settings?.allowStudentRegistration ?? true} // Default to true if undefined
+                            onCheckedChange={(checked) => handleFeatureToggle('allowStudentRegistration', checked)}
+                        />
+                    </div>
+                     <Separator />
                     <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
                         <div className="space-y-0.5">
                             <Label htmlFor="overall-grading-switch" className="text-base">
@@ -79,3 +97,5 @@ export function AdminSettings() {
         </div>
     );
 }
+
+    
