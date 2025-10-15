@@ -391,6 +391,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       'STT': index + 1,
       'MSSV': reg.studentId,
       'Họ và Tên': reg.studentName,
+      'Lớp': reg.className || '',
       'Tên đề tài': reg.projectTitle || 'Chưa có',
       'GVHD TN': reg.supervisorName || 'Chưa có',
       'GVHD chấm TT': reg.internshipSupervisorName || 'Chưa có',
@@ -412,6 +413,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       { wch: 5 }, // STT
       { wch: 15 }, // MSSV
       { wch: 25 }, // Họ và Tên
+      { wch: 15 }, // Lớp
       { wch: 40 }, // Tên đề tài
       { wch: 25 }, // GVHD TN
       { wch: 25 }, // GVHD chấm TT
