@@ -11,16 +11,15 @@ import {
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { writeBatch, doc } from 'firebase/firestore';
 import type { DefenseRegistration, Supervisor } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from './ui/scroll-area';
 import { Label } from './ui/label';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
-import { SupervisorSelect } from './supervisor-select';
+import { SupervisorCombobox } from './supervisor-combobox';
 
-const NO_SUPERVISOR_VALUE = "__NONE__";
 
 interface AssignInternshipSupervisorDialogProps {
   registrationsToAssign: DefenseRegistration[];
@@ -33,8 +32,7 @@ export function AssignInternshipSupervisorDialog({
 }: AssignInternshipSupervisorDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [selectedSupervisorId, setSelectedSupervisorId] = useState<string>('');
-  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
+  const [supervisorName, setSupervisorName] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -46,16 +44,21 @@ export function AssignInternshipSupervisorDialog({
         });
         return;
     }
+     if (!supervisorName.trim()) {
+      toast({
+        variant: 'destructive',
+        title: 'Chưa có tên người hướng dẫn',
+        description: 'Vui lòng chọn hoặc nhập tên người hướng dẫn thực tập.',
+      });
+      return;
+    }
     setIsSubmitting(true);
 
     const batch = writeBatch(firestore);
     
-    const supervisorIdValue = selectedSupervisorId === NO_SUPERVISOR_VALUE ? '' : (selectedSupervisorId || '');
-    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
-
     const dataToUpdate = {
-        internshipSupervisorId: supervisorIdValue,
-        internshipSupervisorName: supervisorNameValue,
+        internshipSupervisorId: '', // Clear ID since it might be an external person
+        internshipSupervisorName: supervisorName,
     };
     
     registrationsToAssign.forEach(registration => {
@@ -91,17 +94,16 @@ export function AssignInternshipSupervisorDialog({
   return (
     <DialogContent className="sm:max-w-md">
       <DialogHeader>
-        <DialogTitle>Gán Giáo viên Hướng dẫn Thực tập</DialogTitle>
+        <DialogTitle>Gán Người Hướng dẫn Thực tập</DialogTitle>
         <DialogDescription>
-          Chọn một giáo viên để hướng dẫn thực tập cho {registrationsToAssign.length} sinh viên đã chọn.
+          Chọn một giáo viên từ danh sách hoặc nhập tên người hướng dẫn tại đơn vị cho {registrationsToAssign.length} sinh viên đã chọn.
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4 py-4">
-        <SupervisorSelect 
-            value={selectedSupervisorId}
-            onChange={setSelectedSupervisorId}
-            onSupervisorSelect={setSelectedSupervisor}
+        <SupervisorCombobox 
+            value={supervisorName}
+            onChange={setSupervisorName}
         />
 
         {registrationsToAssign.length > 0 ? (
