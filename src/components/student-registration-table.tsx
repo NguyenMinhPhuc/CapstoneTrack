@@ -391,6 +391,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       'Họ và Tên': reg.studentName,
       'Tên đề tài': reg.projectTitle || 'Chưa có',
       'GVHD TN': reg.supervisorName || 'Chưa có',
+      'GVHD TT': reg.internshipSupervisorName || 'Chưa có',
+      'Đơn vị Thực tập': reg.internship_companyName || 'Chưa có',
       'Tiểu ban': subCommitteeMap.get(reg.subCommitteeId || '') || 'Chưa phân công',
       'Trạng thái TN': registrationStatusLabel[reg.graduationStatus],
       'Ghi chú TN': reg.graduationStatusNote || '',
@@ -409,6 +411,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       { wch: 25 }, // Họ và Tên
       { wch: 40 }, // Tên đề tài
       { wch: 25 }, // GVHD TN
+      { wch: 25 }, // GVHD TT
+      { wch: 30 }, // Đơn vị Thực tập
       { wch: 20 }, // Tiểu ban
       { wch: 15 }, // Trạng thái TN
       { wch: 30 }, // Ghi chú TN
