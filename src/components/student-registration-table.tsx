@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -78,6 +79,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 
 interface StudentRegistrationTableProps {
@@ -220,7 +222,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
 
   const getSortIcon = (key: SortKey) => {
     if (!sortConfig || sortConfig.key !== key) {
-      return <ArrowUpDown className="ml-2 h-4 w-4" />;
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     }
     return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
   };
@@ -391,7 +393,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       'Họ và Tên': reg.studentName,
       'Tên đề tài': reg.projectTitle || 'Chưa có',
       'GVHD TN': reg.supervisorName || 'Chưa có',
-      'GVHD TT': reg.internshipSupervisorName || 'Chưa có',
+      'GVHD chấm TT': reg.internshipSupervisorName || 'Chưa có',
+      'NSHD tại ĐV': reg.internship_companySupervisorName || 'Chưa có',
       'Đơn vị Thực tập': reg.internship_companyName || 'Chưa có',
       'Tiểu ban': subCommitteeMap.get(reg.subCommitteeId || '') || 'Chưa phân công',
       'Trạng thái TN': registrationStatusLabel[reg.graduationStatus],
@@ -411,7 +414,8 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
       { wch: 25 }, // Họ và Tên
       { wch: 40 }, // Tên đề tài
       { wch: 25 }, // GVHD TN
-      { wch: 25 }, // GVHD TT
+      { wch: 25 }, // GVHD chấm TT
+      { wch: 25 }, // NSHD tại ĐV
       { wch: 30 }, // Đơn vị Thực tập
       { wch: 20 }, // Tiểu ban
       { wch: 15 }, // Trạng thái TN
@@ -640,27 +644,27 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                 </TableHead>
                 <TableHead>STT</TableHead>
                  <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0">
+                    <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
                         Tên sinh viên {getSortIcon('studentName')}
                     </Button>
                 </TableHead>
                 <TableHead>
-                     <Button variant="ghost" onClick={() => requestSort('projectTitle')} className="px-0 text-left">
+                     <Button variant="ghost" onClick={() => requestSort('projectTitle')} className="px-0 text-left hover:bg-transparent">
                         Tên đề tài {getSortIcon('projectTitle')}
                     </Button>
                 </TableHead>
                 <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('supervisorName')} className="px-0">
+                    <Button variant="ghost" onClick={() => requestSort('supervisorName')} className="px-0 hover:bg-transparent">
                         GVHD TN {getSortIcon('supervisorName')}
                     </Button>
                 </TableHead>
                 <TableHead>
-                     <Button variant="ghost" onClick={() => requestSort('internshipSupervisorName')} className="px-0">
+                     <Button variant="ghost" onClick={() => requestSort('internshipSupervisorName')} className="px-0 hover:bg-transparent">
                         GVHD TT {getSortIcon('internshipSupervisorName')}
                     </Button>
                 </TableHead>
                 <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0">
+                    <Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0 hover:bg-transparent">
                         Tiểu ban {getSortIcon('subCommitteeName')}
                     </Button>
                 </TableHead>
