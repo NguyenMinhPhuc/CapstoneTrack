@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -107,7 +108,7 @@ export function UserManagementTable() {
 
 
   const filteredUsers = users?.filter(user => {
-    const searchMatch = user.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
     const roleMatch = roleFilter === 'all' || user.role === roleFilter;
     return searchMatch && roleMatch;
   });
