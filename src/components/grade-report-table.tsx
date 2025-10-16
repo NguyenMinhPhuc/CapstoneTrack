@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -215,7 +216,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 row[`Điểm ${roleDisplayNames[role]}`] = score?.score !== null ? score?.score?.toFixed(2) : 'N/A';
             });
             row['Điểm TB Hội đồng'] = item.councilGradAvg?.toFixed(2) ?? 'N/A';
-            row['Điểm Tổng kết'] = item.finalGradScore?.toFixed(2) ?? 'N/A';
+            row['Điểm Tổng kết'] = item.finalGradScore?.toFixed(1) ?? 'N/A';
             return row;
         });
     } else {
@@ -233,7 +234,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 row[`Điểm ${roleDisplayNames[role]}`] = score?.score !== null ? score?.score?.toFixed(2) : 'N/A';
             });
             row['Điểm TB Hội đồng'] = item.councilInternAvg?.toFixed(2) ?? 'N/A';
-            row['Điểm Tổng kết TT'] = item.finalInternScore?.toFixed(2) ?? 'N/A';
+            row['Điểm Tổng kết TT'] = item.finalInternScore?.toFixed(1) ?? 'N/A';
             return row;
         });
     }
@@ -295,7 +296,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 {item.councilGradAvg !== null ? item.councilGradAvg.toFixed(2) : '-'}
                 </TableCell>
                 <TableCell className="text-center font-bold text-primary">
-                {item.finalGradScore !== null ? item.finalGradScore.toFixed(2) : '-'}
+                {item.finalGradScore !== null ? item.finalGradScore.toFixed(1) : '-'}
                 </TableCell>
                 <TableCell className="text-center">
                     <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
@@ -357,7 +358,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                               {item.councilInternAvg !== null ? item.councilInternAvg.toFixed(2) : '-'}
                           </TableCell>
                           <TableCell className="text-center font-bold text-primary">
-                              {item.finalInternScore !== null ? item.finalInternScore.toFixed(2) : '-'}
+                              {item.finalInternScore !== null ? item.finalInternScore.toFixed(1) : '-'}
                           </TableCell>
                           <TableCell className="text-center">
                             <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
