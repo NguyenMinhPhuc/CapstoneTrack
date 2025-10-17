@@ -1,6 +1,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -197,4 +198,18 @@ export type SystemSettings = {
     id: string;
     enableOverallGrading?: boolean;
     allowStudentRegistration?: boolean;
+}
+
+export type ProjectTopic = {
+    id: string;
+    sessionId: string;
+    supervisorId: string;
+    supervisorName: string;
+    title: string;
+    summary: string;
+    objectives: string;
+    expectedResults: string;
+    maxStudents: 1 | 2;
+    status: 'available' | 'taken';
+    createdAt: any;
 }

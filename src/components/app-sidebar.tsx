@@ -29,6 +29,7 @@ import {
   UserCheck,
   BookCheck,
   Package,
+  BookUser,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -119,6 +120,11 @@ export function AppSidebar() {
             
             {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
               <>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/my-topics")} tooltip="Đề tài của tôi">
+                        <Link href="/my-topics"><BookUser /><span>Đề tài của tôi</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/supervisor-grading")} tooltip="Chấm điểm Hướng dẫn">
                         <Link href="/supervisor-grading"><UserCheck /><span>Chấm điểm Hướng dẫn</span></Link>
