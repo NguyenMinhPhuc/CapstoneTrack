@@ -15,8 +15,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -113,7 +111,7 @@ export function StudentManagementTable() {
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
-  const [isStatsOpen, setIsStatsOpen] = useState(true);
+  const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
@@ -136,7 +134,7 @@ export function StudentManagementTable() {
   }, [students]);
 
   const classStatsByCourse = useMemo(() => {
-    if (!students) return [];
+    if (!students || !isStatsOpen) return [];
 
     const statsByClass: Record<string, { total: number; studying: number; reserved: number; dropped_out: number; graduated: number; }> = {};
 
@@ -171,7 +169,7 @@ export function StudentManagementTable() {
         }))
         .sort((a, b) => a.course.localeCompare(b.course));
 
-  }, [students, courseFilter]);
+  }, [students, courseFilter, isStatsOpen]);
 
   const uniqueClasses = useMemo(() => {
     if (!students) return [];
@@ -375,70 +373,72 @@ export function StudentManagementTable() {
 
   return (
     <div className="space-y-4">
-        {classStatsByCourse.length > 0 && (
-            <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen}>
-                <CollapsibleTrigger asChild>
-                    <button className="flex items-center gap-2 text-xl font-semibold w-full">
-                        {isStatsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
-                        Thống kê theo lớp
-                    </button>
-                </CollapsibleTrigger>
-                <CollapsibleContent className="space-y-4 pt-4">
-                    {classStatsByCourse.map(courseGroup => (
-                        <Collapsible key={courseGroup.course} defaultOpen>
-                            <CollapsibleTrigger className="w-full">
-                                <h3 className="text-lg font-semibold flex items-center gap-2 py-2 border-b">
-                                    <ChevronDown className="h-4 w-4" />
-                                    Khóa {courseGroup.course} ({courseGroup.classes.length} lớp)
-                                </h3>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="pt-4">
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                    {courseGroup.classes.map(stat => (
-                                        <Card key={stat.className}>
-                                            <CardHeader className="pb-2">
-                                                <CardTitle className="text-base">{stat.className}</CardTitle>
-                                                <CardDescription>{stat.total} sinh viên</CardDescription>
-                                            </CardHeader>
-                                            <CardContent className="text-xs space-y-1">
-                                                <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
-                                                    <span className="flex items-center gap-1.5">
-                                                        <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
-                                                        {statusLabel.studying}
-                                                    </span>
-                                                    <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
-                                                </div>
-                                                <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
-                                                    <span className="flex items-center gap-1.5">
-                                                        <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
-                                                        {statusLabel.reserved}
-                                                    </span>
-                                                    <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
-                                                </div>
-                                                <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
-                                                    <span className="flex items-center gap-1.5">
-                                                        <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
-                                                        {statusLabel.dropped_out}
-                                                    </span>
-                                                    <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
-                                                </div>
-                                                <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
-                                                    <span className="flex items-center gap-1.5">
-                                                        <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
-                                                        {statusLabel.graduated}
-                                                    </span>
-                                                    <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
-                                                </div>
-                                            </CardContent>
-                                        </Card>
-                                    ))}
-                                </div>
-                            </CollapsibleContent>
-                        </Collapsible>
-                    ))}
-                </CollapsibleContent>
-             </Collapsible>
-        )}
+        <Collapsible open={isStatsOpen} onOpenChange={setIsStatsOpen}>
+            <CollapsibleTrigger asChild>
+                <button className="flex items-center gap-2 text-xl font-semibold w-full">
+                    {isStatsOpen ? <ChevronUp className="h-5 w-5" /> : <ChevronDown className="h-5 w-5" />}
+                    Thống kê theo lớp
+                </button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-4 pt-4">
+                {isStatsOpen && (
+                    classStatsByCourse && classStatsByCourse.length > 0 ? (
+                        classStatsByCourse.map(courseGroup => (
+                            <Collapsible key={courseGroup.course} defaultOpen>
+                                <CollapsibleTrigger className="w-full">
+                                    <h3 className="text-lg font-semibold flex items-center gap-2 py-2 border-b">
+                                        <ChevronDown className="h-4 w-4" />
+                                        Khóa {courseGroup.course} ({courseGroup.classes.length} lớp)
+                                    </h3>
+                                </CollapsibleTrigger>
+                                <CollapsibleContent className="pt-4">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                                        {courseGroup.classes.map(stat => (
+                                            <Card key={stat.className}>
+                                                <CardHeader className="pb-2">
+                                                    <CardTitle className="text-base">{stat.className}</CardTitle>
+                                                    <CardDescription>{stat.total} sinh viên</CardDescription>
+                                                </CardHeader>
+                                                <CardContent className="text-xs space-y-1">
+                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
+                                                            {statusLabel.studying}
+                                                        </span>
+                                                        <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
+                                                            {statusLabel.reserved}
+                                                        </span>
+                                                        <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
+                                                            {statusLabel.dropped_out}
+                                                        </span>
+                                                        <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
+                                                    </div>
+                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
+                                                        <span className="flex items-center gap-1.5">
+                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
+                                                            {statusLabel.graduated}
+                                                        </span>
+                                                        <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
+                                                    </div>
+                                                </CardContent>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </CollapsibleContent>
+                            </Collapsible>
+                        ))
+                    ) : <Skeleton className="h-40 w-full"/>
+                )}
+            </CollapsibleContent>
+         </Collapsible>
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
