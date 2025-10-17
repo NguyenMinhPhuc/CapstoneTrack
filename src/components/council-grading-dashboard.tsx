@@ -422,7 +422,10 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
             {subCommittees.map(sc => (
                 <Card key={sc.id}>
                     <CardHeader>
-                        <CardTitle className="text-base">{sc.name}</CardTitle>
+                        <CardTitle className="text-base">
+                            {sc.name}
+                            {sc.description && <span className="text-muted-foreground font-normal"> ({sc.description})</span>}
+                        </CardTitle>
                         <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
                             <span>{sc.members.length} thành viên</span>
                              <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> HĐ chấm TN: {getRubricName(councilGraduationRubric, isLoadingCouncilGradRubric)}</span>
@@ -484,5 +487,3 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     </div>
   );
 }
-
-    
