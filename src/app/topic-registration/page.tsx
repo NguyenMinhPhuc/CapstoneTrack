@@ -44,28 +44,35 @@ export default function TopicRegistrationPage() {
     const findActiveRegistration = async () => {
         setIsLoadingRegistration(true);
         try {
-            const ongoingSessionsQuery = query(
+            const sessionsQuery = query(
                 collection(firestore, 'graduationDefenseSessions'),
-                where('status', 'in', ['ongoing', 'upcoming'])
+                where('status', 'in', ['upcoming', 'ongoing'])
             );
-            const ongoingSessionsSnapshot = await getDocs(ongoingSessionsQuery);
+            const sessionsSnapshot = await getDocs(sessionsQuery);
 
-            if (ongoingSessionsSnapshot.empty) {
+            if (sessionsSnapshot.empty) {
+                setActiveRegistration(null);
+                setActiveSession(null);
+                setIsLoadingRegistration(false);
+                return;
+            }
+            
+            const sessionsData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession));
+
+            // Prioritize 'upcoming' session, then 'ongoing'
+            const sessionToSearch = 
+                sessionsData.find(s => s.status === 'upcoming') || 
+                sessionsData.find(s => s.status === 'ongoing') ||
+                null;
+
+            if (!sessionToSearch) {
                 setActiveRegistration(null);
                 setActiveSession(null);
                 setIsLoadingRegistration(false);
                 return;
             }
 
-            const ongoingSessionsMap = new Map(ongoingSessionsSnapshot.docs.map(doc => [doc.id, doc.data() as GraduationDefenseSession]));
-            
-            // Prioritize ongoing session, then upcoming
-            const sessionToSearch = 
-                ongoingSessionsSnapshot.docs.find(s => s.data().status === 'ongoing') || 
-                ongoingSessionsSnapshot.docs[0];
-
-            const sessionData = ongoingSessionsMap.get(sessionToSearch.id)!;
-            setActiveSession(sessionData);
+            setActiveSession(sessionToSearch);
 
             const registrationQuery = query(
                 collection(firestore, 'defenseRegistrations'),
@@ -166,3 +173,4 @@ export default function TopicRegistrationPage() {
     </main>
   );
 }
+
