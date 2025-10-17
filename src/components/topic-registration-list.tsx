@@ -3,7 +3,7 @@
 
 import { useMemo, useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
 import type { GraduationDefenseSession, ProjectTopic, DefenseRegistration } from '@/lib/types';
 import {
   Card,
@@ -40,18 +40,54 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // 1. Fetch all approved topics for the session
   const topicsQuery = useMemoFirebase(
     () => {
       if (!session?.id) return null;
       return query(
         collection(firestore, 'projectTopics'),
         where('sessionId', '==', session.id),
-        where('status', '==', 'approved') // Only show approved topics
+        where('status', 'in', ['approved', 'taken']) // Fetch both to calculate counts accurately
       )
     },
     [firestore, session]
   );
   const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
+  
+  // 2. Fetch all registrations for the session to count students per topic
+  const registrationsQuery = useMemoFirebase(
+      () => {
+        if (!session?.id) return null;
+        return query(
+            collection(firestore, 'defenseRegistrations'),
+            where('sessionId', '==', session.id)
+        )
+      },
+      [firestore, session]
+  );
+  const { data: allRegistrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
+
+  // 3. Process data to get available topics and student counts
+  const { availableTopics, topicRegistrationCounts } = useMemo(() => {
+    if (!topics || !allRegistrations) {
+        return { availableTopics: [], topicRegistrationCounts: new Map() };
+    }
+    
+    const counts = new Map<string, number>();
+    allRegistrations.forEach(reg => {
+        if (reg.projectTitle) {
+            counts.set(reg.projectTitle, (counts.get(reg.projectTitle) || 0) + 1);
+        }
+    });
+
+    const filtered = topics.filter(topic => {
+      const currentCount = counts.get(topic.title) || 0;
+      return topic.status === 'approved' || (topic.status === 'taken' && currentCount < topic.maxStudents);
+    });
+
+    return { availableTopics: filtered, topicRegistrationCounts: counts };
+  }, [topics, allRegistrations]);
+
 
   const handleRegister = async (topic: ProjectTopic) => {
     setIsSubmitting(true);
@@ -69,11 +105,14 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
       supervisorName: topic.supervisorName,
     });
 
-    // 2. Update the topic's status
-    const topicRef = doc(firestore, 'projectTopics', topic.id);
-    batch.update(topicRef, {
-      status: 'taken',
-    });
+    // 2. Update the topic's status if it's now full
+    const currentCount = topicRegistrationCounts.get(topic.title) || 0;
+    if (currentCount + 1 >= topic.maxStudents) {
+        const topicRef = doc(firestore, 'projectTopics', topic.id);
+        batch.update(topicRef, {
+            status: 'taken',
+        });
+    }
 
     try {
       await batch.commit();
@@ -93,8 +132,10 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
         setIsSubmitting(false);
     }
   };
+  
+  const isLoading = isLoadingTopics || isLoadingRegs;
 
-  if (isLoadingTopics) {
+  if (isLoading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {[...Array(6)].map((_, i) => (
@@ -115,7 +156,7 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
     );
   }
 
-  if (!topics || topics.length === 0) {
+  if (availableTopics.length === 0) {
       return (
         <div className="text-center text-muted-foreground py-12">
             <h3 className="text-xl font-semibold">Không có đề tài nào</h3>
@@ -126,65 +167,72 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {topics.map(topic => (
-        <Card key={topic.id} className="flex flex-col">
-          <CardHeader>
-            <CardTitle>{topic.title}</CardTitle>
-            <CardDescription className="flex items-center gap-2 pt-1">
-                <User className="h-4 w-4" />
-                {topic.supervisorName}
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="flex-grow space-y-4">
-             <div className="flex items-center gap-2">
-                 <Badge variant="outline">{topic.maxStudents === 1 ? '1 Sinh viên' : 'Nhóm 2 Sinh viên'}</Badge>
-             </div>
-            <div className="space-y-3 text-sm text-muted-foreground">
-                <div className="flex items-start gap-3">
-                    <Book className="h-4 w-4 mt-0.5 shrink-0" />
-                    <span>{topic.summary}</span>
-                </div>
-                 {topic.objectives && (
-                    <div className="flex items-start gap-3">
-                        <Target className="h-4 w-4 mt-0.5 shrink-0" />
-                        <span className="whitespace-pre-wrap">{topic.objectives}</span>
-                    </div>
-                )}
-                 {topic.expectedResults && (
-                     <div className="flex items-start gap-3">
-                        <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                        <span className="whitespace-pre-wrap">{topic.expectedResults}</span>
-                    </div>
-                )}
-            </div>
-          </CardContent>
-          <CardFooter>
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button className="w-full" disabled={isSubmitting}>
-                    Đăng ký
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Xác nhận đăng ký đề tài?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Bạn có chắc chắn muốn đăng ký đề tài <span className="font-bold">"{topic.title}"</span>? Hành động này không thể hoàn tác.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Hủy</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => handleRegister(topic)}>
-                    Xác nhận
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </CardFooter>
-        </Card>
-      ))}
+      {availableTopics.map(topic => {
+        const registeredCount = topicRegistrationCounts.get(topic.title) || 0;
+        const isFull = registeredCount >= topic.maxStudents;
+
+        return (
+          <Card key={topic.id} className="flex flex-col">
+            <CardHeader>
+              <CardTitle>{topic.title}</CardTitle>
+              <CardDescription className="flex items-center gap-2 pt-1">
+                  <User className="h-4 w-4" />
+                  {topic.supervisorName}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex-grow space-y-4">
+              <div className="flex items-center gap-2">
+                  <Badge variant="outline" className="flex items-center gap-1.5">
+                    <Users className="h-3 w-3" />
+                    {topic.maxStudents} Sinh viên
+                  </Badge>
+                  <Badge variant="secondary">Đã đăng ký: {registeredCount}/{topic.maxStudents}</Badge>
+              </div>
+              <div className="space-y-3 text-sm text-muted-foreground">
+                  <div className="flex items-start gap-3">
+                      <Book className="h-4 w-4 mt-0.5 shrink-0" />
+                      <span>{topic.summary}</span>
+                  </div>
+                  {topic.objectives && (
+                      <div className="flex items-start gap-3">
+                          <Target className="h-4 w-4 mt-0.5 shrink-0" />
+                          <span className="whitespace-pre-wrap">{topic.objectives}</span>
+                      </div>
+                  )}
+                  {topic.expectedResults && (
+                      <div className="flex items-start gap-3">
+                          <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
+                          <span className="whitespace-pre-wrap">{topic.expectedResults}</span>
+                      </div>
+                  )}
+              </div>
+            </CardContent>
+            <CardFooter>
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button className="w-full" disabled={isSubmitting || isFull}>
+                      {isFull ? 'Đề tài đã đủ' : 'Đăng ký'}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Xác nhận đăng ký đề tài?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Bạn có chắc chắn muốn đăng ký đề tài <span className="font-bold">"{topic.title}"</span>? Hành động này không thể hoàn tác.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Hủy</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleRegister(topic)}>
+                      Xác nhận
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </CardFooter>
+          </Card>
+        )
+      })}
     </div>
   );
 }
-
-    
