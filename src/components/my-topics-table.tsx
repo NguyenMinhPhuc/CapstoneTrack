@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -67,7 +67,7 @@ const statusLabel: Record<ProjectTopic['status'], string> = {
   approved: 'Đã duyệt',
   rejected: 'Bị từ chối',
   taken: 'Đã có SV',
-  available: 'Có sẵn',
+  available: 'Có sẵn', // This is a virtual status for available topics
 };
 
 const statusVariant: Record<ProjectTopic['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -75,7 +75,7 @@ const statusVariant: Record<ProjectTopic['status'], 'default' | 'secondary' | 'd
   approved: 'default',
   rejected: 'destructive',
   taken: 'outline',
-  available: 'outline'
+  available: 'outline' // This is a virtual status for available topics
 };
 
 const registrationStatusLabel: Record<string, string> = {
