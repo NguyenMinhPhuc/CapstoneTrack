@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -66,6 +67,7 @@ import { AssignClassDialog } from './assign-class-dialog';
 import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 import { StudentStatusDetailsDialog } from './student-status-details-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
+import { ScrollArea } from './ui/scroll-area';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -442,6 +444,7 @@ export function StudentManagementTable() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                          <ScrollArea className="h-[40vh]">
                             <DropdownMenuLabel>Lọc theo niên khóa</DropdownMenuLabel>
                             <DropdownMenuSeparator />
                              <DropdownMenuCheckboxItem
@@ -477,6 +480,7 @@ export function StudentManagementTable() {
                                     {className}
                                 </DropdownMenuCheckboxItem>
                             ))}
+                          </ScrollArea>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
