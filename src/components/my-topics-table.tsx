@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Check, X } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, query, where, updateDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where, updateDoc, writeBatch } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -98,7 +98,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [isStudentListOpen, setIsStudentListOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
 
@@ -179,32 +178,53 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     }
   };
 
-  const handleRegistrationConfirmation = async (registrationId: string, action: 'approve' | 'reject') => {
-      const regDocRef = doc(firestore, 'defenseRegistrations', registrationId);
-      try {
-          if (action === 'approve') {
-              await updateDoc(regDocRef, { projectRegistrationStatus: 'approved' });
-              toast({ title: 'Thành công', description: 'Đã xác nhận hướng dẫn sinh viên.' });
-          } else { // reject
-              await updateDoc(regDocRef, { 
-                  projectRegistrationStatus: 'rejected',
-                  projectTitle: '',
-                  summary: '',
-                  objectives: '',
-                  expectedResults: '',
-                  supervisorId: '',
-                  supervisorName: '',
-              });
-              toast({ title: 'Thành công', description: 'Đã từ chối hướng dẫn. Đề tài đã được mở lại.' });
-          }
-      } catch (error: any) {
-          toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
-      }
-  }
+  const handleRegistrationConfirmation = async (registrationId: string, topic: ProjectTopic, action: 'approve' | 'reject') => {
+    const regDocRef = doc(firestore, 'defenseRegistrations', registrationId);
+    const topicRef = doc(firestore, 'projectTopics', topic.id);
 
-  const handleStudentListClick = (topic: ProjectTopic) => {
-      setSelectedTopic(topic);
-      setIsStudentListOpen(true);
+    const batch = writeBatch(firestore);
+
+    if (action === 'approve') {
+        batch.update(regDocRef, { projectRegistrationStatus: 'approved' });
+
+        // Check if the topic will be full after this approval
+        const registrationsForThisTopic = allRegistrations?.filter(r => r.sessionId === topic.sessionId && r.projectTitle === topic.title) || [];
+        const approvedCount = registrationsForThisTopic.filter(r => r.projectRegistrationStatus === 'approved').length;
+
+        if (approvedCount + 1 >= topic.maxStudents) {
+            batch.update(topicRef, { status: 'taken' });
+        }
+
+        try {
+            await batch.commit();
+            toast({ title: 'Thành công', description: 'Đã xác nhận hướng dẫn sinh viên.' });
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+        }
+
+    } else { // reject action
+        batch.update(regDocRef, { 
+            projectRegistrationStatus: 'rejected',
+            projectTitle: '',
+            summary: '',
+            objectives: '',
+            expectedResults: '',
+            supervisorId: '',
+            supervisorName: '',
+        });
+
+        // If the topic was 'taken', set it back to 'approved' so others can register
+        if (topic.status === 'taken') {
+            batch.update(topicRef, { status: 'approved' });
+        }
+        
+        try {
+            await batch.commit();
+            toast({ title: 'Thành công', description: 'Đã từ chối hướng dẫn. Đề tài đã được mở lại.' });
+        } catch (error: any) {
+             toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+        }
+    }
   }
   
   const isLoading = isLoadingTopics || isLoadingSessions || isLoadingRegs;
@@ -320,10 +340,10 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                 <TableCell className="text-right">
                                                     {reg.projectRegistrationStatus === 'pending' && (
                                                         <div className="flex gap-2 justify-end">
-                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, 'approve')}>
+                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, topic, 'approve')}>
                                                                 <Check className="mr-2 h-4 w-4"/> Chấp nhận
                                                             </Button>
-                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, 'reject')}>
+                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, topic, 'reject')}>
                                                                 <X className="mr-2 h-4 w-4"/> Từ chối
                                                             </Button>
                                                         </div>
@@ -391,4 +411,3 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     </div>
   );
 }
-

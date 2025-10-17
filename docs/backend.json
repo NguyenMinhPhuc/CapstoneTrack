@@ -258,6 +258,11 @@
           "type": "string",
           "description": "The title of the student's graduation project."
         },
+        "projectRegistrationStatus": {
+          "type": "string",
+          "description": "The status of the student's project topic registration, confirmed by the supervisor.",
+          "enum": ["pending", "approved", "rejected"]
+        },
         "summary": {
           "type": "string",
           "description": "A brief summary of the graduation project."
@@ -644,5 +649,3 @@
     }
   }
 }
-
-    
