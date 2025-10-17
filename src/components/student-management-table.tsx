@@ -15,6 +15,8 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardTitle,
+  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -393,7 +395,7 @@ export function StudentManagementTable() {
                                 </CollapsibleTrigger>
                                 <CollapsibleContent className="pt-4">
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {courseGroup.classes.map(stat => (
+                                        {courseGroup.classes.map((stat: any) => (
                                             <Card key={stat.className}>
                                                 <CardHeader className="pb-2">
                                                     <CardTitle className="text-base">{stat.className}</CardTitle>
