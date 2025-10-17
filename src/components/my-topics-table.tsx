@@ -391,3 +391,4 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     </div>
   );
 }
+
