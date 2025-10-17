@@ -50,7 +50,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -92,6 +92,9 @@ const statusColorClass: Record<Student['status'], string> = {
   graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
 };
 
+type SortKey = 'firstName' | 'studentId' | 'className' | 'email' | 'status' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 
 export function StudentManagementTable() {
   const firestore = useFirestore();
@@ -111,6 +114,7 @@ export function StudentManagementTable() {
   const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
   const [isStatsOpen, setIsStatsOpen] = useState(true);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
   const studentsCollectionRef = useMemoFirebase(
@@ -182,18 +186,50 @@ export function StudentManagementTable() {
 
   const filteredStudents = useMemo(() => {
     if (!students) return [];
-    return students.filter(student => {
+    let sortableStudents = [...students];
+
+    if (sortConfig !== null) {
+      sortableStudents.sort((a, b) => {
+        const aValue = a[sortConfig.key] ?? '';
+        const bValue = b[sortConfig.key] ?? '';
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableStudents.filter(student => {
       const term = searchTerm.toLowerCase();
       const nameMatch = `${student.firstName} ${student.lastName}`.toLowerCase().includes(term);
       const idMatch = student.studentId?.toLowerCase().includes(term);
       const emailMatch = student.email?.toLowerCase().includes(term);
+      const classMatchFilter = student.className?.toLowerCase().includes(term);
       
-      const classMatch = classFilter === 'all' || student.className === classFilter;
+      const classFilterMatch = classFilter === 'all' || student.className === classFilter;
       const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
 
-      return (nameMatch || idMatch || emailMatch) && classMatch && courseMatch;
+      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch;
     });
-  }, [students, searchTerm, classFilter, courseFilter]);
+  }, [students, searchTerm, classFilter, courseFilter, sortConfig]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
+  };
 
   const handleStatusClick = (className: string, status: Student['status']) => {
     if (!students) return;
@@ -454,7 +490,7 @@ export function StudentManagementTable() {
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <Input
                             type="search"
-                            placeholder="Tìm kiếm theo tên, MSSV, email..."
+                            placeholder="Tìm kiếm theo tên, MSSV, lớp..."
                             className="pl-8 w-full sm:w-64"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
@@ -550,9 +586,21 @@ export function StudentManagementTable() {
                 />
               </TableHead>
               <TableHead className="w-[50px]">STT</TableHead>
-              <TableHead>Họ và Tên</TableHead>
-              <TableHead>MSSV</TableHead>
-              <TableHead>Lớp</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => requestSort('firstName')} className="px-0 hover:bg-transparent">
+                    Họ và Tên {getSortIcon('firstName')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0 hover:bg-transparent">
+                    MSSV {getSortIcon('studentId')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => requestSort('className')} className="px-0 hover:bg-transparent">
+                    Lớp {getSortIcon('className')}
+                </Button>
+              </TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead>Email</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
