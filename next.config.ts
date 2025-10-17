@@ -2,6 +2,11 @@ import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
   /* config options here */
+  experimental: {
+    // This is to allow cross-origin requests in development.
+    // The Firebase Studio preview environment runs on a different port than the app server.
+    allowedDevOrigins: ['*'],
+  },
   typescript: {
     ignoreBuildErrors: true,
   },
