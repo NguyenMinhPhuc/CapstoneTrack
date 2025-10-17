@@ -35,7 +35,7 @@ export default function MyTopicsPage() {
 
   const isLoading = isUserLoading || isUserDataLoading;
 
-  if (isLoading || !userData || (userData.role !== 'supervisor' && userData.role !== 'admin')) {
+  if (isLoading || !user || !userData || (userData.role !== 'supervisor' && userData.role !== 'admin')) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Skeleton className="h-16 w-16 rounded-full" />
