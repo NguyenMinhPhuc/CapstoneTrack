@@ -162,11 +162,11 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                     firstName: row['HoSV'] || row['HoLot'] || '',
                     lastName: row['TenSV'] || row['Ten'] || '',
                     major: row['Ngành'] || row['tenNganh'] || '',
-                    enrollmentYear: null, // Ignore date field as requested
+                    enrollmentYear: null,
                     className: row['Lop'] || row['LopID'] || '',
-                    phone: row['SoDienThoai'] || '',
-                    CCCD: row['cmnd'] || '',
-                    status: mapStatus(row['Tình trạng']),
+                    phone: String(row['SoDienThoai'] || ''),
+                    CCCD: String(row['CMND'] || row['cmnd'] || ''),
+                    status: mapStatus(row['Tình trạng'] || row['TinhTrang']),
                     createdAt: serverTimestamp(),
                 };
                 batch.set(studentDocRef, studentData);
