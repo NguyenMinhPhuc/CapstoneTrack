@@ -56,8 +56,8 @@ export function addDocumentNonBlocking(colRef: CollectionReference, data: any) {
  * Initiates an updateDoc operation for a document reference.
  * Does NOT await the write operation internally.
  */
-export function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
-  updateDoc(docRef, data)
+export async function updateDocumentNonBlocking(docRef: DocumentReference, data: any) {
+  await updateDoc(docRef, data)
     .catch(error => {
       errorEmitter.emit(
         'permission-error',
