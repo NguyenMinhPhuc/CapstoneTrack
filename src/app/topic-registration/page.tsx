@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -11,6 +10,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, BookMarked } from 'lucide-react';
 import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type ProjectTopic } from '@/lib/types';
 import { TopicRegistrationList } from '@/components/topic-registration-list';
+import { RegisteredTopicDetails } from '@/components/registered-topic-details';
 
 export default function TopicRegistrationPage() {
   const router = useRouter();
@@ -19,6 +19,7 @@ export default function TopicRegistrationPage() {
 
   const [activeRegistration, setActiveRegistration] = useState<DefenseRegistration | null>(null);
   const [activeSession, setActiveSession] = useState<GraduationDefenseSession | null>(null);
+  const [registeredTopic, setRegisteredTopic] = useState<ProjectTopic | null>(null);
   const [isLoadingRegistration, setIsLoadingRegistration] = useState(true);
 
   const userDocRef = useMemoFirebase(
@@ -43,6 +44,7 @@ export default function TopicRegistrationPage() {
 
     const findActiveRegistration = async () => {
         setIsLoadingRegistration(true);
+        setRegisteredTopic(null); // Reset topic on re-fetch
         try {
             const sessionsQuery = query(
                 collection(firestore, 'graduationDefenseSessions'),
@@ -83,7 +85,22 @@ export default function TopicRegistrationPage() {
 
             if (!registrationSnapshot.empty) {
                 const regDoc = registrationSnapshot.docs[0];
-                setActiveRegistration({ id: regDoc.id, ...regDoc.data() } as DefenseRegistration);
+                const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
+                setActiveRegistration(registrationData);
+
+                // If student has a project, fetch the topic details
+                if (registrationData.projectTitle) {
+                    const topicQuery = query(
+                        collection(firestore, 'projectTopics'),
+                        where('sessionId', '==', sessionToSearch.id),
+                        where('title', '==', registrationData.projectTitle)
+                    );
+                    const topicSnapshot = await getDocs(topicQuery);
+                    if (!topicSnapshot.empty) {
+                        const topicDoc = topicSnapshot.docs[0];
+                        setRegisteredTopic({ id: topicDoc.id, ...topicDoc.data() } as ProjectTopic);
+                    }
+                }
             } else {
                 setActiveRegistration(null);
             }
@@ -158,13 +175,17 @@ export default function TopicRegistrationPage() {
 
         {activeSession && activeRegistration && (
             activeRegistration.projectTitle ? (
-                 <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertTitle>Bạn đã có đề tài</AlertTitle>
-                    <AlertDescription>
-                        Bạn đã đăng ký đề tài: <span className="font-semibold">{activeRegistration.projectTitle}</span>.
-                    </AlertDescription>
-                </Alert>
+                registeredTopic ? (
+                    <RegisteredTopicDetails topic={registeredTopic} />
+                ) : (
+                    <Alert>
+                        <Info className="h-4 w-4" />
+                        <AlertTitle>Bạn đã có đề tài</AlertTitle>
+                        <AlertDescription>
+                            Bạn đã đăng ký đề tài: <span className="font-semibold">{activeRegistration.projectTitle}</span>. Đang tải chi tiết...
+                        </AlertDescription>
+                    </Alert>
+                )
             ) : (
                 activeSession && activeRegistration && <TopicRegistrationList session={activeSession} registration={activeRegistration} />
             )
@@ -173,4 +194,3 @@ export default function TopicRegistrationPage() {
     </main>
   );
 }
-
