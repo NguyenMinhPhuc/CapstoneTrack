@@ -1,16 +1,15 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, collection, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info } from 'lucide-react';
+import { Info, Users } from 'lucide-react';
 import { ReportSubmissionForm } from '@/components/report-submission-form';
-import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser } from '@/lib/types';
+import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type DefenseSubCommittee } from '@/lib/types';
 
 
 export default function ReportSubmissionPage() {
@@ -20,6 +19,7 @@ export default function ReportSubmissionPage() {
 
   const [activeRegistration, setActiveRegistration] = useState<DefenseRegistration | null>(null);
   const [sessionName, setSessionName] = useState('');
+  const [subCommittee, setSubCommittee] = useState<DefenseSubCommittee | null>(null);
   const [isLoadingRegistration, setIsLoadingRegistration] = useState(true);
 
   const userDocRef = useMemoFirebase(
@@ -44,8 +44,8 @@ export default function ReportSubmissionPage() {
 
     const findActiveRegistration = async () => {
         setIsLoadingRegistration(true);
+        setSubCommittee(null); // Reset on each fetch
         try {
-            // 1. Find all ongoing sessions
             const ongoingSessionsQuery = query(
                 collection(firestore, 'graduationDefenseSessions'),
                 where('status', '==', 'ongoing')
@@ -62,7 +62,6 @@ export default function ReportSubmissionPage() {
             const ongoingSessionIds = ongoingSessionsSnapshot.docs.map(doc => doc.id);
             const ongoingSessionsMap = new Map(ongoingSessionsSnapshot.docs.map(doc => [doc.id, doc.data() as GraduationDefenseSession]));
 
-            // 2. Find the user's registration in ANY of the ongoing sessions
             const registrationQuery = query(
                 collection(firestore, 'defenseRegistrations'),
                 where('sessionId', 'in', ongoingSessionIds),
@@ -71,15 +70,23 @@ export default function ReportSubmissionPage() {
             const registrationSnapshot = await getDocs(registrationQuery);
 
             if (!registrationSnapshot.empty) {
-                const regDoc = registrationSnapshot.docs[0]; // A student should only be in one active session at a time
+                const regDoc = registrationSnapshot.docs[0];
                 const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
                 
                 setActiveRegistration(registrationData);
 
-                // Set the session name for display
                 const sessionData = ongoingSessionsMap.get(registrationData.sessionId);
                 if (sessionData) {
                     setSessionName(sessionData.name);
+                }
+
+                // Fetch subcommittee if it exists
+                if (registrationData.subCommitteeId) {
+                    const subCommitteeDocRef = doc(firestore, `graduationDefenseSessions/${registrationData.sessionId}/subCommittees`, registrationData.subCommitteeId);
+                    const subCommitteeDoc = await getDoc(subCommitteeDocRef);
+                    if (subCommitteeDoc.exists()) {
+                        setSubCommittee({ id: subCommitteeDoc.id, ...subCommitteeDoc.data() } as DefenseSubCommittee);
+                    }
                 }
 
             } else {
@@ -132,6 +139,16 @@ export default function ReportSubmissionPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent>
+                 {subCommittee && (
+                    <Alert className="mb-6">
+                        <Users className="h-4 w-4" />
+                        <AlertTitle>Thông tin Hội đồng</AlertTitle>
+                        <AlertDescription>
+                            <p>Bạn đã được phân vào tiểu ban: <strong>{subCommittee.name}</strong>.</p>
+                            {subCommittee.description && <p>Ghi chú: {subCommittee.description}</p>}
+                        </AlertDescription>
+                    </Alert>
+                )}
                 {activeRegistration ? (
                     <ReportSubmissionForm registration={activeRegistration} />
                 ) : (
@@ -149,5 +166,3 @@ export default function ReportSubmissionPage() {
     </main>
   );
 }
-
-    
