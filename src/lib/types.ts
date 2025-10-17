@@ -1,5 +1,6 @@
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -132,6 +133,10 @@ export type StudentWithRegistrationDetails = DefenseRegistration & {
   status: Student['status'];
   className?: string; // Add className
 };
+
+export type SubmissionReport = DefenseRegistration & {
+  sessionName: string;
+}
 
 export type DefenseCouncilMember = {
     id: string;

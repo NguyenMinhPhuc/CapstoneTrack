@@ -28,6 +28,7 @@ import {
   FileUp,
   UserCheck,
   BookCheck,
+  Package,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -160,6 +161,11 @@ export function AppSidebar() {
                                  <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/grade-reports")} tooltip="Grade Reports">
                                         <Link href="/admin/grade-reports"><BookCheck /><span>Bảng điểm</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/submission-reports")} tooltip="Submission Reports">
+                                        <Link href="/admin/submission-reports"><Package /><span>Hồ sơ đã nộp</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
