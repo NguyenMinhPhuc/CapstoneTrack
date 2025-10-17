@@ -21,6 +21,9 @@ import {
   Dialog,
   DialogContent,
   DialogTrigger,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -55,7 +58,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface MyTopicsTableProps {
     supervisorId: string;
@@ -84,12 +86,19 @@ const registrationStatusLabel: Record<string, string> = {
     rejected: 'Đã từ chối',
 };
 
+const registrationStatusVariant: Record<string, 'secondary' | 'default' | 'destructive'> = {
+    pending: 'secondary',
+    approved: 'default',
+    rejected: 'destructive',
+};
+
 export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isStudentListOpen, setIsStudentListOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
 
@@ -192,6 +201,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
       }
   }
+
+  const handleStudentListClick = (topic: ProjectTopic) => {
+      setSelectedTopic(topic);
+      setIsStudentListOpen(true);
+  }
   
   const isLoading = isLoadingTopics || isLoadingSessions || isLoadingRegs;
 
@@ -263,68 +277,84 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
               {filteredTopics?.map((topic) => {
                  const registeredStudents = registrationsByTopic.get(`${topic.sessionId}-${topic.title}`) || [];
                  const registeredCount = registeredStudents.length;
-                 const pendingStudents = registeredStudents.filter(r => r.projectRegistrationStatus === 'pending');
                 return (
-                    <React.Fragment key={topic.id}>
-                        <TableRow>
-                        <TableCell className="font-medium max-w-sm">
-                            <p className="truncate">{topic.title}</p>
-                            <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
-                        </TableCell>
-                        <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
-                        <TableCell>
-                            <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant={statusVariant[topic.status]}>
-                                {statusLabel[topic.status]}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
-                                <MoreHorizontal className="h-4 w-4" />
+                    <TableRow key={topic.id}>
+                    <TableCell className="font-medium max-w-sm">
+                        <p className="truncate">{topic.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
+                    </TableCell>
+                    <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
+                    <TableCell>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <Button variant="ghost" disabled={registeredCount === 0} className="p-1 h-auto">
+                                    <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
                                 </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
-                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
-                            </DropdownMenuContent>
-                            </DropdownMenu>
-                        </TableCell>
-                        </TableRow>
-                        {pendingStudents.length > 0 && (
-                             <TableRow>
-                                <TableCell colSpan={5} className="p-0">
-                                    <Accordion type="single" collapsible className="w-full">
-                                        <AccordionItem value="item-1" className="border-none">
-                                            <AccordionTrigger className="bg-amber-50 hover:bg-amber-100 px-4 py-2 text-sm text-amber-800">
-                                                Có {pendingStudents.length} sinh viên đang chờ bạn xác nhận
-                                            </AccordionTrigger>
-                                            <AccordionContent className="bg-amber-50/50 p-4">
-                                                <div className="space-y-2">
-                                                {pendingStudents.map(reg => (
-                                                    <div key={reg.id} className="flex items-center justify-between">
-                                                        <p className="text-sm">{reg.studentName} ({reg.studentId})</p>
-                                                        <div className="flex gap-2">
-                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200" onClick={() => handleRegistrationConfirmation(reg.id, 'approve')}>
+                            </DialogTrigger>
+                            <DialogContent>
+                                <DialogHeader>
+                                    <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
+                                    <DialogDescription>
+                                        Đề tài: {topic.title}
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>MSSV</TableHead>
+                                            <TableHead>Họ và Tên</TableHead>
+                                            <TableHead>Trạng thái</TableHead>
+                                            <TableHead className="text-right">Hành động</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {registeredStudents.map(reg => (
+                                            <TableRow key={reg.id}>
+                                                <TableCell>{reg.studentId}</TableCell>
+                                                <TableCell>{reg.studentName}</TableCell>
+                                                <TableCell>
+                                                    <Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>
+                                                        {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
+                                                    </Badge>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    {reg.projectRegistrationStatus === 'pending' && (
+                                                        <div className="flex gap-2 justify-end">
+                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, 'approve')}>
                                                                 <Check className="mr-2 h-4 w-4"/> Chấp nhận
                                                             </Button>
-                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200" onClick={() => handleRegistrationConfirmation(reg.id, 'reject')}>
+                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, 'reject')}>
                                                                 <X className="mr-2 h-4 w-4"/> Từ chối
                                                             </Button>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                                </div>
-                                            </AccordionContent>
-                                        </AccordionItem>
-                                    </Accordion>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                    </React.Fragment>
+                                                    )}
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </DialogContent>
+                        </Dialog>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={statusVariant[topic.status]}>
+                            {statusLabel[topic.status]}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
                 )
               })}
             </TableBody>
