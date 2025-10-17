@@ -159,7 +159,7 @@ export default function TopicRegistrationPage() {
                     </AlertDescription>
                 </Alert>
             ) : (
-                <TopicRegistrationList session={activeSession} registration={activeRegistration} />
+                activeSession && activeRegistration && <TopicRegistrationList session={activeSession} registration={activeRegistration} />
             )
         )}
       </div>
