@@ -4,8 +4,6 @@
 import { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import PizZip from 'pizzip';
-import Docxtemplater from 'docxtemplater';
 import {
   Table,
   TableBody,
@@ -41,20 +39,9 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useToast } from '@/hooks/use-toast';
-
-function str2ab(str: string) {
-    const buf = new ArrayBuffer(str.length);
-    const bufView = new Uint8Array(buf);
-    for (let i = 0, strLen = str.length; i < strLen; i++) {
-        bufView[i] = str.charCodeAt(i);
-    }
-    return buf;
-}
 
 export function SubmissionReportTable() {
   const firestore = useFirestore();
-  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('all');
 
@@ -124,6 +111,7 @@ export function SubmissionReportTable() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'HoSoDaNop');
 
+    // Set column widths
     worksheet['!cols'] = [
       { wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 30 },
       { wch: 30 }, { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 40 },
@@ -133,78 +121,6 @@ export function SubmissionReportTable() {
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
     saveAs(data, 'BaoCao_HoSoDaNop.xlsx');
-  };
-
-  const downloadAllLinks = () => {
-    if (processedData.length === 0) {
-      toast({
-        variant: 'destructive',
-        title: 'Không có dữ liệu',
-        description: 'Không có hồ sơ nào để tạo tệp tổng hợp.',
-      });
-      return;
-    }
-    
-    try {
-        const template = `
-            {#students}
-            <w:p><w:r><w:t>Sinh viên: {studentName} - {studentId}</w:t></w:r></w:p>
-            <w:p><w:r><w:t>Đợt: {sessionName}</w:t></w:r></w:p>
-            <w:p><w:r><w:t>---------------------------------</w:t></w:r></w:p>
-            {#reportLink}
-            <w:p><w:r><w:t>Báo cáo Tốt nghiệp: {reportLink}</w:t></w:r></w:p>
-            {/reportLink}
-            {#internship_reportLink}
-            <w:p><w:r><w:t>Báo cáo Thực tập: {internship_reportLink}</w:t></w:r></w:p>
-            {/internship_reportLink}
-            {#internship_acceptanceLetterLink}
-            <w:p><w:r><w:t>Giấy tiếp nhận: {internship_acceptanceLetterLink}</w:t></w:r></w:p>
-            {/internship_acceptanceLetterLink}
-            {#internship_registrationFormLink}
-            <w:p><w:r><w:t>Đơn đăng ký: {internship_registrationFormLink}</w:t></w:r></w:p>
-            {/internship_registrationFormLink}
-            {#internship_commitmentFormLink}
-            <w:p><w:r><w:t>Đơn cam kết: {internship_commitmentFormLink}</w:t></w:r></w:p>
-            {/internship_commitmentFormLink}
-            {#internship_feedbackFormLink}
-            <w:p><w:r><w:t>Giấy nhận xét: {internship_feedbackFormLink}</w:t></w:r></w:p>
-            {/internship_feedbackFormLink}
-            <w:p><w:r><w:br/></w:r></w:p>
-            {/students}
-        `;
-        
-        const fullXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">${template}</w:document>`;
-
-        const zip = new PizZip();
-        zip.file("word/document.xml", fullXml);
-        
-        const doc = new Docxtemplater(zip, {
-            paragraphLoop: true,
-            linebreaks: true,
-        });
-
-        doc.setData({ students: processedData });
-        doc.render();
-
-        const out = doc.getZip().generate({
-          type: 'blob',
-          mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        });
-        
-        saveAs(out, `TongHop_LinkHoSo.docx`);
-        toast({
-          title: 'Thành công',
-          description: 'Đã tạo tệp tổng hợp các đường link.',
-        });
-
-    } catch (error: any) {
-      console.error("Error generating link document:", error);
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: `Không thể tạo tệp: ${error.message}`,
-      });
-    }
   };
 
   const renderLinkCell = (url: string | undefined) => {
@@ -271,10 +187,6 @@ export function SubmissionReportTable() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={downloadAllLinks} variant="outline" className="w-full sm:w-auto">
-              <FileDown className="mr-2 h-4 w-4" />
-              Tải Link Hồ sơ
-            </Button>
             <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
               <FileDown className="mr-2 h-4 w-4" />
               Xuất Excel
