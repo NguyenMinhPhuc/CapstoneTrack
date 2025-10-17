@@ -23,7 +23,7 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileDown, Link as LinkIcon } from 'lucide-react';
+import { Search, FileDown, Link as LinkIcon, MoreHorizontal } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { GraduationDefenseSession, DefenseRegistration, SubmissionReport } from '@/lib/types';
@@ -41,6 +41,12 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 export function SubmissionReportTable() {
   const firestore = useFirestore();
@@ -85,8 +91,8 @@ export function SubmissionReportTable() {
       });
   }, [registrations, sessions, selectedSessionId, searchTerm]);
 
-  const exportToExcel = () => {
-    const dataToExport = processedData.map((item, index) => ({
+  const createExportData = (data: SubmissionReport[]) => {
+    return data.map((item, index) => ({
       'STT': index + 1,
       'MSSV': item.studentId,
       'Họ và Tên': item.studentName,
@@ -100,7 +106,11 @@ export function SubmissionReportTable() {
       'Link đơn cam kết TT': item.internship_commitmentFormLink || '',
       'Link giấy nhận xét TT': item.internship_feedbackFormLink || '',
     }));
+  }
 
+  const exportToExcel = (data: SubmissionReport[], fileName: string) => {
+    const dataToExport = createExportData(data);
+    
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'HoSoDaNop');
@@ -113,9 +123,17 @@ export function SubmissionReportTable() {
     ];
 
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(data, 'BaoCao_HoSoDaNop.xlsx');
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, fileName);
   };
+  
+  const handleExportAll = () => {
+      exportToExcel(processedData, 'BaoCao_HoSoDaNop.xlsx');
+  }
+
+  const handleExportSingle = (studentData: SubmissionReport) => {
+      exportToExcel([studentData], `HoSo_${studentData.studentId}_${studentData.studentName.replace(/\s+/g, '_')}.xlsx`);
+  }
 
   const renderLinkCell = (url: string | undefined) => {
     if (!url) return <span className="text-muted-foreground">-</span>;
@@ -181,7 +199,7 @@ export function SubmissionReportTable() {
                 ))}
               </SelectContent>
             </Select>
-            <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
+            <Button onClick={handleExportAll} variant="outline" className="w-full sm:w-auto">
               <FileDown className="mr-2 h-4 w-4" />
               Xuất Excel
             </Button>
@@ -203,6 +221,7 @@ export function SubmissionReportTable() {
                 <TableHead className="text-center">Đơn ĐK</TableHead>
                 <TableHead className="text-center">Đơn cam kết</TableHead>
                 <TableHead className="text-center">Giấy nhận xét</TableHead>
+                <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -234,11 +253,26 @@ export function SubmissionReportTable() {
                     <TableCell className="text-center">{renderLinkCell(item.internship_registrationFormLink)}</TableCell>
                     <TableCell className="text-center">{renderLinkCell(item.internship_commitmentFormLink)}</TableCell>
                     <TableCell className="text-center">{renderLinkCell(item.internship_feedbackFormLink)}</TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleExportSingle(item)}>
+                                    <FileDown className="mr-2 h-4 w-4" />
+                                    <span>Xuất Excel</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
                   </TableRow>
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center h-24">
+                  <TableCell colSpan={11} className="text-center h-24">
                     Không tìm thấy hồ sơ nào.
                   </TableCell>
                 </TableRow>
