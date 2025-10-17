@@ -4,6 +4,8 @@
 import { useState, useMemo } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+const PizZip = require('pizzip');
+const Docxtemplater = require('docxtemplater');
 import {
   Table,
   TableBody,
