@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -42,7 +41,7 @@ import {
 import { MoreHorizontal, PlusCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
-import type { ProjectTopic, GraduationDefenseSession } from '@/lib/types';
+import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddTopicForm } from './add-topic-form';
@@ -96,10 +95,30 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
+  const registrationsQuery = useMemoFirebase(
+    () => collection(firestore, 'defenseRegistrations'),
+    [firestore]
+  );
+  const { data: allRegistrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
+
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
     return new Map(sessions.map(s => [s.id, s.name]));
   }, [sessions]);
+
+  const registrationCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    if (allRegistrations) {
+      allRegistrations.forEach(reg => {
+        if (reg.projectTitle) {
+          const key = `${reg.sessionId}-${reg.projectTitle}`;
+          counts.set(key, (counts.get(key) || 0) + 1);
+        }
+      });
+    }
+    return counts;
+  }, [allRegistrations]);
+
 
   const filteredTopics = useMemo(() => {
     if (!topics) return [];
@@ -138,7 +157,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     }
   };
   
-  const isLoading = isLoadingTopics || isLoadingSessions;
+  const isLoading = isLoadingTopics || isLoadingSessions || isLoadingRegs;
 
   if (isLoading) {
     return (
@@ -199,40 +218,46 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
               <TableRow>
                 <TableHead>Tên Đề tài</TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
-                <TableHead>SL SV Tối đa</TableHead>
+                <TableHead>SL SV</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTopics?.map((topic) => (
-                <TableRow key={topic.id}>
-                  <TableCell className="font-medium max-w-sm">
-                    <p className="truncate">{topic.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
-                  </TableCell>
-                  <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
-                  <TableCell>{topic.maxStudents}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant[topic.status]}>
-                        {statusLabel[topic.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
+              {filteredTopics?.map((topic) => {
+                 const countKey = `${topic.sessionId}-${topic.title}`;
+                 const registeredCount = registrationCounts.get(countKey) || 0;
+                return (
+                    <TableRow key={topic.id}>
+                    <TableCell className="font-medium max-w-sm">
+                        <p className="truncate">{topic.title}</p>
+                        <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
+                    </TableCell>
+                    <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
+                    <TableCell>
+                        <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
+                    </TableCell>
+                    <TableCell>
+                        <Badge variant={statusVariant[topic.status]}>
+                            {statusLabel[topic.status]}
+                        </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                        <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
+                            <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
+                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
+                        </DropdownMenuContent>
+                        </DropdownMenu>
+                    </TableCell>
+                    </TableRow>
+                )
+              })}
             </TableBody>
           </Table>
         </CardContent>
