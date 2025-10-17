@@ -67,7 +67,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
       supervisorId,
       supervisorName,
       maxStudents: parseInt(values.maxStudents, 10),
-      status: 'available' as const,
+      status: 'pending' as const, // Set default status to pending for approval
       createdAt: serverTimestamp(),
     };
 
@@ -75,7 +75,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
       await addDoc(collection(firestore, 'projectTopics'), newTopicData);
       toast({
         title: 'Thành công',
-        description: `Đã thêm đề tài "${values.title}".`,
+        description: `Đã gửi đề tài "${values.title}" để chờ duyệt.`,
       });
       onFinished();
     } catch (error: any) {
@@ -93,7 +93,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
       <DialogHeader>
         <DialogTitle>Thêm Đề tài mới</DialogTitle>
         <DialogDescription>
-          Điền thông tin chi tiết để đề xuất một đề tài mới cho sinh viên.
+          Điền thông tin chi tiết để đề xuất một đề tài mới cho sinh viên. Đề tài sẽ cần được admin duyệt trước khi hiển thị.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -223,7 +223,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
           <DialogFooter className="pt-4 mt-4 border-t">
             <Button type="button" variant="outline" onClick={onFinished}>Hủy</Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Đang tạo..." : "Tạo đề tài"}
+              {form.formState.isSubmitting ? "Đang gửi..." : "Gửi duyệt"}
             </Button>
           </DialogFooter>
         </form>
@@ -231,3 +231,5 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
     </>
   );
 }
+
+    

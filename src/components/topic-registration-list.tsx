@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -41,14 +42,14 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
 
   const topicsQuery = useMemoFirebase(
     () => {
-      if (!session?.id) return null; // Prevent query with undefined id
+      if (!session?.id) return null;
       return query(
         collection(firestore, 'projectTopics'),
         where('sessionId', '==', session.id),
-        where('status', '==', 'available')
+        where('status', '==', 'approved') // Only show approved topics
       )
     },
-    [firestore, session] // Depend on the whole session object
+    [firestore, session]
   );
   const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
 
@@ -185,3 +186,5 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
     </div>
   );
 }
+
+    

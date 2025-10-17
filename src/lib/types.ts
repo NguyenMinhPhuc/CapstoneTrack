@@ -2,6 +2,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -210,6 +211,8 @@ export type ProjectTopic = {
     objectives: string;
     expectedResults: string;
     maxStudents: 1 | 2;
-    status: 'available' | 'taken';
+    status: 'pending' | 'approved' | 'rejected' | 'taken';
     createdAt: any;
 }
+
+    

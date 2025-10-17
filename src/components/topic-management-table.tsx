@@ -18,10 +18,6 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import {
-  Dialog,
-  DialogContent,
-} from '@/components/ui/dialog';
-import {
     AlertDialog,
     AlertDialogAction,
     AlertDialogCancel,
@@ -37,15 +33,14 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, Check, X, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, doc, updateDoc, query } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
-import { AddTopicForm } from './add-topic-form';
-import { EditTopicForm } from './edit-topic-form';
 import { Badge } from './ui/badge';
 import {
   Select,
@@ -54,11 +49,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-
-interface MyTopicsTableProps {
-    supervisorId: string;
-    supervisorName: string;
-}
+import { Input } from './ui/input';
 
 const statusLabel: Record<ProjectTopic['status'], string> = {
   pending: 'Chờ duyệt',
@@ -74,18 +65,16 @@ const statusVariant: Record<ProjectTopic['status'], 'default' | 'secondary' | 'd
   taken: 'outline',
 };
 
-export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTableProps) {
+export function TopicManagementTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const topicsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'projectTopics'), where('supervisorId', '==', supervisorId)),
-    [firestore, supervisorId]
+    () => query(collection(firestore, 'projectTopics')),
+    [firestore]
   );
   const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
   
@@ -102,38 +91,32 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
 
   const filteredTopics = useMemo(() => {
     if (!topics) return [];
-    if (sessionFilter === 'all') return topics;
-    return topics.filter(topic => topic.sessionId === sessionFilter);
-  }, [topics, sessionFilter]);
+    
+    return topics.filter(topic => {
+      const sessionMatch = sessionFilter === 'all' || topic.sessionId === sessionFilter;
+      const statusMatch = statusFilter === 'all' || topic.status === statusFilter;
+      const term = searchTerm.toLowerCase();
+      const searchMatch = topic.title.toLowerCase().includes(term) || topic.supervisorName.toLowerCase().includes(term);
 
+      return sessionMatch && statusMatch && searchMatch;
+    });
 
-  const handleEditClick = (topic: ProjectTopic) => {
-    setSelectedTopic(topic);
-    setIsEditDialogOpen(true);
-  };
-  
-  const handleDeleteClick = (topic: ProjectTopic) => {
-    setSelectedTopic(topic);
-    setIsDeleteDialogOpen(true);
-  };
+  }, [topics, sessionFilter, statusFilter, searchTerm]);
 
-  const confirmDelete = async () => {
-    if (!selectedTopic) return;
+  const handleStatusChange = async (topicId: string, newStatus: 'approved' | 'rejected') => {
+    const topicRef = doc(firestore, 'projectTopics', topicId);
     try {
-      await deleteDoc(doc(firestore, 'projectTopics', selectedTopic.id));
-      toast({
-        title: 'Thành công',
-        description: `Đề tài "${selectedTopic.title}" đã được xóa.`,
-      });
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: `Không thể xóa đề tài: ${error.message}`,
-      });
-    } finally {
-      setIsDeleteDialogOpen(false);
-      setSelectedTopic(null);
+        await updateDoc(topicRef, { status: newStatus });
+        toast({
+            title: "Thành công",
+            description: `Trạng thái đề tài đã được cập nhật.`,
+        });
+    } catch(error: any) {
+        toast({
+            variant: "destructive",
+            title: "Lỗi",
+            description: `Không thể cập nhật trạng thái: ${error.message}`,
+        })
     }
   };
   
@@ -159,9 +142,30 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Danh sách Đề tài</CardTitle>
-              <CardDescription>Các đề tài bạn đã đề xuất cho các đợt báo cáo.</CardDescription>
+              <CardDescription>Xem và duyệt các đề tài do giáo viên đề xuất.</CardDescription>
             </div>
              <div className="flex items-center gap-2">
+                <div className="relative">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Tìm theo tên đề tài, GV..."
+                        className="pl-8 w-full sm:w-64"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Lọc theo trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                        {Object.entries(statusLabel).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 <Select value={sessionFilter} onValueChange={setSessionFilter}>
                     <SelectTrigger className="w-[250px]">
                         <SelectValue placeholder="Lọc theo đợt báo cáo" />
@@ -173,22 +177,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         ))}
                     </SelectContent>
                 </Select>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button>
-                    <PlusCircle className="mr-2 h-4 w-4" />
-                    Thêm Đề tài mới
-                    </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-2xl">
-                    <AddTopicForm 
-                        supervisorId={supervisorId}
-                        supervisorName={supervisorName}
-                        sessions={sessions || []}
-                        onFinished={() => setIsAddDialogOpen(false)} 
-                    />
-                </DialogContent>
-                </Dialog>
             </div>
           </div>
         </CardHeader>
@@ -197,8 +185,9 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             <TableHeader>
               <TableRow>
                 <TableHead>Tên Đề tài</TableHead>
+                <TableHead>GVHD</TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
-                <TableHead>SL SV Tối đa</TableHead>
+                <TableHead>SL SV</TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
@@ -210,6 +199,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     <p className="truncate">{topic.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
                   </TableCell>
+                  <TableCell>{topic.supervisorName}</TableCell>
                   <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
                   <TableCell>{topic.maxStudents}</TableCell>
                   <TableCell>
@@ -220,13 +210,19 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
+                        <Button variant="ghost" size="icon" disabled={topic.status !== 'pending'}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleStatusChange(topic.id, 'approved')}>
+                            <Check className="mr-2 h-4 w-4" />
+                            Duyệt
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(topic.id, 'rejected')}>
+                            <X className="mr-2 h-4 w-4" />
+                            Từ chối
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -236,33 +232,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           </Table>
         </CardContent>
       </Card>
-
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-2xl">
-          {selectedTopic && (
-            <EditTopicForm
-              topic={selectedTopic}
-              sessions={sessions || []}
-              onFinished={() => setIsEditDialogOpen(false)}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
-      
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn không?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Hành động này không thể hoàn tác. Đề tài sẽ bị xóa vĩnh viễn.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Tiếp tục</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 }

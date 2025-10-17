@@ -66,13 +66,14 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
     const updatedData = {
         ...values,
         maxStudents: parseInt(values.maxStudents, 10),
+        status: 'pending' // Reset status to pending on edit
     };
 
     try {
       await updateDoc(topicRef, updatedData);
       toast({
         title: 'Thành công',
-        description: 'Đã cập nhật thông tin đề tài.',
+        description: 'Đã cập nhật thông tin đề tài và gửi lại để chờ duyệt.',
       });
       onFinished();
     } catch (error: any) {
@@ -90,7 +91,7 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
       <DialogHeader>
         <DialogTitle>Chỉnh sửa Đề tài</DialogTitle>
         <DialogDescription>
-          Cập nhật thông tin chi tiết cho đề tài của bạn.
+          Cập nhật thông tin chi tiết cho đề tài của bạn. Thay đổi sẽ cần được duyệt lại.
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -208,7 +209,7 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
           <DialogFooter className="pt-4 mt-4 border-t">
             <Button type="button" variant="outline" onClick={onFinished}>Hủy</Button>
             <Button type="submit" disabled={form.formState.isSubmitting}>
-              {form.formState.isSubmitting ? "Đang lưu..." : "Lưu thay đổi"}
+              {form.formState.isSubmitting ? "Đang lưu..." : "Lưu và gửi duyệt lại"}
             </Button>
           </DialogFooter>
         </form>
@@ -216,3 +217,5 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
     </>
   );
 }
+
+    
