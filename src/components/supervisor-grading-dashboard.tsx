@@ -3,7 +3,7 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, Query, DocumentData } from 'firebase/firestore';
 import type { GraduationDefenseSession, DefenseRegistration, Supervisor, Rubric, Evaluation } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
@@ -250,18 +250,28 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
       const assignmentsData: SessionAssignments[] = [];
 
       for (const session of allSessions) {
-        const gradSupervisorQuery = query(
-            collection(firestore, 'defenseRegistrations'), 
+        
+        let gradSupervisorQuery: Query<DocumentData>;
+        let internSupervisorQuery: Query<DocumentData>;
+
+        const baseGradQuery = [
             where('sessionId', '==', session.id),
-            where('supervisorId', '==', supervisorId),
             where('graduationStatus', '==', 'reporting')
-        );
-        const internSupervisorQuery = query(
-            collection(firestore, 'defenseRegistrations'),
+        ];
+        const baseInternQuery = [
             where('sessionId', '==', session.id),
-            where('internshipSupervisorId', '==', supervisorId),
             where('internshipStatus', '==', 'reporting')
-        );
+        ];
+
+        if (userRole === 'admin') {
+            // Admin sees all students in the session
+            gradSupervisorQuery = query(collection(firestore, 'defenseRegistrations'), ...baseGradQuery);
+            internSupervisorQuery = query(collection(firestore, 'defenseRegistrations'), ...baseInternQuery);
+        } else {
+            // Supervisor sees only their assigned students
+            gradSupervisorQuery = query(collection(firestore, 'defenseRegistrations'), ...baseGradQuery, where('supervisorId', '==', supervisorId));
+            internSupervisorQuery = query(collection(firestore, 'defenseRegistrations'), ...baseInternQuery, where('internshipSupervisorId', '==', supervisorId));
+        }
         
         const [gradSnapshot, internSnapshot] = await Promise.all([
           getDocs(gradSupervisorQuery),
@@ -284,7 +294,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     };
 
     fetchAssignments();
-  }, [allSessions, isLoadingSessions, supervisorId, firestore]);
+  }, [allSessions, isLoadingSessions, supervisorId, firestore, userRole]);
   
 
   const SessionAccordionItem = ({ sessionData }: { sessionData: SessionAssignments }) => {
