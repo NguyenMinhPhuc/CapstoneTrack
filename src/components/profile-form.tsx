@@ -24,7 +24,6 @@ import { Skeleton } from './ui/skeleton';
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
   lastName: z.string().min(1, { message: 'Tên là bắt buộc.' }),
-  email: z.string().email(),
 });
 
 interface ProfileFormProps {
@@ -47,7 +46,6 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: user.email || '',
       firstName: '',
       lastName: '',
     },
@@ -56,12 +54,11 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   useEffect(() => {
     if (profileData) {
       form.reset({
-        email: user.email || '',
         firstName: profileData.firstName || '',
         lastName: profileData.lastName || '',
       });
     }
-  }, [profileData, user.email, form]);
+  }, [profileData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!profileDocRef) {
@@ -105,20 +102,7 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <FormField
-          control={form.control}
-          name="email"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Email</FormLabel>
-              <FormControl>
-                <Input {...field} readOnly disabled />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        {userData.role !== 'admin' && (
+        {userData.role !== 'admin' ? (
              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <FormField
                 control={form.control}
@@ -147,6 +131,8 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
                 )}
                 />
             </div>
+        ) : (
+             <p className="text-sm text-muted-foreground">Không có thông tin hồ sơ (Họ, Tên) cho tài khoản Quản trị viên.</p>
         )}
        
         <Button type="submit" disabled={form.formState.isSubmitting || userData.role === 'admin'}>

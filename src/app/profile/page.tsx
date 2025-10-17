@@ -1,6 +1,7 @@
 'use client';
 
 import { ChangePasswordForm } from '@/components/change-password-form';
+import { ChangeEmailForm } from '@/components/change-email-form';
 import { ProfileForm } from '@/components/profile-form';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -44,11 +45,22 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Hồ sơ cá nhân</CardTitle>
             <CardDescription>
-              Quản lý thông tin cá nhân và cài đặt tài khoản của bạn.
+              Quản lý thông tin cá nhân của bạn. Email không thể thay đổi tại đây.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ProfileForm user={user} userData={userData} />
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>Đổi Email</CardTitle>
+            <CardDescription>
+                Nhập email mới và mật khẩu hiện tại của bạn để thay đổi email đăng nhập.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+             <ChangeEmailForm user={user} userData={userData} />
           </CardContent>
         </Card>
         <Card>
