@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -38,9 +39,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where, updateDoc } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -54,6 +55,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 interface MyTopicsTableProps {
     supervisorId: string;
@@ -65,6 +67,7 @@ const statusLabel: Record<ProjectTopic['status'], string> = {
   approved: 'Đã duyệt',
   rejected: 'Bị từ chối',
   taken: 'Đã có SV',
+  available: 'Có sẵn',
 };
 
 const statusVariant: Record<ProjectTopic['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -72,6 +75,13 @@ const statusVariant: Record<ProjectTopic['status'], 'default' | 'secondary' | 'd
   approved: 'default',
   rejected: 'destructive',
   taken: 'outline',
+  available: 'outline'
+};
+
+const registrationStatusLabel: Record<string, string> = {
+    pending: 'Chờ xác nhận',
+    approved: 'Đã xác nhận',
+    rejected: 'Đã từ chối',
 };
 
 export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTableProps) {
@@ -96,8 +106,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
   const registrationsQuery = useMemoFirebase(
-    () => collection(firestore, 'defenseRegistrations'),
-    [firestore]
+    () => query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', supervisorId)),
+    [firestore, supervisorId]
   );
   const { data: allRegistrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
 
@@ -106,17 +116,20 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     return new Map(sessions.map(s => [s.id, s.name]));
   }, [sessions]);
 
-  const registrationCounts = useMemo(() => {
-    const counts = new Map<string, number>();
-    if (allRegistrations) {
-      allRegistrations.forEach(reg => {
-        if (reg.projectTitle) {
-          const key = `${reg.sessionId}-${reg.projectTitle}`;
-          counts.set(key, (counts.get(key) || 0) + 1);
-        }
-      });
-    }
-    return counts;
+  const registrationsByTopic = useMemo(() => {
+      const map = new Map<string, DefenseRegistration[]>();
+      if (allRegistrations) {
+          allRegistrations.forEach(reg => {
+              if (reg.projectTitle) {
+                  const key = `${reg.sessionId}-${reg.projectTitle}`;
+                  if (!map.has(key)) {
+                      map.set(key, []);
+                  }
+                  map.get(key)?.push(reg);
+              }
+          });
+      }
+      return map;
   }, [allRegistrations]);
 
 
@@ -156,6 +169,29 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       setSelectedTopic(null);
     }
   };
+
+  const handleRegistrationConfirmation = async (registrationId: string, action: 'approve' | 'reject') => {
+      const regDocRef = doc(firestore, 'defenseRegistrations', registrationId);
+      try {
+          if (action === 'approve') {
+              await updateDoc(regDocRef, { projectRegistrationStatus: 'approved' });
+              toast({ title: 'Thành công', description: 'Đã xác nhận hướng dẫn sinh viên.' });
+          } else { // reject
+              await updateDoc(regDocRef, { 
+                  projectRegistrationStatus: 'rejected',
+                  projectTitle: '',
+                  summary: '',
+                  objectives: '',
+                  expectedResults: '',
+                  supervisorId: '',
+                  supervisorName: '',
+              });
+              toast({ title: 'Thành công', description: 'Đã từ chối hướng dẫn. Đề tài đã được mở lại.' });
+          }
+      } catch (error: any) {
+          toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+      }
+  }
   
   const isLoading = isLoadingTopics || isLoadingSessions || isLoadingRegs;
 
@@ -225,37 +261,70 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             </TableHeader>
             <TableBody>
               {filteredTopics?.map((topic) => {
-                 const countKey = `${topic.sessionId}-${topic.title}`;
-                 const registeredCount = registrationCounts.get(countKey) || 0;
+                 const registeredStudents = registrationsByTopic.get(`${topic.sessionId}-${topic.title}`) || [];
+                 const registeredCount = registeredStudents.length;
+                 const pendingStudents = registeredStudents.filter(r => r.projectRegistrationStatus === 'pending');
                 return (
-                    <TableRow key={topic.id}>
-                    <TableCell className="font-medium max-w-sm">
-                        <p className="truncate">{topic.title}</p>
-                        <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
-                    </TableCell>
-                    <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
-                    <TableCell>
-                        <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
-                    </TableCell>
-                    <TableCell>
-                        <Badge variant={statusVariant[topic.status]}>
-                            {statusLabel[topic.status]}
-                        </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                        <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
-                            <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
-                        </DropdownMenuContent>
-                        </DropdownMenu>
-                    </TableCell>
-                    </TableRow>
+                    <React.Fragment key={topic.id}>
+                        <TableRow>
+                        <TableCell className="font-medium max-w-sm">
+                            <p className="truncate">{topic.title}</p>
+                            <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
+                        </TableCell>
+                        <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
+                        <TableCell>
+                            <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
+                        </TableCell>
+                        <TableCell>
+                            <Badge variant={statusVariant[topic.status]}>
+                                {statusLabel[topic.status]}
+                            </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                            <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" disabled={topic.status === 'taken' || topic.status === 'approved'}>
+                                <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditClick(topic)}>Sửa</DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)}>Xóa</DropdownMenuItem>
+                            </DropdownMenuContent>
+                            </DropdownMenu>
+                        </TableCell>
+                        </TableRow>
+                        {pendingStudents.length > 0 && (
+                             <TableRow>
+                                <TableCell colSpan={5} className="p-0">
+                                    <Accordion type="single" collapsible className="w-full">
+                                        <AccordionItem value="item-1" className="border-none">
+                                            <AccordionTrigger className="bg-amber-50 hover:bg-amber-100 px-4 py-2 text-sm text-amber-800">
+                                                Có {pendingStudents.length} sinh viên đang chờ bạn xác nhận
+                                            </AccordionTrigger>
+                                            <AccordionContent className="bg-amber-50/50 p-4">
+                                                <div className="space-y-2">
+                                                {pendingStudents.map(reg => (
+                                                    <div key={reg.id} className="flex items-center justify-between">
+                                                        <p className="text-sm">{reg.studentName} ({reg.studentId})</p>
+                                                        <div className="flex gap-2">
+                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200" onClick={() => handleRegistrationConfirmation(reg.id, 'approve')}>
+                                                                <Check className="mr-2 h-4 w-4"/> Chấp nhận
+                                                            </Button>
+                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200" onClick={() => handleRegistrationConfirmation(reg.id, 'reject')}>
+                                                                <X className="mr-2 h-4 w-4"/> Từ chối
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                                </div>
+                                            </AccordionContent>
+                                        </AccordionItem>
+                                    </Accordion>
+                                </TableCell>
+                            </TableRow>
+                        )}
+                    </React.Fragment>
                 )
               })}
             </TableBody>

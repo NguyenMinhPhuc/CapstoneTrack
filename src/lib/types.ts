@@ -3,6 +3,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -74,6 +75,7 @@ export type Supervisor = {
 }
 
 export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting';
+export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 
 export type DefenseRegistration = {
   id: string;
@@ -87,6 +89,7 @@ export type DefenseRegistration = {
   objectives?: string;
   expectedResults?: string;
   reportLink?: string;
+  projectRegistrationStatus?: ProjectRegistrationStatus;
   // General fields
   supervisorId?: string; // Graduation project supervisor
   supervisorName?: string; // Graduation project supervisor name
@@ -211,8 +214,6 @@ export type ProjectTopic = {
     objectives: string;
     expectedResults: string;
     maxStudents: 1 | 2;
-    status: 'pending' | 'approved' | 'rejected' | 'taken';
+    status: 'pending' | 'approved' | 'rejected' | 'taken' | 'available';
     createdAt: any;
 }
-
-    
