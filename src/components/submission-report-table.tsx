@@ -67,14 +67,6 @@ export function SubmissionReportTable() {
     const sessionMap = new Map(sessions.map(s => [s.id, s.name]));
 
     return registrations
-      .filter(reg => 
-        reg.reportLink || 
-        reg.internship_reportLink || 
-        reg.internship_acceptanceLetterLink ||
-        reg.internship_commitmentFormLink ||
-        reg.internship_feedbackFormLink ||
-        reg.internship_registrationFormLink
-      )
       .map((reg): SubmissionReport => ({
         ...reg,
         sessionName: sessionMap.get(reg.sessionId) || 'Không xác định',
@@ -247,7 +239,7 @@ export function SubmissionReportTable() {
               ) : (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center h-24">
-                    Không tìm thấy hồ sơ nào đã nộp.
+                    Không tìm thấy hồ sơ nào.
                   </TableCell>
                 </TableRow>
               )}
