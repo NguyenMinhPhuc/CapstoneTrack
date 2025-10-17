@@ -17,9 +17,11 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { Textarea } from './ui/textarea';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên tiểu ban là bắt buộc.' }),
+  description: z.string().optional(),
 });
 
 interface AddSubCommitteeFormProps {
@@ -35,6 +37,7 @@ export function AddSubCommitteeForm({ sessionId, onFinished }: AddSubCommitteeFo
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      description: '',
     },
   });
 
@@ -44,6 +47,7 @@ export function AddSubCommitteeForm({ sessionId, onFinished }: AddSubCommitteeFo
     const newSubcommitteeData = {
       sessionId: sessionId,
       name: values.name,
+      description: values.description || '',
       members: [], // Initialize with an empty member list
       createdAt: serverTimestamp(),
     };
@@ -77,6 +81,19 @@ export function AddSubCommitteeForm({ sessionId, onFinished }: AddSubCommitteeFo
               <FormLabel>Tên tiểu ban</FormLabel>
               <FormControl>
                 <Input placeholder="Ví dụ: Tiểu ban 1 - CNTT" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mô tả (tùy chọn)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Ghi chú thêm về phòng, thời gian..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

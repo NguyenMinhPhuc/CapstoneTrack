@@ -87,8 +87,8 @@ export function SubCommitteeCard({ subcommittee, allSupervisors, sessionId }: Su
         <CardHeader className="flex flex-row items-start justify-between">
           <div>
             <CardTitle>{subcommittee.name}</CardTitle>
-            <CardDescription>
-                {subcommittee.members.length} thành viên
+            <CardDescription className="pt-1">
+                {subcommittee.description || `${subcommittee.members.length} thành viên`}
             </CardDescription>
           </div>
            <DropdownMenu>
@@ -100,7 +100,7 @@ export function SubCommitteeCard({ subcommittee, allSupervisors, sessionId }: Su
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setIsEditDialogOpen(true)}>
                 <Edit className="mr-2 h-4 w-4" />
-                <span>Đổi tên</span>
+                <span>Sửa thông tin</span>
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => setIsMembersDialogOpen(true)}>
                 <UserPlus className="mr-2 h-4 w-4" />
@@ -133,7 +133,7 @@ export function SubCommitteeCard({ subcommittee, allSupervisors, sessionId }: Su
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-md">
             <DialogHeader>
-                <DialogTitle>Đổi tên tiểu ban</DialogTitle>
+                <DialogTitle>Sửa thông tin tiểu ban</DialogTitle>
             </DialogHeader>
             <EditSubCommitteeForm
                 subcommittee={subcommittee}

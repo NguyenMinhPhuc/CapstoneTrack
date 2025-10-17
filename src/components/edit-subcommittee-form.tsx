@@ -18,9 +18,11 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseSubCommittee } from '@/lib/types';
+import { Textarea } from './ui/textarea';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên tiểu ban là bắt buộc.' }),
+  description: z.string().optional(),
 });
 
 interface EditSubCommitteeFormProps {
@@ -37,6 +39,7 @@ export function EditSubCommitteeForm({ subcommittee, sessionId, onFinished }: Ed
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: subcommittee.name,
+      description: subcommittee.description || '',
     },
   });
 
@@ -45,13 +48,14 @@ export function EditSubCommitteeForm({ subcommittee, sessionId, onFinished }: Ed
     
     const updateData = {
         name: values.name,
+        description: values.description || '',
     };
 
     updateDoc(subcommitteeDocRef, updateData)
         .then(() => {
             toast({
                 title: 'Thành công',
-                description: 'Tên tiểu ban đã được cập nhật.',
+                description: 'Thông tin tiểu ban đã được cập nhật.',
             });
             onFinished();
         })
@@ -76,6 +80,19 @@ export function EditSubCommitteeForm({ subcommittee, sessionId, onFinished }: Ed
               <FormLabel>Tên tiểu ban</FormLabel>
               <FormControl>
                 <Input placeholder="Ví dụ: Tiểu ban 1 - CNTT" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="description"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Mô tả (tùy chọn)</FormLabel>
+              <FormControl>
+                <Textarea placeholder="Ghi chú thêm về phòng, thời gian..." {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

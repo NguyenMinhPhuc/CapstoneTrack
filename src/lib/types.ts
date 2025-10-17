@@ -151,6 +151,7 @@ export type DefenseSubCommittee = {
     id: string;
     sessionId: string;
     name: string;
+    description?: string;
     members: SubCommitteeMember[];
 }
 
@@ -192,5 +193,3 @@ export type SystemSettings = {
     enableOverallGrading?: boolean;
     allowStudentRegistration?: boolean;
 }
-
-    
