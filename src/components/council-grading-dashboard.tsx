@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -8,13 +9,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle } from 'lucide-react';
+import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle, Search } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
 import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Input } from './ui/input';
 
 
 interface CouncilGradingDashboardProps {
@@ -51,6 +53,7 @@ function SubcommitteeGradingView({
     const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
     const [isGradingDialogOpen, setIsGradingDialogOpen] = useState(false);
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const studentsInSubcommittee = useMemo(() => {
         return registrations.filter(reg => reg.subCommitteeId === subcommittee.id);
@@ -67,7 +70,7 @@ function SubcommitteeGradingView({
             groups.get(projectKey)!.push(reg);
         });
 
-        return Array.from(groups.entries()).map(([projectTitle, students]) => {
+        const allGroups = Array.from(groups.entries()).map(([projectTitle, students]) => {
             const representativeStudent = 
                 students.find(s => s.summary || s.reportLink) ||
                 students[0];
@@ -81,11 +84,34 @@ function SubcommitteeGradingView({
                 reportLink: representativeStudent?.reportLink,
             }
         });
-    }, [studentsInSubcommittee]);
+        
+        if (!searchTerm) {
+            return allGroups;
+        }
+        
+        const term = searchTerm.toLowerCase();
+        return allGroups.filter(group => 
+            group.projectTitle.toLowerCase().includes(term) ||
+            group.students.some(s => 
+                s.studentName.toLowerCase().includes(term) ||
+                s.studentId.toLowerCase().includes(term)
+            )
+        );
+
+    }, [studentsInSubcommittee, searchTerm]);
 
     const internshipStudents = useMemo(() => {
-        return studentsInSubcommittee.filter(reg => reg.internshipStatus === 'reporting');
-    }, [studentsInSubcommittee]);
+        const allInternshipStudents = studentsInSubcommittee.filter(reg => reg.internshipStatus === 'reporting');
+         if (!searchTerm) {
+            return allInternshipStudents;
+        }
+        const term = searchTerm.toLowerCase();
+        return allInternshipStudents.filter(student => 
+            student.studentName.toLowerCase().includes(term) ||
+            student.studentId.toLowerCase().includes(term) ||
+            (student.internship_companyName && student.internship_companyName.toLowerCase().includes(term))
+        );
+    }, [studentsInSubcommittee, searchTerm]);
     
     // Find evaluations for each group/student, specific to the evaluator and rubric
     const getEvaluationForGroup = (group: ProjectGroup) => {
@@ -177,6 +203,16 @@ function SubcommitteeGradingView({
     return (
         <>
             <CardContent>
+                <div className="relative mb-4">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Tìm theo MSSV, tên SV, đề tài, công ty..."
+                        className="w-full pl-8"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
                  <Tabs defaultValue={getDefaultTab()} className="w-full">
                     <TabsList className="grid w-full grid-cols-2">
                         <TabsTrigger value="graduation" disabled={projectGroups.length === 0}>
