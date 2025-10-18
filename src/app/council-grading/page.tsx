@@ -8,7 +8,6 @@ import { doc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CouncilGradingDashboard } from '@/components/council-grading-dashboard';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Stopwatch } from '@/components/stopwatch';
 
 
 export default function CouncilGradingPage() {
@@ -54,15 +53,12 @@ export default function CouncilGradingPage() {
 
   return (
     <main className="p-4 sm:p-6 lg:p-8 space-y-6">
-       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-         <Card className="lg:col-span-2">
-              <CardHeader>
-                  <CardTitle>Chấm điểm Hội đồng</CardTitle>
-                  <CardDescription>Chấm điểm với tư cách là thành viên hội đồng hoặc tiểu ban bạn được phân công.</CardDescription>
-              </CardHeader>
-          </Card>
-          <Stopwatch />
-       </div>
+       <Card>
+          <CardHeader>
+              <CardTitle>Chấm điểm Hội đồng</CardTitle>
+              <CardDescription>Chấm điểm với tư cách là thành viên hội đồng hoặc tiểu ban bạn được phân công.</CardDescription>
+          </CardHeader>
+      </Card>
       {supervisorId ? (
          <CouncilGradingDashboard supervisorId={supervisorId} userRole={userData.role} />
       ) : (
