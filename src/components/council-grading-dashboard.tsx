@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -419,34 +418,40 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
                     </CardContent>
                 </Card>
             )}
-            {subCommittees.map(sc => (
-                <Card key={sc.id}>
-                    <CardHeader>
-                        <CardTitle className="text-base">
-                            {sc.name}
-                            {sc.description && <span className="text-muted-foreground font-normal"> ({sc.description})</span>}
-                        </CardTitle>
-                        <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-                            <span>{sc.members.length} thành viên</span>
-                             <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> HĐ chấm TN: {getRubricName(councilGraduationRubric, isLoadingCouncilGradRubric)}</span>
-                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> HĐ chấm TT: {getRubricName(councilInternshipRubric, isLoadingCouncilInternRubric)}</span>
-                        </CardDescription>
-                    </CardHeader>
-                    {(isLoadingCouncilGradRubric || isLoadingCouncilInternRubric) ? (
-                        <div className="p-6"><Skeleton className="h-20 w-full" /></div>
-                    ) : (
-                         <SubcommitteeGradingView 
-                            subcommittee={sc} 
-                            registrations={registrations} 
-                            evaluations={sessionEvaluations}
-                            councilGraduationRubric={councilGraduationRubric || null}
-                            councilInternshipRubric={councilInternshipRubric || null}
-                            supervisorId={supervisorId}
-                            sessionId={session.id}
-                        />
-                    )}
-                </Card>
-            ))}
+             <Accordion type="multiple" className="space-y-4">
+                {subCommittees.map(sc => (
+                    <AccordionItem value={sc.id} key={sc.id} className="border rounded-lg bg-card overflow-hidden">
+                       <AccordionTrigger className="px-6 hover:no-underline">
+                           <div className="text-left">
+                                <CardTitle className="text-base">
+                                    {sc.name}
+                                </CardTitle>
+                                {sc.description && <CardDescription className="pt-1">{sc.description}</CardDescription>}
+                                <CardDescription className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs pt-2">
+                                    <span>{sc.members.length} thành viên</span>
+                                    <span className="flex items-center gap-1"><GraduationCap className="h-3 w-3" /> HĐ chấm TN: {getRubricName(councilGraduationRubric, isLoadingCouncilGradRubric)}</span>
+                                    <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> HĐ chấm TT: {getRubricName(councilInternshipRubric, isLoadingCouncilInternRubric)}</span>
+                                </CardDescription>
+                           </div>
+                       </AccordionTrigger>
+                       <AccordionContent>
+                         {(isLoadingCouncilGradRubric || isLoadingCouncilInternRubric) ? (
+                            <div className="p-6"><Skeleton className="h-20 w-full" /></div>
+                        ) : (
+                            <SubcommitteeGradingView 
+                                subcommittee={sc} 
+                                registrations={registrations} 
+                                evaluations={sessionEvaluations}
+                                councilGraduationRubric={councilGraduationRubric || null}
+                                councilInternshipRubric={councilInternshipRubric || null}
+                                supervisorId={supervisorId}
+                                sessionId={session.id}
+                            />
+                        )}
+                       </AccordionContent>
+                    </AccordionItem>
+                ))}
+             </Accordion>
             </AccordionContent>
         </AccordionItem>
     );
