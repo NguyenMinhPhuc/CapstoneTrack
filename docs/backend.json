@@ -576,6 +576,31 @@
       },
       "required": ["id", "sessionId", "supervisorId", "supervisorName", "title", "summary", "maxStudents", "status"]
     },
+    "WeeklyProgressReport": {
+        "$schema": "http://json-schema.org/draft-07/schema#",
+        "title": "WeeklyProgressReport",
+        "type": "object",
+        "description": "Stores a student's weekly progress report for their project.",
+        "properties": {
+            "id": {"type": "string"},
+            "registrationId": {"type": "string", "description": "Reference to the student's registration."},
+            "studentId": {"type": "string", "description": "The student's user ID."},
+            "supervisorId": {"type": "string", "description": "The supervisor's user ID."},
+            "sessionId": {"type": "string", "description": "The session ID."},
+            "weekNumber": {"type": "number", "description": "The week number of the report within the session."},
+            "submissionDate": {"type": "string", "format": "date-time"},
+            "workDone": {"type": "string", "description": "Content of work done this week."},
+            "nextWeekPlan": {"type": "string", "description": "Plan for the next week."},
+            "status": {
+                "type": "string",
+                "enum": ["pending_review", "approved", "rejected"],
+                "description": "The review status of the report."
+            },
+            "supervisorComments": {"type": "string", "description": "Optional comments from the supervisor."},
+            "reviewDate": {"type": "string", "format": "date-time", "description": "When the report was reviewed."}
+        },
+        "required": ["id", "registrationId", "studentId", "supervisorId", "sessionId", "weekNumber", "submissionDate", "workDone", "nextWeekPlan", "status"]
+    },
     "SystemSettings": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "SystemSettings",
@@ -673,6 +698,12 @@
         },
         "description": "Stores individual evaluation records from supervisors."
     },
+    "/weeklyProgressReports/{reportId}": {
+        "schema": {
+            "$ref": "#/entities/WeeklyProgressReport"
+        },
+        "description": "Stores students' weekly progress reports."
+    },
     "/systemSettings/{settingId}": {
       "schema": {
         "$ref": "#/entities/SystemSettings"
@@ -681,3 +712,5 @@
     }
   }
 }
+
+    

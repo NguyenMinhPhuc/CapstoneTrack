@@ -225,3 +225,20 @@ export type ProjectTopic = {
     status: 'pending' | 'approved' | 'rejected' | 'taken';
     createdAt: any;
 }
+
+export type WeeklyProgressReport = {
+    id: string;
+    registrationId: string;
+    studentId: string;
+    supervisorId: string;
+    sessionId: string;
+    weekNumber: number;
+    submissionDate: any;
+    workDone: string;
+    nextWeekPlan: string;
+    status: 'pending_review' | 'approved' | 'rejected';
+    supervisorComments?: string;
+    reviewDate?: any;
+}
+
+    
