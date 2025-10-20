@@ -29,6 +29,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
+
 
 interface TopicRegistrationListProps {
   session: GraduationDefenseSession;
@@ -194,21 +198,26 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
                   )}
                   <Badge variant="secondary">Đã đăng ký: {registeredCount}/{topic.maxStudents}</Badge>
               </div>
-              <div className="space-y-3 text-sm text-muted-foreground">
+              <div className={cn(
+                "prose prose-sm text-muted-foreground max-w-none space-y-3",
+                "[&_ul]:list-disc [&_ul]:pl-4",
+                "[&_ol]:list-decimal [&_ol]:pl-4",
+                "[&_p]:m-0"
+              )}>
                   <div className="flex items-start gap-3">
-                      <Book className="h-4 w-4 mt-0.5 shrink-0" />
-                      <span>{topic.summary}</span>
+                      <Book className="h-4 w-4 mt-1 shrink-0" />
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.summary}</ReactMarkdown>
                   </div>
                   {topic.objectives && (
                       <div className="flex items-start gap-3">
-                          <Target className="h-4 w-4 mt-0.5 shrink-0" />
-                          <span className="whitespace-pre-wrap">{topic.objectives}</span>
+                          <Target className="h-4 w-4 mt-1 shrink-0" />
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.objectives}</ReactMarkdown>
                       </div>
                   )}
                   {topic.expectedResults && (
                       <div className="flex items-start gap-3">
-                          <CheckCircle className="h-4 w-4 mt-0.5 shrink-0" />
-                          <span className="whitespace-pre-wrap">{topic.expectedResults}</span>
+                          <CheckCircle className="h-4 w-4 mt-1 shrink-0" />
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults}</ReactMarkdown>
                       </div>
                   )}
               </div>
@@ -242,5 +251,3 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
     </div>
   );
 }
-
-    
