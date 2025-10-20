@@ -591,6 +591,11 @@
             "submissionDate": {"type": "string", "format": "date-time"},
             "workDone": {"type": "string", "description": "Content of work done this week."},
             "nextWeekPlan": {"type": "string", "description": "Plan for the next week."},
+            "proofLink": {
+                "type": "string",
+                "format": "uri",
+                "description": "A URL link to a proof image or document for the week's work."
+            },
             "status": {
                 "type": "string",
                 "enum": ["pending_review", "approved", "rejected"],

@@ -10,7 +10,7 @@ import * as z from 'zod';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Send, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Info, Send, Clock, CheckCircle, XCircle, Link } from 'lucide-react';
 import { type DefenseRegistration, type GraduationDefenseSession, type WeeklyProgressReport } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { differenceInWeeks, startOfWeek } from 'date-fns';
@@ -31,11 +31,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Input } from './ui/input';
 
 
 const formSchema = z.object({
   workDone: z.string().min(10, { message: 'Vui lòng mô tả công việc đã làm.' }),
   nextWeekPlan: z.string().min(10, { message: 'Vui lòng mô tả kế hoạch tuần tới.' }),
+  proofLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
 });
 
 const statusConfig = {
@@ -76,8 +78,7 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     }
     // If all weeks up to the current one are submitted, and the session is ongoing, add the next week as an option.
     if (weeks.length === 0 && currentWeek > 0) {
-      const lastSubmittedWeek = Math.max(...Array.from(submittedWeeks), 0);
-      weeks.push(Math.max(currentWeek, lastSubmittedWeek) + 1);
+      weeks.push(currentWeek + 1);
     }
     return weeks;
   }, [currentWeek, pastReports]);
@@ -97,6 +98,7 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     defaultValues: {
       workDone: '',
       nextWeekPlan: '',
+      proofLink: '',
     },
   });
 
@@ -248,6 +250,19 @@ export function ProgressReportDashboard({ user }: { user: User }) {
                       </FormItem>
                     )}
                   />
+                   <FormField
+                    control={form.control}
+                    name="proofLink"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Link minh chứng (tùy chọn)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://example.com/image.png" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || selectedWeek === null}>
                     <Send className="mr-2 h-4 w-4" />
                     {form.formState.isSubmitting ? 'Đang nộp...' : `Nộp Báo cáo Tuần ${selectedWeek || ''}`}
@@ -303,6 +318,14 @@ export function ProgressReportDashboard({ user }: { user: User }) {
                                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.nextWeekPlan}</ReactMarkdown>
                                             </div>
                                         </div>
+                                        {report.proofLink && (
+                                            <div>
+                                                <h4 className="font-semibold mb-2">Minh chứng</h4>
+                                                <a href={report.proofLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all flex items-center gap-1">
+                                                   <Link className="h-3 w-3" /> {report.proofLink}
+                                                </a>
+                                            </div>
+                                        )}
                                         {report.supervisorComments && (
                                              <div>
                                                 <h4 className="font-semibold mb-2">Nhận xét của GVHD</h4>
@@ -323,3 +346,5 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     </div>
   );
 }
+
+    

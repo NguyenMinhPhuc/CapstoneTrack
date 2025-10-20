@@ -236,9 +236,12 @@ export type WeeklyProgressReport = {
     submissionDate: any;
     workDone: string;
     nextWeekPlan: string;
+    proofLink?: string;
     status: 'pending_review' | 'approved' | 'rejected';
     supervisorComments?: string;
     reviewDate?: any;
 }
+
+    
 
     

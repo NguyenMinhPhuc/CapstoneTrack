@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -17,7 +18,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
-import { Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Clock, CheckCircle, XCircle, Link } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
@@ -123,6 +124,14 @@ export function ViewProgressDialog({ registration, onFinished }: ViewProgressDia
                                             <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.nextWeekPlan}</ReactMarkdown>
                                         </div>
                                     </div>
+                                    {report.proofLink && (
+                                        <div>
+                                            <h4 className="font-semibold mb-2">Minh chứng</h4>
+                                            <a href={report.proofLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all flex items-center gap-1">
+                                                <Link className="h-3 w-3" /> {report.proofLink}
+                                            </a>
+                                        </div>
+                                    )}
                                     <Separator />
                                      {report.status === 'pending_review' ? (
                                         <div className="space-y-2">
@@ -163,3 +172,5 @@ export function ViewProgressDialog({ registration, onFinished }: ViewProgressDia
     </>
   );
 }
+
+    
