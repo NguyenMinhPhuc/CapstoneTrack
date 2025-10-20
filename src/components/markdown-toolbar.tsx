@@ -17,60 +17,72 @@ export function MarkdownToolbar({ textareaRef }: MarkdownToolbarProps) {
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
     const selectedText = textarea.value.substring(start, end);
+    const value = textarea.value;
+    
     let newText = '';
-    let newCursorPos = start;
+    let newCursorPos = 0;
+
+    const insertText = (text: string, cursorPos: number) => {
+      textarea.value = value.substring(0, start) + text + value.substring(end);
+      textarea.focus();
+      
+      // Use setTimeout to ensure the cursor position is set after the value is updated.
+      setTimeout(() => {
+        textarea.selectionStart = textarea.selectionEnd = start + cursorPos;
+        // Dispatch an input event to notify React Hook Form of the change
+        const event = new Event('input', { bubbles: true, cancelable: true });
+        textarea.dispatchEvent(event);
+      }, 0);
+    };
 
     switch (style) {
       case 'bold':
-        newText = `**${selectedText || 'in đậm'}**`;
-        newCursorPos = selectedText ? start + newText.length : start + 2;
+        if (selectedText) {
+          newText = `**${selectedText}**`;
+          insertText(newText, newText.length);
+        } else {
+          newText = '****';
+          insertText(newText, 2);
+        }
         break;
       case 'italic':
-        newText = `*${selectedText || 'in nghiêng'}*`;
-        newCursorPos = selectedText ? start + newText.length : start + 1;
+        if (selectedText) {
+          newText = `*${selectedText}*`;
+          insertText(newText, newText.length);
+        } else {
+          newText = '**';
+          insertText(newText, 1);
+        }
         break;
       case 'bullet': {
         const lines = selectedText.split('\n');
-        if (lines.length > 1) {
-          newText = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
+        if (lines.length > 1 && selectedText) {
+           newText = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
+           insertText(newText, newText.length);
         } else {
-          newText = `- ${selectedText || 'danh sách'}`;
+          const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+          const prefix = value.substring(lineStart, start).trim().length === 0 ? '' : '\n';
+          newText = `${prefix}- `;
+          insertText(newText, newText.length);
         }
-        newCursorPos = start + newText.length;
         break;
       }
       case 'number': {
         const lines = selectedText.split('\n');
-         if (lines.length > 1) {
-          newText = lines.filter(line => line.trim()).map((line, index) => `${index + 1}. ${line}`).join('\n');
+        if (lines.length > 1 && selectedText) {
+          newText = lines.map((line, index) => line.trim() ? `${index + 1}. ${line}` : line).join('\n');
+          insertText(newText, newText.length);
         } else {
-          newText = `1. ${selectedText || 'danh sách'}`;
+           const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+           const prefix = value.substring(lineStart, start).trim().length === 0 ? '' : '\n';
+           newText = `${prefix}1. `;
+           insertText(newText, newText.length);
         }
-        newCursorPos = start + newText.length;
         break;
       }
       default:
-        newText = selectedText;
-        newCursorPos = end;
+        break;
     }
-
-    const value = textarea.value;
-    const before = value.substring(0, start);
-    const after = value.substring(end);
-
-    // This is the key part: update the value programmatically
-    textarea.value = before + newText + after;
-
-    // Then, create and dispatch an 'input' event
-    // This makes React and react-hook-form aware of the change
-    const event = new Event('input', { bubbles: true, cancelable: true });
-    textarea.dispatchEvent(event);
-
-    // Set focus and cursor position after the state update
-    textarea.focus();
-    setTimeout(() => {
-        textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }, 0);
   };
 
   return (
