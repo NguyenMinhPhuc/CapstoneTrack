@@ -263,6 +263,11 @@
           "description": "The status of the student's project topic registration, confirmed by the supervisor.",
           "enum": ["pending", "approved", "rejected"]
         },
+        "proposalStatus": {
+          "type": "string",
+          "description": "The status of the project proposal (thuyết minh) submitted by the student.",
+          "enum": ["not_submitted", "pending_approval", "approved", "rejected"]
+        },
         "summary": {
           "type": "string",
           "description": "A brief summary of the graduation project."
@@ -274,6 +279,10 @@
         "expectedResults": {
           "type": "string",
           "description": "The expected results of the graduation project."
+        },
+        "implementationPlan": {
+            "type": "string",
+            "description": "The detailed implementation plan for the project."
         },
         "reportLink": {
           "type": "string",

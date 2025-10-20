@@ -32,6 +32,7 @@ import {
   BookUser,
   BookMarked,
   BookA,
+  FileSignature,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -110,6 +111,11 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/topic-registration")} tooltip="Đăng ký Đề tài">
                         <Link href="/topic-registration"><BookMarked /><span>Đăng ký Đề tài</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/proposal-submission")} tooltip="Nộp thuyết minh">
+                        <Link href="/proposal-submission"><FileSignature /><span>Nộp Thuyết minh</span></Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -226,5 +232,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    

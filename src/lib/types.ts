@@ -8,6 +8,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -80,6 +81,8 @@ export type Supervisor = {
 
 export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting';
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
+export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
+
 
 export type DefenseRegistration = {
   id: string;
@@ -92,8 +95,10 @@ export type DefenseRegistration = {
   summary?: string;
   objectives?: string;
   expectedResults?: string;
+  implementationPlan?: string;
   reportLink?: string;
   projectRegistrationStatus?: ProjectRegistrationStatus;
+  proposalStatus?: ProposalStatus;
   // General fields
   supervisorId?: string; // Graduation project supervisor
   supervisorName?: string; // Graduation project supervisor name

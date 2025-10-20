@@ -10,11 +10,13 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Book, CheckCircle, Target, User, Users, Tag, Clock, CircleAlert, CircleCheck, CircleX } from 'lucide-react';
+import { Book, CheckCircle, Target, User, Users, Tag, Clock, CircleAlert, CircleCheck, CircleX, FileSignature } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import { Button } from './ui/button';
+import Link from 'next/link';
 
 interface RegisteredTopicDetailsProps {
   topic: ProjectTopic;
@@ -34,7 +36,7 @@ const registrationStatusConfig = {
         icon: <CircleCheck className="h-4 w-4 text-green-500" />,
         variant: "default" as const,
         alert: "Đăng ký thành công!",
-        alertDesc: "Bạn đã đăng ký thành công đề tài này. Vui lòng liên hệ giáo viên hướng dẫn để được hỗ trợ các bước tiếp theo.",
+        alertDesc: "Bạn đã đăng ký thành công đề tài này. Vui lòng liên hệ giáo viên hướng dẫn và bắt đầu nộp thuyết minh đề tài.",
     },
     rejected: {
         label: "Bị từ chối",
@@ -52,18 +54,28 @@ const registrationStatusConfig = {
     }
 }
 
+const proposalStatusConfig = {
+    not_submitted: { label: "Chưa nộp thuyết minh", variant: "outline" as const },
+    pending_approval: { label: "Chờ duyệt thuyết minh", variant: "secondary" as const },
+    approved: { label: "Đã duyệt thuyết minh", variant: "default" as const },
+    rejected: { label: "Cần chỉnh sửa", variant: "destructive" as const },
+};
+
 
 export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicDetailsProps) {
-  const status = registration.projectRegistrationStatus || 'pending';
-  const config = registrationStatusConfig[status] || registrationStatusConfig.default;
+  const regStatus = registration.projectRegistrationStatus || 'pending';
+  const regConfig = registrationStatusConfig[regStatus] || registrationStatusConfig.default;
+  
+  const propStatus = registration.proposalStatus || 'not_submitted';
+  const propConfig = proposalStatusConfig[propStatus];
 
   return (
     <div>
         <Alert>
-            {config.icon}
-            <AlertTitle>{config.alert}</AlertTitle>
+            {regConfig.icon}
+            <AlertTitle>{regConfig.alert}</AlertTitle>
             <AlertDescription>
-                {config.alertDesc}
+                {regConfig.alertDesc}
             </AlertDescription>
         </Alert>
         <Card className="mt-6 border-primary">
@@ -76,7 +88,12 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
                           {topic.supervisorName}
                       </CardDescription>
                   </div>
-                  <Badge variant={config.variant}>{config.label}</Badge>
+                  <div className="flex flex-col items-end gap-2">
+                    <Badge variant={regConfig.variant}>{regConfig.label}</Badge>
+                     {regStatus === 'approved' && (
+                        <Badge variant={propConfig.variant}>{propConfig.label}</Badge>
+                    )}
+                  </div>
               </div>
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
@@ -116,6 +133,16 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
                   )}
               </div>
             </CardContent>
+             {regStatus === 'approved' && (
+                <CardFooter>
+                    <Button asChild className="w-full">
+                        <Link href="/proposal-submission">
+                            <FileSignature className="mr-2 h-4 w-4" />
+                            {registration.proposalStatus === 'not_submitted' || registration.proposalStatus === 'rejected' ? 'Nộp Thuyết minh' : 'Cập nhật Thuyết minh'}
+                        </Link>
+                    </Button>
+                </CardFooter>
+            )}
         </Card>
     </div>
   );
