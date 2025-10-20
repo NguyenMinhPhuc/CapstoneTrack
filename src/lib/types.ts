@@ -274,4 +274,5 @@ export type EarlyInternship = {
   proofLink?: string;
   status: 'pending_approval' | 'ongoing' | 'completed' | 'rejected' | 'cancelled';
   statusNote?: string;
+  batch: string;
 };

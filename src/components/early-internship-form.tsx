@@ -98,6 +98,11 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
         toast({ variant: 'destructive', title: 'Lỗi', description: 'Phòng ban này chưa có người hướng dẫn được gán.' });
         return;
     }
+    
+    const now = new Date();
+    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+    const batch = `${String(nextMonth.getMonth() + 1).padStart(2, '0')}/${nextMonth.getFullYear()}`;
+
 
     const newRecord = {
       studentId: user.uid,
@@ -111,6 +116,7 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       endDate: values.endDate,
       proofLink: values.proofLink,
       status: 'pending_approval' as const,
+      batch: batch,
       createdAt: serverTimestamp(),
     };
     

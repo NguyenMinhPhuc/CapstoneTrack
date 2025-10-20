@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -30,7 +31,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc, writeBatch, updateDoc, query } from 'firebase/firestore';
+import { collection, query, where, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -70,7 +71,7 @@ const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' |
   cancelled: 'destructive',
 };
 
-type SortKey = 'studentName' | 'companyName' | 'supervisorName' | 'startDate';
+type SortKey = 'studentName' | 'companyName' | 'supervisorName' | 'startDate' | 'batch';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -87,6 +88,7 @@ export function EarlyInternshipTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
+  const [batchFilter, setBatchFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
@@ -101,17 +103,25 @@ export function EarlyInternshipTable() {
     setSelectedRowIds([]);
   }, [internships]);
   
-  const { uniqueCompanies, uniqueSupervisors } = useMemo(() => {
-    if (!internships) return { uniqueCompanies: [], uniqueSupervisors: [] };
+  const { uniqueCompanies, uniqueSupervisors, uniqueBatches } = useMemo(() => {
+    if (!internships) return { uniqueCompanies: [], uniqueSupervisors: [], uniqueBatches: [] };
     const companies = new Set<string>();
     const supervisors = new Set<string>();
+    const batches = new Set<string>();
     internships.forEach(internship => {
       if (internship.companyName) companies.add(internship.companyName);
       if (internship.supervisorName) supervisors.add(internship.supervisorName);
+      if (internship.batch) batches.add(internship.batch);
     });
     return {
       uniqueCompanies: Array.from(companies).sort(),
       uniqueSupervisors: Array.from(supervisors).sort(),
+      uniqueBatches: Array.from(batches).sort((a,b) => {
+          const [aMonth, aYear] = a.split('/');
+          const [bMonth, bYear] = b.split('/');
+          if (aYear !== bYear) return bYear.localeCompare(aYear);
+          return bMonth.localeCompare(aMonth);
+      }),
     };
   }, [internships]);
   
@@ -129,13 +139,12 @@ export function EarlyInternshipTable() {
 
      if (sortConfig !== null) {
       sortableInternships.sort((a, b) => {
-        const aValue = a[sortConfig.key];
-        const bValue = b[sortConfig.key];
-
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        
         if (aValue === undefined || aValue === null) return 1;
         if (bValue === undefined || bValue === null) return -1;
         
-        // Specific handling for date fields
         if (sortConfig.key === 'startDate') {
           const dateA = toDate(aValue)?.getTime() || 0;
           const dateB = toDate(bValue)?.getTime() || 0;
@@ -144,8 +153,19 @@ export function EarlyInternshipTable() {
            return 0;
         }
 
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        // For batch, we need to sort by year then month
+        if (sortConfig.key === 'batch') {
+            const [aMonth, aYear] = (aValue as string).split('/');
+            const [bMonth, bYear] = (bValue as string).split('/');
+            if (aYear !== bYear) {
+                return sortConfig.direction === 'asc' ? aYear.localeCompare(bYear) : bYear.localeCompare(aYear);
+            }
+             const monthComparison = parseInt(aMonth) - parseInt(bMonth);
+            return sortConfig.direction === 'asc' ? monthComparison : -monthComparison;
+        }
+
+        if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -160,10 +180,11 @@ export function EarlyInternshipTable() {
 
       const companyMatch = companyFilter === 'all' || internship.companyName === companyFilter;
       const supervisorMatch = supervisorFilter === 'all' || internship.supervisorName === supervisorFilter;
+      const batchMatch = batchFilter === 'all' || internship.batch === batchFilter;
 
-      return searchMatch && companyMatch && supervisorMatch;
+      return searchMatch && companyMatch && supervisorMatch && batchMatch;
     });
-  }, [internships, searchTerm, companyFilter, supervisorFilter, sortConfig]);
+  }, [internships, searchTerm, companyFilter, supervisorFilter, batchFilter, sortConfig]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -292,11 +313,22 @@ export function EarlyInternshipTable() {
                   <Input
                     type="search"
                     placeholder="Tìm kiếm..."
-                    className="w-full rounded-lg bg-background pl-8 sm:w-64"
+                    className="w-full rounded-lg bg-background pl-8 sm:w-48"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                 <Select value={batchFilter} onValueChange={setBatchFilter}>
+                  <SelectTrigger className="w-full sm:w-[150px]">
+                    <SelectValue placeholder="Lọc theo đợt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả các đợt</SelectItem>
+                    {uniqueBatches.map((batch) => (
+                      <SelectItem key={batch} value={batch}>Đợt {batch}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
                   <SelectTrigger className="w-full sm:w-[180px]">
                     <SelectValue placeholder="Lọc theo công ty" />
@@ -332,9 +364,8 @@ export function EarlyInternshipTable() {
                         onCheckedChange={handleSelectAll}
                     />
                 </TableHead>
-                <TableHead className="w-[50px]">STT</TableHead>
                 <TableHead>
-                    <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
+                     <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
                         Sinh viên {getSortIcon('studentName')}
                     </Button>
                 </TableHead>
@@ -346,6 +377,11 @@ export function EarlyInternshipTable() {
                 <TableHead>
                     <Button variant="ghost" onClick={() => requestSort('supervisorName')} className="px-0 hover:bg-transparent">
                         GVHD {getSortIcon('supervisorName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('batch')} className="px-0 hover:bg-transparent">
+                        Đợt ĐK {getSortIcon('batch')}
                     </Button>
                 </TableHead>
                 <TableHead>
@@ -366,13 +402,13 @@ export function EarlyInternshipTable() {
                             onCheckedChange={(checked) => handleRowSelect(internship.id, !!checked)}
                         />
                     </TableCell>
-                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
                     <div className="font-medium">{internship.studentName}</div>
                     <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
                     </TableCell>
                     <TableCell>{internship.companyName}</TableCell>
                     <TableCell>{internship.supervisorName}</TableCell>
+                    <TableCell>{internship.batch}</TableCell>
                     <TableCell>
                     {toDate(internship.startDate) ? format(toDate(internship.startDate)!, 'PPP') : 'N/A'}
                     </TableCell>
