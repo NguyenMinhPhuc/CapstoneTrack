@@ -7,6 +7,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -222,5 +223,3 @@ export type ProjectTopic = {
     status: 'pending' | 'approved' | 'rejected' | 'taken';
     createdAt: any;
 }
-
-    
