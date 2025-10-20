@@ -290,7 +290,7 @@ export function EarlyInternshipTable() {
   }
 
   const isAllSelected = filteredInternships && selectedRowIds.length > 0 && selectedRowIds.length === filteredInternships.length;
-  const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredInternships?.length ?? 0);
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredInternships || selectedRowIds.length < filteredInternships.length);
 
   return (
     <>
