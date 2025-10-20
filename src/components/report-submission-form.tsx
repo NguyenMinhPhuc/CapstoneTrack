@@ -21,8 +21,6 @@ import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, SystemSettings } from '@/lib/types';
 import React from 'react';
 import { MarkdownToolbar } from './markdown-toolbar';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
 
 const formSchema = z.object({
   projectTitle: z.string().min(1, { message: 'Tên đề tài là bắt buộc.' }),
@@ -46,6 +44,8 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
   const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
   const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
   const requireApproval = settings?.requireReportApproval ?? true;
+
+  const isFormDisabled = registration.reportStatus === 'approved' || registration.reportStatus === 'pending_approval';
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,7 +98,7 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
             <FormItem>
               <FormLabel>Tên đề tài</FormLabel>
               <FormControl>
-                <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý đề tài tốt nghiệp..." {...field} />
+                <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý đề tài tốt nghiệp..." {...field} disabled={isFormDisabled} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -117,6 +117,7 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
                   placeholder="Mô tả ngắn gọn về nội dung, bối cảnh và vấn đề mà đề tài giải quyết."
                   className="resize-y min-h-[100px]"
                   {...field}
+                   disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -136,6 +137,7 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
                   placeholder="Liệt kê các mục tiêu cụ thể mà đề tài cần đạt được (ví dụ: gạch đầu dòng)."
                   className="resize-y min-h-[100px]"
                   {...field}
+                   disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -155,6 +157,7 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
                   placeholder="Mô tả các sản phẩm hoặc kết quả cụ thể sẽ có sau khi hoàn thành đề tài (ví dụ: ứng dụng web, bài báo khoa học...)."
                   className="resize-y min-h-[100px]"
                   {...field}
+                   disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -168,14 +171,14 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
             <FormItem>
               <FormLabel>Link file báo cáo toàn văn</FormLabel>
               <FormControl>
-                <Input placeholder="https://docs.google.com/document/d/..." {...field} />
+                <Input placeholder="https://docs.google.com/document/d/..." {...field} disabled={isFormDisabled} />
               </FormControl>
                <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isFormDisabled}>
+          {isFormDisabled ? 'Báo cáo đã được nộp hoặc duyệt' : (form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi')}
         </Button>
       </form>
     </Form>

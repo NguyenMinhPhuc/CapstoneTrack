@@ -8,7 +8,7 @@ import { doc, collection, query, where, getDocs, getDoc } from 'firebase/firesto
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { Info, Users } from 'lucide-react';
+import { Info, Users, FileSignature, FileUp } from 'lucide-react';
 import { ReportSubmissionForm } from '@/components/report-submission-form';
 import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type DefenseSubCommittee, type SystemSettings } from '@/lib/types';
 import { sub, isWithinInterval } from 'date-fns';
@@ -41,7 +41,7 @@ export default function ReportSubmissionPage() {
   }, [user, userData, isUserLoading, router]);
 
   useEffect(() => {
-    if (!user || !firestore || !settings) return;
+    if (!user || !firestore) return; // Wait for settings to be loaded too
 
     const findActiveRegistration = async () => {
         setIsLoading(true);
@@ -85,7 +85,7 @@ export default function ReportSubmissionPage() {
                     isWindowOpen = isWithinInterval(new Date(), { start: startDate, end: endDate });
                 }
 
-                if (registrationData.proposalStatus === 'approved' && (isWindowOpen || settings.forceOpenReportSubmission)) {
+                if (registrationData.proposalStatus === 'approved' && (isWindowOpen || settings?.forceOpenReportSubmission)) {
                     setActiveRegistration(registrationData);
                     if (registrationData.subCommitteeId) {
                         const subCommitteeDocRef = doc(firestore, `graduationDefenseSessions/${registrationData.sessionId}/subCommittees`, registrationData.subCommitteeId);
@@ -107,8 +107,11 @@ export default function ReportSubmissionPage() {
             setIsLoading(false);
         }
     };
-
-    findActiveRegistration();
+    
+    // Only run if settings have been loaded.
+    if(settings !== undefined) {
+        findActiveRegistration();
+    }
   }, [user, firestore, settings]);
   
   if (isLoading || isUserLoading || !userData) {
@@ -132,6 +135,56 @@ export default function ReportSubmissionPage() {
     );
   }
 
+  const getAlert = () => {
+    if (!activeRegistration) {
+      return (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Chưa đến thời gian nộp báo cáo</AlertTitle>
+          <AlertDescription>
+              Bạn hiện chưa thể nộp báo cáo. Vui lòng kiểm tra lại thời gian nộp bài hoặc đợi thông báo từ khoa.
+          </AlertDescription>
+        </Alert>
+      );
+    }
+    const status = activeRegistration.reportStatus;
+
+    if (status === 'pending_approval') {
+        return (
+            <Alert variant="default" className="border-blue-500 text-blue-800">
+                <FileUp className="h-4 w-4" />
+                <AlertTitle>Đã nộp - Chờ duyệt</AlertTitle>
+                <AlertDescription>
+                    Bạn đã nộp báo cáo thành công. Vui lòng chờ giáo viên hướng dẫn xem xét và duyệt.
+                </AlertDescription>
+            </Alert>
+        )
+    }
+     if (status === 'rejected') {
+         return (
+            <Alert variant="destructive">
+                <FileSignature className="h-4 w-4" />
+                <AlertTitle>Báo cáo bị từ chối</AlertTitle>
+                <AlertDescription>
+                    Báo cáo của bạn đã bị từ chối. Vui lòng xem lại góp ý của giáo viên, chỉnh sửa và nộp lại.
+                </AlertDescription>
+            </Alert>
+        )
+    }
+     if (status === 'approved') {
+         return (
+            <Alert variant="default" className="border-green-500 text-green-800">
+                <FileUp className="h-4 w-4" />
+                <AlertTitle>Báo cáo đã được duyệt</AlertTitle>
+                <AlertDescription>
+                    Chúc mừng! Báo cáo cuối kỳ của bạn đã được giáo viên hướng dẫn duyệt.
+                </AlertDescription>
+            </Alert>
+        )
+    }
+    return null;
+  }
+
   return (
     <main className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto">
@@ -142,7 +195,7 @@ export default function ReportSubmissionPage() {
                     Cập nhật thông tin chi tiết về đề tài của bạn cho đợt báo cáo: <strong>{activeSession?.name || '...'}</strong>
                 </CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
                  {subCommittee && (
                     <Alert className="mb-6">
                         <Users className="h-4 w-4" />
@@ -153,16 +206,9 @@ export default function ReportSubmissionPage() {
                         </AlertDescription>
                     </Alert>
                 )}
-                {activeRegistration ? (
+                {getAlert()}
+                {activeRegistration && (
                     <ReportSubmissionForm registration={activeRegistration} />
-                ) : (
-                    <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>Chưa đến thời gian nộp báo cáo</AlertTitle>
-                        <AlertDescription>
-                            Bạn hiện chưa thể nộp báo cáo. Vui lòng kiểm tra lại thời gian nộp bài hoặc đợi thông báo từ khoa.
-                        </AlertDescription>
-                    </Alert>
                 )}
             </CardContent>
         </Card>
@@ -170,3 +216,4 @@ export default function ReportSubmissionPage() {
     </main>
   );
 }
+
