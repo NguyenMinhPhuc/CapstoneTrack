@@ -206,13 +206,11 @@ function SubcommitteeGradingView({
             batch.set(evalDocRef, { ...absentEval, evaluationDate: new Date() });
         });
 
-        try {
-            await batch.commit();
+        batch.commit().then(() => {
             toast({ title: 'Thành công', description: `Đã ghi nhận vắng mặt cho ${registrations.length} sinh viên.` });
             onRefresh();
-        } catch (error: any) {
+        }).catch((error: any) => {
             console.error("Error marking absent:", error);
-            // Check if it's a permission error before creating a contextual error
             if (error.code === 'permission-denied') {
                 const contextualError = new FirestorePermissionError({
                     path: 'evaluations',
@@ -223,7 +221,7 @@ function SubcommitteeGradingView({
             } else {
                  toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể ghi nhận vắng mặt: ${error.message}` });
             }
-        }
+        });
     };
     
     const handleRevertAbsence = async (evaluationId: string) => {
@@ -525,10 +523,6 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
   const forceRefreshAll = () => {
     forceRefreshSessions();
     forceRefreshEvaluations();
-    // A small delay to allow data to propagate if needed, or just let useEffect handle it
-    setTimeout(() => {
-        // You might not even need this if useEffect dependencies are set up correctly
-    }, 100);
   };
 
 
