@@ -5,13 +5,25 @@ import { DashboardStats } from '@/components/dashboard-stats';
 import { DashboardProgressChart } from '@/components/dashboard-progress-chart';
 import { DashboardApplicationsTable } from '@/components/dashboard-applications-table';
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
+import { doc } from 'firebase/firestore';
+import { StudentDashboard } from '@/components/student-dashboard';
+import type { SystemUser } from '@/lib/types';
+
 
 export default function Home() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
+
+  const userDocRef = useMemoFirebase(() => {
+    if (!user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [user, firestore]);
+
+  const { data: userData, isLoading: isUserDataLoading } = useDoc<SystemUser>(userDocRef);
 
   useEffect(() => {
     if (!isUserLoading && !user) {
@@ -19,7 +31,9 @@ export default function Home() {
     }
   }, [user, isUserLoading, router]);
 
-  if (isUserLoading || !user) {
+  const isLoading = isUserLoading || isUserDataLoading;
+
+  if (isLoading || !user || !userData) {
     return (
       <div className="flex h-screen w-full items-center justify-center">
         <Skeleton className="h-16 w-16 rounded-full" />
@@ -27,6 +41,11 @@ export default function Home() {
     );
   }
 
+  if (userData.role === 'student') {
+    return <StudentDashboard user={user} />;
+  }
+
+  // Admin and Supervisor Dashboard
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
       <Suspense fallback={<DashboardStats.Skeleton />}>
