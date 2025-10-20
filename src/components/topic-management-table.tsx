@@ -1,31 +1,15 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import {
@@ -39,7 +23,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Check, X, Search } from 'lucide-react';
+import { MoreHorizontal, Search, Book, Target, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, query } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession } from '@/lib/types';
@@ -54,6 +38,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from './ui/input';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 
 const statusLabel: Record<ProjectTopic['status'], string> = {
   pending: 'Chờ duyệt',
@@ -185,69 +174,81 @@ export function TopicManagementTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>STT</TableHead>
-                <TableHead>Tên Đề tài</TableHead>
-                <TableHead>Lĩnh vực</TableHead>
-                <TableHead>GVHD</TableHead>
-                <TableHead>Đợt báo cáo</TableHead>
-                <TableHead>SL SV</TableHead>
-                <TableHead>Trạng thái</TableHead>
-                <TableHead className="text-right">Hành động</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredTopics?.map((topic, index) => (
-                <TableRow key={topic.id}>
-                  <TableCell>{index + 1}</TableCell>
-                  <TableCell className="font-medium max-w-sm">
-                    <p className="truncate">{topic.title}</p>
-                    <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
-                  </TableCell>
-                  <TableCell>{topic.field}</TableCell>
-                  <TableCell>{topic.supervisorName}</TableCell>
-                  <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
-                  <TableCell>{topic.maxStudents}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariant[topic.status]}>
-                        {statusLabel[topic.status]}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                         <DropdownMenuSub>
-                            <DropdownMenuSubTrigger>
-                                <span>Thay đổi trạng thái</span>
-                            </DropdownMenuSubTrigger>
-                            <DropdownMenuPortal>
-                                <DropdownMenuSubContent>
-                                     {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map(status => (
-                                        <DropdownMenuItem
-                                            key={status}
-                                            onClick={() => handleStatusChange(topic.id, status)}
-                                            disabled={topic.status === status}
-                                        >
-                                            {statusLabel[status]}
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuSubContent>
-                            </DropdownMenuPortal>
-                         </DropdownMenuSub>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          <Accordion type="multiple" className="space-y-2">
+            {filteredTopics?.map((topic) => (
+                <AccordionItem value={topic.id} key={topic.id} className="border rounded-md px-4 bg-background hover:bg-muted/50">
+                    <AccordionTrigger className="hover:no-underline">
+                        <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
+                            <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
+                            <div className="col-span-2 truncate">{topic.supervisorName}</div>
+                            <div className="col-span-3 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
+                            <div className="col-span-1 text-center">{topic.maxStudents}</div>
+                            <div className="col-span-1">
+                                <Badge variant={statusVariant[topic.status]}>
+                                    {statusLabel[topic.status]}
+                                </Badge>
+                            </div>
+                             <div className="col-span-1 flex justify-end">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                        <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuSub>
+                                            <DropdownMenuSubTrigger>
+                                                <span>Thay đổi trạng thái</span>
+                                            </DropdownMenuSubTrigger>
+                                            <DropdownMenuPortal>
+                                                <DropdownMenuSubContent>
+                                                    {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map(status => (
+                                                        <DropdownMenuItem
+                                                            key={status}
+                                                            onClick={() => handleStatusChange(topic.id, status)}
+                                                            disabled={topic.status === status}
+                                                        >
+                                                            {statusLabel[status]}
+                                                        </DropdownMenuItem>
+                                                    ))}
+                                                </DropdownMenuSubContent>
+                                            </DropdownMenuPortal>
+                                        </DropdownMenuSub>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                             </div>
+                        </div>
+                    </AccordionTrigger>
+                    <AccordionContent className="pt-4 border-t">
+                        <div className="space-y-6">
+                            <div className="space-y-1">
+                                <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
+                                <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.summary || ''}</ReactMarkdown>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4>
+                                <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.objectives || ''}</ReactMarkdown>
+                                </div>
+                            </div>
+                            <div className="space-y-1">
+                                <h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4>
+                                <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults || ''}</ReactMarkdown>
+                                </div>
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
+            ))}
+          </Accordion>
+           {filteredTopics.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground">
+                    Không tìm thấy đề tài nào phù hợp.
+                </div>
+            )}
         </CardContent>
       </Card>
     </div>
