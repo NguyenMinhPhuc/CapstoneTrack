@@ -184,6 +184,7 @@ export function TopicManagementTable() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>STT</TableHead>
                 <TableHead>Tên Đề tài</TableHead>
                 <TableHead>Lĩnh vực</TableHead>
                 <TableHead>GVHD</TableHead>
@@ -194,8 +195,9 @@ export function TopicManagementTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredTopics?.map((topic) => (
+              {filteredTopics?.map((topic, index) => (
                 <TableRow key={topic.id}>
+                  <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium max-w-sm">
                     <p className="truncate">{topic.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
@@ -237,5 +239,3 @@ export function TopicManagementTable() {
     </div>
   );
 }
-
-    
