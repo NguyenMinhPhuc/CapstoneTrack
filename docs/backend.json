@@ -544,6 +544,7 @@
         "supervisorId": { "type": "string", "description": "The ID of the supervisor who proposed the topic." },
         "supervisorName": { "type": "string", "description": "The name of the supervisor." },
         "title": { "type": "string", "description": "The title of the project." },
+        "field": { "type": "string", "description": "The field or category of the project topic." },
         "summary": { "type": "string", "description": "A brief summary of the project." },
         "objectives": { "type": "string", "description": "The objectives of the project." },
         "expectedResults": { "type": "string", "description": "The expected results of the project." },

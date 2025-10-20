@@ -16,7 +16,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
-import { Book, CheckCircle, Target, User, Users } from 'lucide-react';
+import { Book, CheckCircle, Target, User, Users, Tag } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
@@ -181,11 +181,17 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
               </CardDescription>
             </CardHeader>
             <CardContent className="flex-grow space-y-4">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                   <Badge variant="outline" className="flex items-center gap-1.5">
                     <Users className="h-3 w-3" />
                     {topic.maxStudents} Sinh viên
                   </Badge>
+                  {topic.field && (
+                    <Badge variant="secondary" className="flex items-center gap-1.5">
+                      <Tag className="h-3 w-3" />
+                      {topic.field}
+                    </Badge>
+                  )}
                   <Badge variant="secondary">Đã đăng ký: {registeredCount}/{topic.maxStudents}</Badge>
               </div>
               <div className="space-y-3 text-sm text-muted-foreground">
@@ -236,3 +242,5 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
     </div>
   );
 }
+
+    

@@ -6,6 +6,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -213,6 +214,7 @@ export type ProjectTopic = {
     supervisorId: string;
     supervisorName: string;
     title: string;
+    field?: string;
     summary: string;
     objectives: string;
     expectedResults: string;
@@ -220,3 +222,5 @@ export type ProjectTopic = {
     status: 'pending' | 'approved' | 'rejected' | 'taken';
     createdAt: any;
 }
+
+    

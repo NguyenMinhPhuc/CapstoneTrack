@@ -44,7 +44,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Check, X } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, query, where, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -287,6 +287,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             <TableHeader>
               <TableRow>
                 <TableHead>Tên Đề tài</TableHead>
+                <TableHead>Lĩnh vực</TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
                 <TableHead>SL SV</TableHead>
                 <TableHead>Trạng thái</TableHead>
@@ -303,6 +304,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         <p className="truncate">{topic.title}</p>
                         <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
                     </TableCell>
+                    <TableCell>{topic.field}</TableCell>
                     <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
                     <TableCell>
                         <Dialog>
@@ -411,3 +413,5 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     </div>
   );
 }
+
+    

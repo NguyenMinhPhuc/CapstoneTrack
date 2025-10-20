@@ -96,7 +96,7 @@ export function TopicManagementTable() {
       const sessionMatch = sessionFilter === 'all' || topic.sessionId === sessionFilter;
       const statusMatch = statusFilter === 'all' || topic.status === statusFilter;
       const term = searchTerm.toLowerCase();
-      const searchMatch = topic.title.toLowerCase().includes(term) || topic.supervisorName.toLowerCase().includes(term);
+      const searchMatch = topic.title.toLowerCase().includes(term) || topic.supervisorName.toLowerCase().includes(term) || (topic.field && topic.field.toLowerCase().includes(term));
 
       return sessionMatch && statusMatch && searchMatch;
     });
@@ -149,7 +149,7 @@ export function TopicManagementTable() {
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Tìm theo tên đề tài, GV..."
+                        placeholder="Tìm theo tên đề tài, GV, lĩnh vực..."
                         className="pl-8 w-full sm:w-64"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -185,6 +185,7 @@ export function TopicManagementTable() {
             <TableHeader>
               <TableRow>
                 <TableHead>Tên Đề tài</TableHead>
+                <TableHead>Lĩnh vực</TableHead>
                 <TableHead>GVHD</TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
                 <TableHead>SL SV</TableHead>
@@ -199,6 +200,7 @@ export function TopicManagementTable() {
                     <p className="truncate">{topic.title}</p>
                     <p className="text-xs text-muted-foreground truncate">{topic.summary}</p>
                   </TableCell>
+                  <TableCell>{topic.field}</TableCell>
                   <TableCell>{topic.supervisorName}</TableCell>
                   <TableCell>{sessionMap.get(topic.sessionId) || 'N/A'}</TableCell>
                   <TableCell>{topic.maxStudents}</TableCell>
@@ -236,3 +238,4 @@ export function TopicManagementTable() {
   );
 }
 
+    

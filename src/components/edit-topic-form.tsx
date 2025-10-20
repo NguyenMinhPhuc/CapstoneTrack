@@ -33,6 +33,7 @@ import { ScrollArea } from './ui/scroll-area';
 const formSchema = z.object({
   sessionId: z.string({ required_error: 'Vui lòng chọn một đợt báo cáo.' }),
   title: z.string().min(10, { message: 'Tên đề tài phải có ít nhất 10 ký tự.' }),
+  field: z.string().optional(),
   summary: z.string().min(10, { message: 'Tóm tắt phải có ít nhất 10 ký tự.' }),
   objectives: z.string().optional(),
   expectedResults: z.string().optional(),
@@ -54,6 +55,7 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
     defaultValues: {
       sessionId: topic.sessionId,
       title: topic.title,
+      field: topic.field || '',
       summary: topic.summary,
       objectives: topic.objectives || '',
       expectedResults: topic.expectedResults || '',
@@ -130,6 +132,19 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                     <FormLabel>Tên đề tài</FormLabel>
                     <FormControl>
                       <Input {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="field"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Lĩnh vực</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Ví dụ: Trí tuệ nhân tạo, Xử lý ngôn ngữ tự nhiên" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
