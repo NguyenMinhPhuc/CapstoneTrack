@@ -31,6 +31,8 @@ import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui
 import { ScrollArea } from './ui/scroll-area';
 import { MarkdownToolbar } from './markdown-toolbar';
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const formSchema = z.object({
   sessionId: z.string({ required_error: 'Vui lòng chọn một đợt báo cáo.' }),

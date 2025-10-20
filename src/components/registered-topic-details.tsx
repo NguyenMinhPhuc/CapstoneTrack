@@ -159,5 +159,3 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
     </div>
   );
 }
-
-    

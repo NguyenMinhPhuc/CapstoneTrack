@@ -21,6 +21,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
 import React from 'react';
 import { MarkdownToolbar } from './markdown-toolbar';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 const formSchema = z.object({
   projectTitle: z.string().min(1, { message: 'Tên đề tài là bắt buộc.' }),

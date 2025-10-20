@@ -220,8 +220,8 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
             evaluatorId: supervisorId,
             rubricId: rubric.id,
             evaluationType: evaluationType,
-            scores: scoresToSave,
             attendance: 'present',
+            scores: scoresToSave,
             totalScore: totalScoreToSave,
             comments: values.comments || '',
         };

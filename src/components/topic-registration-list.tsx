@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -209,7 +210,7 @@ export function TopicRegistrationList({ session, registration, onRegistrationSuc
                   )}
                   <Badge variant="secondary">Đã đăng ký: {registeredCount}/{topic.maxStudents}</Badge>
               </div>
-              <div className={cn(
+                <div className={cn(
                 "prose prose-sm text-muted-foreground max-w-none space-y-3",
                 "[&_ul]:list-disc [&_ul]:pl-4",
                 "[&_ol]:list-decimal [&_ol]:pl-4",
@@ -228,7 +229,7 @@ export function TopicRegistrationList({ session, registration, onRegistrationSuc
                   {topic.expectedResults && (
                       <div className="flex items-start gap-3">
                           <CheckCircle className="h-4 w-4 mt-1 shrink-0" />
-                          <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults}</ReactMarkdown>
+                           <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults}</ReactMarkdown>
                       </div>
                   )}
               </div>
