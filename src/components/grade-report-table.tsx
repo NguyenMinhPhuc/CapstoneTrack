@@ -127,8 +127,18 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         const gradSupervisorWeight = 1 - gradCouncilWeight;
         
         return registrations
-            .filter(reg => reg.graduationStatus === 'reporting' || reg.graduationStatus === 'completed')
+            .filter(reg => reg.graduationStatus === 'reporting' || reg.graduationStatus === 'completed' || reg.graduationStatus === 'withdrawn')
             .map((reg): ProcessedGraduationData => {
+            
+            if (reg.graduationStatus === 'withdrawn') {
+                 return {
+                    id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
+                    projectTitle: reg.projectTitle, subCommitteeName: 'N/A',
+                    supervisorGradScore: 0, councilScores: COUNCIL_ROLES.map(role => ({ role, score: 0 })),
+                    councilGradAvg: 0, finalGradScore: 0, currentStatus: 'withdrawn',
+                };
+            }
+
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
             
             const supervisorGradEval = studentEvals.find(e => 
@@ -178,8 +188,18 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         const internCouncilWeight = (session.internshipCouncilWeight ?? 50) / 100;
         const internCompanyWeight = 1 - internCouncilWeight;
         return registrations
-        .filter(reg => reg.internshipStatus === 'reporting' || reg.internshipStatus === 'completed')
+        .filter(reg => reg.internshipStatus === 'reporting' || reg.internshipStatus === 'completed' || reg.internshipStatus === 'withdrawn')
         .map((reg): ProcessedInternshipData => {
+            
+            if (reg.internshipStatus === 'withdrawn') {
+                return {
+                    id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
+                    companyName: reg.internship_companyName, subCommitteeName: 'N/A',
+                    companySupervisorScore: 0, councilScores: COUNCIL_ROLES.map(role => ({ role, score: 0 })),
+                    councilInternAvg: 0, finalInternScore: 0, currentStatus: 'withdrawn',
+                }
+            }
+
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
             const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
             const subCommitteeMembers = subCommitteeDetails?.members || [];
@@ -506,10 +526,6 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     <Button size="sm" variant="destructive" onClick={() => handleBatchStatusUpdate(selectedRowIds, 'withdrawn')}>
                         <XCircle className="mr-2 h-4 w-4" />
                         Chuyển sang 'Bỏ báo cáo'
-                    </Button>
-                     <Button size="sm" variant="secondary" onClick={() => handleBatchStatusUpdate(selectedRowIds, 'reporting')}>
-                        <RefreshCw className="mr-2 h-4 w-4" />
-                        Hoàn tác về 'Báo cáo'
                     </Button>
                 </div>
             )}
