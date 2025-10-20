@@ -43,7 +43,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
@@ -110,6 +110,20 @@ const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' 
     rejected: 'destructive',
 };
 
+const reportStatusLabel: Record<string, string> = {
+    not_submitted: 'Chưa nộp',
+    pending_approval: 'Chờ duyệt',
+    approved: 'Đã duyệt',
+    rejected: 'Bị từ chối',
+};
+
+const reportStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
+    not_submitted: 'outline',
+    pending_approval: 'secondary',
+    approved: 'default',
+    rejected: 'destructive',
+};
+
 
 export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTableProps) {
   const firestore = useFirestore();
@@ -118,8 +132,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+
   const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
   const [selectedRegistrationForProposal, setSelectedRegistrationForProposal] = useState<DefenseRegistration | null>(null);
+  const [selectedRegistrationForReport, setSelectedRegistrationForReport] = useState<DefenseRegistration | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
 
   const topicsQuery = useMemoFirebase(
@@ -182,6 +199,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const handleViewProposalClick = (registration: DefenseRegistration) => {
     setSelectedRegistrationForProposal(registration);
     setIsProposalDialogOpen(true);
+  }
+
+  const handleViewReportClick = (registration: DefenseRegistration) => {
+    setSelectedRegistrationForReport(registration);
+    setIsReportDialogOpen(true);
   }
 
   const confirmDelete = async () => {
@@ -267,6 +289,28 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             path: regDocRef.path,
             operation: 'update',
             requestResourceData: { proposalStatus: newStatus }
+        });
+        errorEmitter.emit('permission-error', contextualError);
+    }
+  }
+
+  const handleReportAction = async (registration: DefenseRegistration, action: 'approve' | 'reject') => {
+    const regDocRef = doc(firestore, 'defenseRegistrations', registration.id);
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+    try {
+      await updateDoc(regDocRef, { reportStatus: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Đã ${action === 'approve' ? 'duyệt' : 'yêu cầu chỉnh sửa'} báo cáo.`,
+      });
+      setIsReportDialogOpen(false);
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+        const contextualError = new FirestorePermissionError({
+            path: regDocRef.path,
+            operation: 'update',
+            requestResourceData: { reportStatus: newStatus }
         });
         errorEmitter.emit('permission-error', contextualError);
     }
@@ -358,7 +402,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                     <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent className="sm:max-w-3xl">
+                            <DialogContent className="sm:max-w-4xl">
                                 <DialogHeader>
                                     <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
                                     <DialogDescription>
@@ -372,6 +416,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                             <TableHead>Họ và Tên</TableHead>
                                             <TableHead>Trạng thái ĐK</TableHead>
                                             <TableHead>Trạng thái TM</TableHead>
+                                            <TableHead>Trạng thái BC</TableHead>
                                             <TableHead className="text-right">Hành động</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -390,6 +435,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                         {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
                                                     </Badge>
                                                 </TableCell>
+                                                 <TableCell>
+                                                     <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
+                                                        {reportStatusLabel[reg.reportStatus || 'not_submitted']}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right">
                                                      <div className="flex gap-2 justify-end">
                                                         {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
@@ -406,6 +456,9 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                             <>
                                                                 <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted'}>
                                                                     <Eye className="mr-2 h-4 w-4"/> Xem TM
+                                                                </Button>
+                                                                <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewReportClick(reg)} disabled={reg.reportStatus === 'not_submitted'}>
+                                                                    <Eye className="mr-2 h-4 w-4"/> Xem BC
                                                                 </Button>
                                                                 <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
                                                                     <X className="mr-2 h-4 w-4"/> Hủy ĐK
@@ -519,6 +572,42 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         </Button>
                         <Button onClick={() => handleProposalAction(selectedRegistrationForProposal, 'approve')}>
                             Duyệt thuyết minh
+                        </Button>
+                    </DialogFooter>
+                  </>
+              )}
+          </DialogContent>
+       </Dialog>
+       
+        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+              {selectedRegistrationForReport && (
+                  <>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><FileUp /> Báo cáo cuối kỳ của sinh viên</DialogTitle>
+                        <DialogDescription>
+                            Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistrationForReport.studentName} ({selectedRegistrationForReport.studentId})
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                        <p className="text-sm text-muted-foreground">Thông tin dưới đây là bản tóm tắt cuối cùng sinh viên đã nộp.</p>
+                        <div className="space-y-1">
+                             <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>
+                            {selectedRegistrationForReport.reportLink ? (
+                                <a href={selectedRegistrationForReport.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                    {selectedRegistrationForReport.reportLink}
+                                </a>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Sinh viên chưa nộp link báo cáo.</p>
+                            )}
+                        </div>
+                    </div>
+                     <DialogFooter>
+                        <Button variant="destructive" onClick={() => handleReportAction(selectedRegistrationForReport, 'reject')}>
+                            Yêu cầu chỉnh sửa
+                        </Button>
+                        <Button onClick={() => handleReportAction(selectedRegistrationForReport, 'approve')}>
+                            Duyệt Báo cáo
                         </Button>
                     </DialogFooter>
                   </>
