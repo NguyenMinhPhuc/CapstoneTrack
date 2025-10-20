@@ -18,7 +18,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity } from 'lucide-react';
+import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, updateDoc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { EarlyInternship, DefenseRegistration } from '@/lib/types';
@@ -36,7 +36,8 @@ import {
 import { Dialog, DialogContent } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
 import { ViewEarlyInternshipProgressDialog } from './view-early-internship-progress-dialog';
-
+import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface EarlyInternshipGuidanceTableProps {
   supervisorId: string;
@@ -65,6 +66,8 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
   const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [batchFilter, setBatchFilter] = useState('all');
 
   const internshipsQuery = useMemoFirebase(
     () => query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', supervisorId)),
@@ -72,6 +75,35 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   );
   
   const { data: internships, isLoading, forceRefresh } = useCollection<EarlyInternship>(internshipsQuery);
+
+  const uniqueBatches = useMemo(() => {
+    if (!internships) return [];
+    const batches = new Set<string>();
+    internships.forEach(internship => {
+      if (internship.batch) batches.add(internship.batch);
+    });
+    return Array.from(batches).sort((a,b) => {
+        const [aMonth, aYear] = a.split('/');
+        const [bMonth, bYear] = b.split('/');
+        if (aYear !== bYear) return bYear.localeCompare(aYear);
+        return bMonth.localeCompare(aMonth);
+    });
+  }, [internships]);
+
+  const filteredInternships = useMemo(() => {
+    if (!internships) return [];
+    return internships.filter(internship => {
+      const term = searchTerm.toLowerCase();
+      const searchMatch =
+        internship.studentName.toLowerCase().includes(term) ||
+        internship.studentIdentifier.toLowerCase().includes(term);
+      
+      const batchMatch = batchFilter === 'all' || internship.batch === batchFilter;
+
+      return searchMatch && batchMatch;
+    });
+  }, [internships, searchTerm, batchFilter]);
+
 
   const toDate = (timestamp: any): Date | undefined => {
     if (!timestamp) return undefined;
@@ -184,9 +216,34 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     <>
     <Card>
       <CardHeader>
-        <div>
-          <CardTitle>Danh sách Sinh viên</CardTitle>
-          <CardDescription>Các sinh viên đã chọn bạn làm người hướng dẫn thực tập sớm.</CardDescription>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <CardTitle>Danh sách Sinh viên</CardTitle>
+            <CardDescription>Các sinh viên đã chọn bạn làm người hướng dẫn thực tập sớm.</CardDescription>
+          </div>
+           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+              <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Tìm theo MSSV, tên..."
+                    className="w-full rounded-lg bg-background pl-8 sm:w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+              </div>
+              <Select value={batchFilter} onValueChange={setBatchFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Lọc theo đợt" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả các đợt</SelectItem>
+                    {uniqueBatches.map((batch) => (
+                      <SelectItem key={batch} value={batch}>Đợt {batch}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+           </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -195,19 +252,21 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
             <TableRow>
               <TableHead>Sinh viên</TableHead>
               <TableHead>Công ty</TableHead>
+              <TableHead>Đợt ĐK</TableHead>
               <TableHead>Ngày bắt đầu</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {internships?.map((internship) => (
+            {filteredInternships?.map((internship) => (
               <TableRow key={internship.id}>
                 <TableCell>
                   <div className="font-medium">{internship.studentName}</div>
                   <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
                 </TableCell>
                 <TableCell>{internship.companyName}</TableCell>
+                <TableCell>{internship.batch}</TableCell>
                 <TableCell>
                   {toDate(internship.startDate) ? format(toDate(internship.startDate)!, 'PPP') : 'N/A'}
                 </TableCell>
