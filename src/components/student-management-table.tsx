@@ -365,7 +365,7 @@ export function StudentManagementTable() {
     )
   }
 
-  const isAllSelected = filteredStudents && selectedRowIds.length === filteredStudents.length;
+  const isAllSelected = filteredStudents && selectedRowIds.length > 0 && selectedRowIds.length === filteredStudents.length;
   const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredStudents?.length ?? 0);
 
   const getPercentage = (value: number, total: number) => {
@@ -735,3 +735,4 @@ export function StudentManagementTable() {
     </div>
   );
 }
+
