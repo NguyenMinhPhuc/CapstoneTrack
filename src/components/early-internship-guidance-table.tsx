@@ -21,7 +21,7 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity, Search, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, updateDoc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
-import type { EarlyInternship, DefenseRegistration } from '@/lib/types';
+import type { EarlyInternship, DefenseRegistration, EarlyInternshipWeeklyReport } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -38,6 +38,7 @@ import { RejectionReasonDialog } from './rejection-reason-dialog';
 import { ViewEarlyInternshipProgressDialog } from './view-early-internship-progress-dialog';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Progress } from './ui/progress';
 
 interface EarlyInternshipGuidanceTableProps {
   supervisorId: string;
@@ -59,7 +60,7 @@ const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' |
   cancelled: 'destructive',
 };
 
-type SortKey = 'studentName' | 'companyName' | 'batch' | 'startDate';
+type SortKey = 'studentName' | 'companyName' | 'batch' | 'startDate' | 'progress';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -79,7 +80,31 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     [firestore, supervisorId]
   );
   
-  const { data: internships, isLoading, forceRefresh } = useCollection<EarlyInternship>(internshipsQuery);
+  const { data: internships, isLoading: isLoadingInternships, forceRefresh } = useCollection<EarlyInternship>(internshipsQuery);
+
+  const internshipIds = useMemo(() => internships?.map(i => i.id) || [], [internships]);
+
+  const reportsQuery = useMemoFirebase(
+    () => internshipIds.length > 0 ? query(collection(firestore, 'earlyInternshipWeeklyReports'), where('earlyInternshipId', 'in', internshipIds)) : null,
+    [firestore, internshipIds]
+  );
+  const { data: allReports, isLoading: isLoadingReports } = useCollection<EarlyInternshipWeeklyReport>(reportsQuery);
+
+  const progressData = useMemo(() => {
+    const data = new Map<string, { totalHours: number; percentage: number }>();
+    if (!allReports || !internships) return data;
+
+    const goalHours = 700;
+    internships.forEach(internship => {
+      const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id);
+      const totalHours = reportsForInternship.reduce((sum, report) => sum + report.hours, 0);
+      data.set(internship.id, {
+        totalHours,
+        percentage: (totalHours / goalHours) * 100
+      });
+    });
+    return data;
+  }, [allReports, internships]);
 
   const uniqueBatches = useMemo(() => {
     if (!internships) return [];
@@ -110,8 +135,16 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
 
      if (sortConfig !== null) {
       sortableInternships.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === 'progress') {
+            aValue = progressData.get(a.id)?.totalHours ?? 0;
+            bValue = progressData.get(b.id)?.totalHours ?? 0;
+        } else {
+             aValue = a[sortConfig.key];
+             bValue = b[sortConfig.key];
+        }
         
         if (aValue === undefined || aValue === null) return 1;
         if (bValue === undefined || bValue === null) return -1;
@@ -124,7 +157,6 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
            return 0;
         }
 
-        // For batch, we need to sort by year then month
         if (sortConfig.key === 'batch') {
             const [aMonth, aYear] = (aValue as string).split('/');
             const [bMonth, bYear] = (bValue as string).split('/');
@@ -134,9 +166,15 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
              const monthComparison = parseInt(aMonth) - parseInt(bMonth);
             return sortConfig.direction === 'asc' ? monthComparison : -monthComparison;
         }
-
-        if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
+        
+        // Handle numeric and string sorting for other keys
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        } else {
+            if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
+        }
         return 0;
       });
     }
@@ -152,7 +190,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
 
       return searchMatch && batchMatch && statusMatch;
     });
-  }, [internships, searchTerm, batchFilter, statusFilter, sortConfig]);
+  }, [internships, searchTerm, batchFilter, statusFilter, sortConfig, progressData]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -256,6 +294,8 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     setIsProgressDialogOpen(true);
   }
   
+  const isLoading = isLoadingInternships || isLoadingReports;
+
   if (isLoading) {
     return (
       <Card>
@@ -339,12 +379,19 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     Ngày bắt đầu {getSortIcon('startDate')}
                   </Button>
               </TableHead>
+              <TableHead>
+                 <Button variant="ghost" onClick={() => requestSort('progress')} className="px-0 hover:bg-transparent">
+                    Tiến độ (giờ) {getSortIcon('progress')}
+                  </Button>
+              </TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedAndFilteredInternships?.map((internship, index) => (
+            {sortedAndFilteredInternships?.map((internship, index) => {
+              const progress = progressData.get(internship.id);
+              return (
               <TableRow key={internship.id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>
@@ -355,6 +402,16 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                 <TableCell>{internship.batch}</TableCell>
                 <TableCell>
                   {toDate(internship.startDate) ? format(toDate(internship.startDate)!, 'PPP') : 'N/A'}
+                </TableCell>
+                <TableCell>
+                   {progress ? (
+                        <div className="w-24">
+                           <Progress value={progress.percentage} />
+                           <span className="text-xs text-muted-foreground">{progress.totalHours.toFixed(0)}/700</span>
+                        </div>
+                    ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                    )}
                 </TableCell>
                 <TableCell>
                     <Badge variant={statusVariant[internship.status]}>
@@ -398,7 +455,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     )}
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </CardContent>

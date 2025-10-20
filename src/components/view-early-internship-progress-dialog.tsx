@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -20,6 +21,7 @@ import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
 import { Badge } from './ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 interface ViewEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
@@ -101,12 +103,16 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished }: Vi
              <h3 className="text-sm font-medium">Ghi nhận Tuần mới</h3>
             <div className="space-y-2">
                 <Label htmlFor="week-number">Tuần số</Label>
-                <select id="week-number" value={newWeekNumber || ''} onChange={(e) => setNewWeekNumber(Number(e.target.value))} className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50">
-                    <option value="" disabled>Chọn một tuần</option>
-                    {availableWeeks.map(week => (
-                        <option key={week} value={week}>Tuần {week}</option>
-                    ))}
-                </select>
+                <Select value={newWeekNumber?.toString() || ''} onValueChange={(value) => setNewWeekNumber(Number(value))}>
+                    <SelectTrigger id="week-number">
+                        <SelectValue placeholder="Chọn một tuần" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {availableWeeks.map(week => (
+                             <SelectItem key={week} value={String(week)}>Tuần {week}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
              <div className="space-y-2">
                 <Label htmlFor="hours">Số giờ hoàn thành</Label>
