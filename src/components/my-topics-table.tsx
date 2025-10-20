@@ -43,7 +43,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
@@ -62,6 +62,7 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import { Separator } from './ui/separator';
 
 
 interface MyTopicsTableProps {
@@ -468,21 +469,44 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             Xem xét và phê duyệt thuyết minh của sinh viên: {selectedRegistrationForProposal.studentName} ({selectedRegistrationForProposal.studentId})
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-4 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
-                        <h3 className="font-semibold">{selectedRegistrationForProposal.projectTitle}</h3>
-                        <div className="prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                            <h4>Tóm tắt</h4>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.summary || ''}</ReactMarkdown>
-                            <h4>Mục tiêu</h4>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.objectives || ''}</ReactMarkdown>
-                            <h4>Phương pháp & Công nghệ</h4>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.implementationPlan || ''}</ReactMarkdown>
-                            <h4>Kết quả mong đợi</h4>
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.expectedResults || ''}</ReactMarkdown>
+                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                        <div>
+                            <h3 className="font-semibold text-lg">{selectedRegistrationForProposal.projectTitle}</h3>
                         </div>
+
+                        <Separator />
+
+                        <div className="space-y-1">
+                             <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.summary || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+                        
+                        <div className="space-y-1">
+                            <h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.objectives || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                            <h4 className="font-semibold flex items-center gap-2 text-base"><FileSignature className="h-4 w-4 text-primary" /> Phương pháp & Công nghệ</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.implementationPlan || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+
+                        <div className="space-y-1">
+                             <h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.expectedResults || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+
                         {selectedRegistrationForProposal.proposalLink && (
-                            <div>
-                                <h4 className="font-semibold">Link file toàn văn</h4>
+                            <div className="space-y-1">
+                                <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file toàn văn</h4>
                                 <a href={selectedRegistrationForProposal.proposalLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
                                     {selectedRegistrationForProposal.proposalLink}
                                 </a>
