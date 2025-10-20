@@ -242,6 +242,14 @@ export type WeeklyProgressReport = {
     reviewDate?: any;
 }
 
-    
-
-    
+export type InternshipCompany = {
+  id: string;
+  name: string;
+  address?: string;
+  description?: string;
+  website?: string;
+  contactName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  createdAt: any;
+};

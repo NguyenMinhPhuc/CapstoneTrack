@@ -633,6 +633,23 @@
           "description": "If true, final reports submitted by students must be approved by their supervisor."
         }
       }
+    },
+    "InternshipCompany": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "InternshipCompany",
+      "type": "object",
+      "description": "Represents a company or organization offering internship opportunities.",
+      "properties": {
+        "id": { "type": "string", "description": "Unique identifier for the company." },
+        "name": { "type": "string", "description": "The official name of the company." },
+        "address": { "type": "string", "description": "The physical address of the company." },
+        "description": { "type": "string", "description": "A brief description of the company, its industry, and what it does." },
+        "website": { "type": "string", "format": "uri", "description": "The company's official website." },
+        "contactName": { "type": "string", "description": "Name of the primary contact person (e.g., HR manager)." },
+        "contactEmail": { "type": "string", "format": "email", "description": "Email address of the contact person." },
+        "contactPhone": { "type": "string", "description": "Phone number of the contact person." }
+      },
+      "required": ["id", "name"]
     }
   },
   "auth": {
@@ -714,8 +731,12 @@
         "$ref": "#/entities/SystemSettings"
       },
       "description": "Stores global system-wide settings and feature flags."
+    },
+    "/internshipCompanies/{companyId}": {
+        "schema": {
+            "$ref": "#/entities/InternshipCompany"
+        },
+        "description": "Stores information about companies offering internships."
     }
   }
 }
-
-    
