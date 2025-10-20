@@ -14,8 +14,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   Dialog,
@@ -49,6 +47,8 @@ import type { InternshipCompany } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
+import { AddCompanyForm } from './add-company-form';
+import { EditCompanyForm } from './edit-company-form';
 
 export function CompanyManagementTable() {
   const firestore = useFirestore();
@@ -77,9 +77,8 @@ export function CompanyManagementTable() {
   }, [companies, searchTerm]);
   
   const handleEditClick = (company: InternshipCompany) => {
-    // setSelectedCompany(company);
-    // setIsEditDialogOpen(true);
-    toast({ title: 'Thông báo', description: 'Chức năng sửa đang được phát triển.' });
+    setSelectedCompany(company);
+    setIsEditDialogOpen(true);
   };
   
   const handleDeleteClick = (company: InternshipCompany) => {
@@ -145,15 +144,8 @@ export function CompanyManagementTable() {
                         Thêm Doanh nghiệp
                     </Button>
                 </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                    <DialogTitle>Thêm Doanh nghiệp mới</DialogTitle>
-                    <DialogDescription>
-                        Điền thông tin chi tiết của doanh nghiệp.
-                    </DialogDescription>
-                    </DialogHeader>
-                    {/* <AddCompanyForm onFinished={() => setIsAddDialogOpen(false)} /> */}
-                     <p className="py-4 text-center text-sm text-muted-foreground">Chức năng thêm doanh nghiệp đang được phát triển.</p>
+                <DialogContent className="sm:max-w-lg">
+                     <AddCompanyForm onFinished={() => setIsAddDialogOpen(false)} />
                 </DialogContent>
             </Dialog>
         </div>
@@ -176,8 +168,10 @@ export function CompanyManagementTable() {
                 <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{company.name}</TableCell>
                 <TableCell>{company.address}</TableCell>
-                <TableCell>{company.website}</TableCell>
-                <TableCell>{company.contactName}</TableCell>
+                <TableCell>
+                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{company.website}</a>
+                </TableCell>
+                <TableCell>{company.contactName} ({company.contactPhone || 'N/A'})</TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
@@ -197,6 +191,17 @@ export function CompanyManagementTable() {
         </Table>
       </CardContent>
     </Card>
+
+    <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-lg">
+          {selectedCompany && (
+            <EditCompanyForm
+              company={selectedCompany}
+              onFinished={() => setIsEditDialogOpen(false)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
 
     <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>

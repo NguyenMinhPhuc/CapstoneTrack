@@ -251,5 +251,5 @@ export type InternshipCompany = {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
-  createdAt: any;
+  createdAt?: any;
 };
