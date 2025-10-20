@@ -256,8 +256,16 @@ export type InternshipCompany = {
   createdAt?: any;
 };
 
-    
-
-    
-
-    
+export type EarlyInternship = {
+  id: string;
+  studentId: string;
+  studentName: string;
+  studentIdentifier: string;
+  companyName: string;
+  companyAddress?: string;
+  supervisorName?: string;
+  startDate: any;
+  endDate?: any;
+  proofLink?: string;
+  status: 'ongoing' | 'completed' | 'cancelled';
+};

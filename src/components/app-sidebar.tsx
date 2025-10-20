@@ -36,6 +36,7 @@ import {
   Activity,
   Building,
   ClipboardList,
+  Clock,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -246,6 +247,11 @@ export function AppSidebar() {
                                         <Link href="/admin/companies"><Building /><span>Quản lý Doanh nghiệp</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/early-internships")} tooltip="Early Internships">
+                                        <Link href="/admin/early-internships"><Clock /><span>Thực tập sớm</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
                             </SidebarMenu>
                          </CollapsibleContent>
                     </SidebarGroup>
@@ -266,5 +272,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
-    
