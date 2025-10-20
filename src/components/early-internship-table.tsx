@@ -45,6 +45,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
   DropdownMenuSub,
+  DropdownMenuSubTrigger,
   DropdownMenuSubContent,
   DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
