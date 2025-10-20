@@ -6,7 +6,7 @@ import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase
 import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
@@ -239,3 +239,4 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   );
 }
 
+    
