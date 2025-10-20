@@ -4,7 +4,7 @@
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser, useDoc, useMemoFirebase, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { doc, collection, query, where, deleteDoc } from 'firebase/firestore';
 import { EarlyInternshipForm } from '@/components/early-internship-form';
 import { useCollection } from '@/firebase/firestore/use-collection';
@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, Lock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -62,6 +62,14 @@ export default function EarlyInternshipRegistrationPage() {
   }, [user, firestore]);
   
   const { data: pastRegistrations, isLoading: isLoadingRegistrations } = useCollection<EarlyInternship>(earlyInternshipsQuery);
+
+  const activeInternship = useMemo(() => {
+    if (!pastRegistrations) return null;
+    return pastRegistrations.find(reg => reg.status === 'ongoing' || reg.status === 'pending_approval');
+  }, [pastRegistrations]);
+
+  const canRegisterNew = !activeInternship;
+
 
   useEffect(() => {
     // This effect can stay as it is, ensuring only students can access the page.
@@ -135,7 +143,7 @@ export default function EarlyInternshipRegistrationPage() {
               </div>
                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
-                        <Button disabled={!studentData}>
+                        <Button disabled={!studentData || !canRegisterNew}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Tạo Đơn đăng ký mới
                         </Button>
@@ -159,7 +167,16 @@ export default function EarlyInternshipRegistrationPage() {
                     </DialogContent>
                 </Dialog>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+              {!canRegisterNew && (
+                <Alert variant="destructive">
+                    <Lock className="h-4 w-4" />
+                    <AlertTitle>Không thể đăng ký mới</AlertTitle>
+                    <AlertDescription>
+                        Bạn hiện có một đơn đăng ký thực tập sớm đang ở trạng thái "{activeInternship?.status === 'ongoing' ? 'Đang thực tập' : 'Chờ duyệt'}". Bạn cần hoàn thành hoặc hủy đơn đăng ký hiện tại trước khi tạo đơn mới.
+                    </AlertDescription>
+                </Alert>
+              )}
               {pastRegistrations && pastRegistrations.length > 0 ? (
                 <div className="space-y-4">
                   {pastRegistrations.map(reg => (
