@@ -2,8 +2,8 @@
 
 import { useEffect, useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, collection, query, where, getDocs } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -11,9 +11,23 @@ import { Info, BookMarked } from 'lucide-react';
 import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type ProjectTopic } from '@/lib/types';
 import { TopicRegistrationList } from '@/components/topic-registration-list';
 import { RegisteredTopicDetails } from '@/components/registered-topic-details';
+import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 export default function TopicRegistrationPage() {
   const router = useRouter();
+  const { toast } = useToast();
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
 
@@ -21,6 +35,7 @@ export default function TopicRegistrationPage() {
   const [activeSession, setActiveSession] = useState<GraduationDefenseSession | null>(null);
   const [registeredTopic, setRegisteredTopic] = useState<ProjectTopic | null>(null);
   const [isLoadingRegistration, setIsLoadingRegistration] = useState(true);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
@@ -39,82 +54,132 @@ export default function TopicRegistrationPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  useEffect(() => {
+   const fetchActiveRegistration = async () => {
     if (!user || !firestore) return;
 
-    const findActiveRegistration = async () => {
-        setIsLoadingRegistration(true);
-        setRegisteredTopic(null); // Reset topic on re-fetch
-        try {
-            const sessionsQuery = query(
-                collection(firestore, 'graduationDefenseSessions'),
-                where('status', 'in', ['upcoming', 'ongoing'])
-            );
-            const sessionsSnapshot = await getDocs(sessionsQuery);
+    setIsLoadingRegistration(true);
+    setRegisteredTopic(null); // Reset topic on re-fetch
+    try {
+        const sessionsQuery = query(
+            collection(firestore, 'graduationDefenseSessions'),
+            where('status', 'in', ['upcoming', 'ongoing'])
+        );
+        const sessionsSnapshot = await getDocs(sessionsQuery);
 
-            if (sessionsSnapshot.empty) {
-                setActiveRegistration(null);
-                setActiveSession(null);
-                setIsLoadingRegistration(false);
-                return;
-            }
-            
-            const sessionsData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession));
-
-            // Prioritize 'upcoming' session, then 'ongoing'
-            const sessionToSearch = 
-                sessionsData.find(s => s.status === 'upcoming') || 
-                sessionsData.find(s => s.status === 'ongoing') ||
-                null;
-
-            if (!sessionToSearch) {
-                setActiveRegistration(null);
-                setActiveSession(null);
-                setIsLoadingRegistration(false);
-                return;
-            }
-
-            setActiveSession(sessionToSearch);
-
-            const registrationQuery = query(
-                collection(firestore, 'defenseRegistrations'),
-                where('sessionId', '==', sessionToSearch.id),
-                where('studentDocId', '==', user.uid)
-            );
-            const registrationSnapshot = await getDocs(registrationQuery);
-
-            if (!registrationSnapshot.empty) {
-                const regDoc = registrationSnapshot.docs[0];
-                const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
-                setActiveRegistration(registrationData);
-
-                // If student has a project, fetch the topic details
-                if (registrationData.projectTitle) {
-                    const topicQuery = query(
-                        collection(firestore, 'projectTopics'),
-                        where('sessionId', '==', sessionToSearch.id),
-                        where('title', '==', registrationData.projectTitle)
-                    );
-                    const topicSnapshot = await getDocs(topicQuery);
-                    if (!topicSnapshot.empty) {
-                        const topicDoc = topicSnapshot.docs[0];
-                        setRegisteredTopic({ id: topicDoc.id, ...topicDoc.data() } as ProjectTopic);
-                    }
-                }
-            } else {
-                setActiveRegistration(null);
-            }
-        } catch (error) {
-            console.error("Error finding active registration:", error);
+        if (sessionsSnapshot.empty) {
             setActiveRegistration(null);
             setActiveSession(null);
-        } finally {
             setIsLoadingRegistration(false);
+            return;
         }
-    };
+        
+        const sessionsData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession));
 
-    findActiveRegistration();
+        const sessionToSearch = 
+            sessionsData.find(s => s.status === 'upcoming') || 
+            sessionsData.find(s => s.status === 'ongoing') ||
+            null;
+
+        if (!sessionToSearch) {
+            setActiveRegistration(null);
+            setActiveSession(null);
+            setIsLoadingRegistration(false);
+            return;
+        }
+
+        setActiveSession(sessionToSearch);
+
+        const registrationQuery = query(
+            collection(firestore, 'defenseRegistrations'),
+            where('sessionId', '==', sessionToSearch.id),
+            where('studentDocId', '==', user.uid)
+        );
+        const registrationSnapshot = await getDocs(registrationQuery);
+
+        if (!registrationSnapshot.empty) {
+            const regDoc = registrationSnapshot.docs[0];
+            const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
+            setActiveRegistration(registrationData);
+
+            if (registrationData.projectTitle) {
+                const topicQuery = query(
+                    collection(firestore, 'projectTopics'),
+                    where('sessionId', '==', sessionToSearch.id),
+                    where('title', '==', registrationData.projectTitle),
+                    where('supervisorId', '==', registrationData.supervisorId)
+                );
+                const topicSnapshot = await getDocs(topicQuery);
+                if (!topicSnapshot.empty) {
+                    const topicDoc = topicSnapshot.docs[0];
+                    setRegisteredTopic({ id: topicDoc.id, ...topicDoc.data() } as ProjectTopic);
+                }
+            }
+        } else {
+            setActiveRegistration(null);
+        }
+    } catch (error) {
+        console.error("Error finding active registration:", error);
+        setActiveRegistration(null);
+        setActiveSession(null);
+    } finally {
+        setIsLoadingRegistration(false);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchActiveRegistration();
   }, [user, firestore]);
+
+  const handleCancelRegistration = async () => {
+    if (!activeRegistration || !registeredTopic) return;
+    
+    setIsCancelling(true);
+    const batch = writeBatch(firestore);
+
+    // 1. Reset the student's registration document
+    const registrationRef = doc(firestore, 'defenseRegistrations', activeRegistration.id);
+    batch.update(registrationRef, {
+        projectTitle: '',
+        summary: '',
+        objectives: '',
+        expectedResults: '',
+        supervisorId: '',
+        supervisorName: '',
+        projectRegistrationStatus: null, // Reset status
+    });
+    
+    // 2. If the topic was full, open it up again
+    if (registeredTopic.status === 'taken') {
+        const topicRef = doc(firestore, 'projectTopics', registeredTopic.id);
+        batch.update(topicRef, { status: 'approved' });
+    }
+    
+    try {
+        await batch.commit();
+        toast({
+            title: 'Hủy đăng ký thành công!',
+            description: 'Bạn có thể chọn một đề tài khác.',
+        });
+        // Refetch data to update UI
+        fetchActiveRegistration();
+    } catch (error) {
+        console.error("Error cancelling registration:", error);
+        toast({
+            variant: 'destructive',
+            title: 'Lỗi',
+            description: 'Không thể hủy đăng ký. Vui lòng thử lại.',
+        });
+        const contextualError = new FirestorePermissionError({
+            path: `batch write on topic ${registeredTopic.id} and registration ${activeRegistration.id}`,
+            operation: 'update',
+        });
+        errorEmitter.emit('permission-error', contextualError);
+    } finally {
+        setIsCancelling(false);
+    }
+  };
+
 
   const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistration;
 
@@ -153,7 +218,7 @@ export default function TopicRegistrationPage() {
             </CardHeader>
         </Card>
         
-        {!activeSession && (
+        {!activeSession && !isLoading && (
             <Alert>
                 <Info className="h-4 w-4" />
                 <AlertTitle>Chưa có đợt báo cáo nào</AlertTitle>
@@ -163,7 +228,7 @@ export default function TopicRegistrationPage() {
             </Alert>
         )}
 
-        {activeSession && !activeRegistration && (
+        {activeSession && !activeRegistration && !isLoading &&(
              <Alert variant="destructive">
                 <Info className="h-4 w-4" />
                 <AlertTitle>Chưa được thêm vào đợt</AlertTitle>
@@ -174,20 +239,31 @@ export default function TopicRegistrationPage() {
         )}
 
         {activeSession && activeRegistration && (
-            activeRegistration.projectTitle ? (
-                registeredTopic ? (
-                    <RegisteredTopicDetails topic={registeredTopic} />
-                ) : (
-                    <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertTitle>Bạn đã có đề tài</AlertTitle>
-                        <AlertDescription>
-                            Bạn đã đăng ký đề tài: <span className="font-semibold">{activeRegistration.projectTitle}</span>. Đang tải chi tiết...
-                        </AlertDescription>
-                    </Alert>
-                )
+            activeRegistration.projectTitle && registeredTopic ? (
+                <div>
+                    <RegisteredTopicDetails topic={registeredTopic} registration={activeRegistration} />
+                    <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="destructive" className="mt-4 w-full sm:w-auto" disabled={isCancelling}>
+                                {isCancelling ? 'Đang hủy...' : 'Hủy đăng ký'}
+                            </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Xác nhận hủy đăng ký?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Bạn có chắc chắn muốn hủy đăng ký đề tài <span className="font-bold">"{registeredTopic.title}"</span>?
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Không</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleCancelRegistration}>Xác nhận hủy</AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
+                </div>
             ) : (
-                activeSession && activeRegistration && <TopicRegistrationList session={activeSession} registration={activeRegistration} />
+                <TopicRegistrationList session={activeSession} registration={activeRegistration} />
             )
         )}
       </div>

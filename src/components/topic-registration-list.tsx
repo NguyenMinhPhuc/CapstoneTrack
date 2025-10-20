@@ -1,8 +1,7 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, writeBatch } from 'firebase/firestore';
 import type { GraduationDefenseSession, ProjectTopic, DefenseRegistration } from '@/lib/types';
 import {
@@ -80,12 +79,15 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
     const counts = new Map<string, number>();
     allRegistrations.forEach(reg => {
         if (reg.projectTitle) {
-            counts.set(reg.projectTitle, (counts.get(reg.projectTitle) || 0) + 1);
+            // Use a composite key to be more specific, though title is likely unique per session
+            const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
+            counts.set(key, (counts.get(key) || 0) + 1);
         }
     });
 
     const filtered = topics.filter(topic => {
-      const currentCount = counts.get(topic.title) || 0;
+      const key = `${topic.sessionId}-${topic.title}-${topic.supervisorId}`;
+      const currentCount = counts.get(key) || 0;
       return topic.status === 'approved' || (topic.status === 'taken' && currentCount < topic.maxStudents);
     });
 
@@ -107,10 +109,12 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
       expectedResults: topic.expectedResults,
       supervisorId: topic.supervisorId,
       supervisorName: topic.supervisorName,
+      projectRegistrationStatus: 'pending', // Set status to pending
     });
 
     // 2. Update the topic's status if it's now full
-    const currentCount = topicRegistrationCounts.get(topic.title) || 0;
+    const key = `${topic.sessionId}-${topic.title}-${topic.supervisorId}`;
+    const currentCount = topicRegistrationCounts.get(key) || 0;
     if (currentCount + 1 >= topic.maxStudents) {
         const topicRef = doc(firestore, 'projectTopics', topic.id);
         batch.update(topicRef, {
@@ -122,9 +126,9 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
       await batch.commit();
       toast({
         title: 'Đăng ký thành công!',
-        description: `Bạn đã đăng ký đề tài "${topic.title}".`,
+        description: `Bạn đã đăng ký đề tài "${topic.title}". Vui lòng chờ GVHD xác nhận.`,
       });
-      // The page will automatically reflect the change due to real-time updates.
+      // The parent component will refetch and update the view
     } catch (error: any) {
       console.error("Error registering for topic: ", error);
       toast({
@@ -132,6 +136,11 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
         title: 'Đăng ký thất bại',
         description: 'Đã có lỗi xảy ra. Vui lòng thử lại.',
       });
+       const contextualError = new FirestorePermissionError({
+            path: `batch write on topic ${topic.id} and registration ${registration.id}`,
+            operation: 'update',
+        });
+        errorEmitter.emit('permission-error', contextualError);
     } finally {
         setIsSubmitting(false);
     }
@@ -172,7 +181,8 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {availableTopics.map(topic => {
-        const registeredCount = topicRegistrationCounts.get(topic.title) || 0;
+        const key = `${topic.sessionId}-${topic.title}-${topic.supervisorId}`;
+        const registeredCount = topicRegistrationCounts.get(key) || 0;
         const isFull = registeredCount >= topic.maxStudents;
 
         return (
@@ -233,7 +243,7 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
                   <AlertDialogHeader>
                     <AlertDialogTitle>Xác nhận đăng ký đề tài?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Bạn có chắc chắn muốn đăng ký đề tài <span className="font-bold">"{topic.title}"</span>? Hành động này không thể hoàn tác.
+                      Bạn có chắc chắn muốn đăng ký đề tài <span className="font-bold">"{topic.title}"</span>? Hành động này không thể hoàn tác trực tiếp, nhưng bạn có thể hủy đăng ký sau nếu muốn.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>
