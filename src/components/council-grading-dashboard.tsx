@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -505,9 +506,10 @@ function SubcommitteeGradingView({
 
 export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradingDashboardProps) {
   const firestore = useFirestore();
-
-  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore]);
-  const { data: allSessions, isLoading: isLoadingSessions, forceRefresh: forceRefreshSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
+  const [refreshKey, setRefreshKey] = useState(0);
+  
+  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore, refreshKey]);
+  const { data: allSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
   const [councilAssignments, setCouncilAssignments] = useState<SessionWithCouncilAssignments[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
@@ -516,13 +518,12 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
 
   const evaluationsQuery = useMemoFirebase(
       () => ongoingSessionIds.length > 0 ? query(collection(firestore, 'evaluations'), where('sessionId', 'in', ongoingSessionIds)) : null,
-      [firestore, ongoingSessionIds]
+      [firestore, ongoingSessionIds, refreshKey]
   );
-  const { data: allEvaluations, isLoading: isLoadingEvaluations, forceRefresh: forceRefreshEvaluations } = useCollection<Evaluation>(evaluationsQuery);
+  const { data: allEvaluations, isLoading: isLoadingEvaluations } = useCollection<Evaluation>(evaluationsQuery);
 
   const forceRefreshAll = () => {
-    forceRefreshSessions();
-    forceRefreshEvaluations();
+    setRefreshKey(prev => prev + 1);
   };
 
 
@@ -571,10 +572,10 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     };
 
     fetchAssignments();
-  }, [allSessions, isLoadingSessions, supervisorId, firestore]);
+  }, [allSessions, isLoadingSessions, supervisorId, firestore, refreshKey]);
   
   
-  const CouncilSessionAccordionItem = ({ sessionData }: { sessionData: SessionWithCouncilAssignments }) => {
+  const CouncilSessionAccordionItem = ({ sessionData, onRefresh }: { sessionData: SessionWithCouncilAssignments, onRefresh: () => void }) => {
     const { session, isCouncilMember, subCommittees, registrations } = sessionData;
     
     const councilGradRubricDocRef = useMemoFirebase(() => (session.councilGraduationRubricId ? doc(firestore, 'rubrics', session.councilGraduationRubricId) : null), [firestore, session.councilGraduationRubricId]);
@@ -611,7 +612,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
                     </CardContent>
                 </Card>
             )}
-             <Accordion type="multiple" className="space-y-4">
+             <Accordion type="multiple" className="space-y-4" defaultValue={subCommittees.map(sc => sc.id)}>
                 {subCommittees.map(sc => (
                     <AccordionItem value={sc.id} key={sc.id} className="border rounded-lg bg-card overflow-hidden">
                        <AccordionTrigger className="px-6 hover:no-underline">
@@ -639,7 +640,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
                                 councilInternshipRubric={councilInternshipRubric || null}
                                 supervisorId={supervisorId}
                                 sessionId={session.id}
-                                onRefresh={forceRefreshAll}
+                                onRefresh={onRefresh}
                             />
                         )}
                        </AccordionContent>
@@ -680,7 +681,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
     <div className="space-y-6">
         <Accordion type="multiple" defaultValue={councilAssignments.map(s => `council-${s.session.id}`)}>
             {councilAssignments.map((sessionData) => (
-                <CouncilSessionAccordionItem key={sessionData.session.id} sessionData={sessionData} />
+                <CouncilSessionAccordionItem key={sessionData.session.id} sessionData={sessionData} onRefresh={forceRefreshAll} />
             ))}
         </Accordion>
     </div>
