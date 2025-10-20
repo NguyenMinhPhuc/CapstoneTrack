@@ -24,8 +24,8 @@ import type { Supervisor } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface SupervisorComboboxProps {
-  value: string;
-  onChange: (value: string) => void;
+  value: string; // The ID of the supervisor
+  onChange: (supervisor: Supervisor | null) => void;
 }
 
 export function SupervisorCombobox({ value, onChange }: SupervisorComboboxProps) {
@@ -59,47 +59,48 @@ export function SupervisorCombobox({ value, onChange }: SupervisorComboboxProps)
     return supervisors.map(supervisor => {
       const fullName = `${supervisor.firstName} ${supervisor.lastName}`.trim();
       return {
-        value: fullName.toLowerCase(),
+        ...supervisor,
+        value: supervisor.id,
         label: fullName,
       };
     }).filter(opt => opt.label);
   }, [supervisors]);
 
+  const selectedSupervisorLabel = supervisorOptions.find(opt => opt.value === value)?.label || "Chọn giáo viên...";
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <div className="relative w-full">
-            <ChevronsUpDown className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 shrink-0 opacity-50" />
-            <Command>
-                 <CommandInput
-                    value={value}
-                    onValueChange={onChange}
-                    placeholder="Chọn hoặc nhập tên GVHD..."
-                    className="w-full"
-                />
-            </Command>
-        </div>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+          disabled={isLoading}
+        >
+          {isLoading ? "Đang tải..." : selectedSupervisorLabel}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
+          <CommandInput placeholder="Tìm giáo viên..." />
           <CommandList>
-            <CommandEmpty>
-              {isLoading ? 'Đang tải...' : 'Không tìm thấy giáo viên.'}
-            </CommandEmpty>
+            <CommandEmpty>Không tìm thấy giáo viên.</CommandEmpty>
             <CommandGroup>
               {supervisorOptions.map(option => (
                 <CommandItem
                   key={option.value}
                   value={option.label}
-                  onSelect={currentValue => {
-                    onChange(currentValue === value ? '' : option.label);
+                  onSelect={() => {
+                    onChange(option.value === value ? null : option);
                     setOpen(false);
                   }}
                 >
                   <Check
                     className={cn(
                       'mr-2 h-4 w-4',
-                      value === option.label ? 'opacity-100' : 'opacity-0'
+                      value === option.value ? 'opacity-100' : 'opacity-0'
                     )}
                   />
                   {option.label}

@@ -266,11 +266,11 @@ export type EarlyInternship = {
   studentIdentifier: string;
   companyName: string;
   companyAddress?: string;
-  supervisorName?: string;
+  supervisorId: string;
+  supervisorName: string;
   startDate: any;
   endDate?: any;
   proofLink?: string;
-  status: 'ongoing' | 'completed' | 'cancelled';
+  status: 'pending_approval' | 'ongoing' | 'completed' | 'rejected' | 'cancelled';
+  statusNote?: string;
 };
-
-    

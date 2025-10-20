@@ -158,6 +158,11 @@ export function AppSidebar() {
                         <Link href="/my-topics"><BookUser /><span>Đề tài của tôi</span></Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/early-internship-guidance")} tooltip="Hướng dẫn TT sớm">
+                        <Link href="/early-internship-guidance"><Clock /><span>Hướng dẫn TT sớm</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/supervisor-grading")} tooltip="Chấm điểm Hướng dẫn">
                         <Link href="/supervisor-grading"><UserCheck /><span>Chấm điểm Hướng dẫn</span></Link>
@@ -283,4 +288,3 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-    

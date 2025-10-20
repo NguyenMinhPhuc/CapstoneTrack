@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -25,6 +26,24 @@ import type { EarlyInternship } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
+import { Badge } from './ui/badge';
+
+const statusLabel: Record<EarlyInternship['status'], string> = {
+  pending_approval: 'Chờ duyệt',
+  ongoing: 'Đang thực tập',
+  completed: 'Hoàn thành',
+  rejected: 'Bị từ chối',
+  cancelled: 'Đã hủy',
+};
+
+const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
+  pending_approval: 'secondary',
+  ongoing: 'default',
+  completed: 'outline',
+  rejected: 'destructive',
+  cancelled: 'destructive',
+};
+
 
 export function EarlyInternshipTable() {
   const firestore = useFirestore();
@@ -67,10 +86,6 @@ export function EarlyInternshipTable() {
             <CardTitle>Danh sách Sinh viên</CardTitle>
             <CardDescription>Các sinh viên đang hoặc đã hoàn thành thực tập sớm.</CardDescription>
           </div>
-          <Button>
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Thêm Sinh viên
-          </Button>
         </div>
       </CardHeader>
       <CardContent>
@@ -80,6 +95,7 @@ export function EarlyInternshipTable() {
               <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>Sinh viên</TableHead>
               <TableHead>Công ty</TableHead>
+              <TableHead>GVHD</TableHead>
               <TableHead>Ngày bắt đầu</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
@@ -94,10 +110,15 @@ export function EarlyInternshipTable() {
                   <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
                 </TableCell>
                 <TableCell>{internship.companyName}</TableCell>
+                <TableCell>{internship.supervisorName}</TableCell>
                 <TableCell>
                   {toDate(internship.startDate) ? format(toDate(internship.startDate)!, 'PPP') : 'N/A'}
                 </TableCell>
-                <TableCell>{internship.status}</TableCell>
+                <TableCell>
+                    <Badge variant={statusVariant[internship.status]}>
+                        {statusLabel[internship.status]}
+                    </Badge>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon">
                     <MoreHorizontal className="h-4 w-4" />

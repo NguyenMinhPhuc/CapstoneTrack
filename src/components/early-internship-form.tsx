@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
-import type { Student, InternshipCompany } from '@/lib/types';
+import type { Student, InternshipCompany, Supervisor } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
@@ -35,10 +35,11 @@ import {
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Separator } from './ui/separator';
+import { SupervisorCombobox } from './supervisor-combobox';
 
 const formSchema = z.object({
   companyId: z.string().min(1, { message: 'Vui lòng chọn một phòng ban.' }),
-  supervisorName: z.string().optional(),
+  supervisorId: z.string().min(1, { message: 'Vui lòng chọn người hướng dẫn.' }),
   startDate: z.date({ required_error: 'Ngày bắt đầu là bắt buộc.' }),
   endDate: z.date().optional(),
   proofLink: z.string().url({ message: 'URL không hợp lệ' }).optional().or(z.literal('')),
@@ -54,6 +55,8 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
   const { toast } = useToast();
   const firestore = useFirestore();
   const [selectedDepartment, setSelectedDepartment] = useState<InternshipCompany | null>(null);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
+
 
   const lhuDepartmentsQuery = useMemoFirebase(
     () => query(collection(firestore, 'internshipCompanies'), where('isLHU', '==', true)),
@@ -64,7 +67,6 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      supervisorName: '',
       proofLink: '',
     },
   });
@@ -83,12 +85,12 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const department = lhuDepartments?.find(d => d.id === values.companyId);
     if (!department) {
-      toast({
-        variant: 'destructive',
-        title: 'Lỗi',
-        description: 'Không tìm thấy thông tin phòng ban đã chọn.',
-      });
+      toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy thông tin phòng ban.' });
       return;
+    }
+    if (!selectedSupervisor) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng chọn giáo viên hướng dẫn.' });
+        return;
     }
 
     const newRecord = {
@@ -97,11 +99,12 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       studentIdentifier: student.studentId,
       companyName: department.name,
       companyAddress: department.address || '',
-      supervisorName: values.supervisorName,
+      supervisorId: selectedSupervisor.id,
+      supervisorName: `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}`,
       startDate: values.startDate,
       endDate: values.endDate,
       proofLink: values.proofLink,
-      status: 'ongoing' as const,
+      status: 'pending_approval' as const,
       createdAt: serverTimestamp(),
     };
     
@@ -109,7 +112,7 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       .then(() => {
         toast({
           title: 'Thành công',
-          description: 'Đã tạo đơn đăng ký thực tập sớm.',
+          description: 'Đã gửi đơn đăng ký đến giáo viên hướng dẫn.',
         });
         onFinished();
       })
@@ -167,12 +170,18 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
         )}
         <FormField
           control={form.control}
-          name="supervisorName"
+          name="supervisorId"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Người hướng dẫn tại phòng ban</FormLabel>
               <FormControl>
-                <Input placeholder="Tên người hướng dẫn" {...field} />
+                 <SupervisorCombobox
+                    value={field.value}
+                    onChange={(supervisor) => {
+                        field.onChange(supervisor?.id || '');
+                        setSelectedSupervisor(supervisor);
+                    }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
