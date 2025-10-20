@@ -22,6 +22,7 @@ import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
 
 interface ViewProgressDialogProps {
   registration: DefenseRegistration;
