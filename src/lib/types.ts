@@ -1,6 +1,5 @@
 
 
-
 export type Application = {
   id: string;
   studentName: string;
@@ -256,6 +255,7 @@ export type InternshipCompany = {
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
+  isLHU?: boolean;
   createdAt?: any;
 };
 

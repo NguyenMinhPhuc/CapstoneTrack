@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -42,7 +43,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Users, Trash2, Upload, FileDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, Trash2, Upload, FileDown, CheckCircle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { InternshipCompany } from '@/lib/types';
@@ -157,7 +158,7 @@ export function CompanyManagementTable() {
   }
 
   const handleExportTemplate = () => {
-    const headers = ["name", "address", "website", "description", "contactName", "contactEmail", "contactPhone"];
+    const headers = ["name", "address", "website", "description", "contactName", "contactEmail", "contactPhone", "isLHU"];
     const worksheet = XLSX.utils.json_to_sheet([{}], { header: headers });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachDoanhNghiep");
@@ -267,7 +268,7 @@ export function CompanyManagementTable() {
               <TableHead>Tên Doanh nghiệp</TableHead>
               <TableHead>Địa chỉ</TableHead>
               <TableHead>Website</TableHead>
-              <TableHead>Người liên hệ</TableHead>
+              <TableHead>Phòng ban LHU</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -285,7 +286,9 @@ export function CompanyManagementTable() {
                 <TableCell>
                   <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{company.website}</a>
                 </TableCell>
-                <TableCell>{company.contactName} ({company.contactPhone || 'N/A'})</TableCell>
+                <TableCell>
+                    {company.isLHU && <CheckCircle className="h-5 w-5 text-green-500" />}
+                </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

@@ -418,6 +418,11 @@
             "type": "string",
             "format": "uri",
             "description": "URL to the full internship report."
+        },
+         "internshipRegistrationStatus": {
+          "type": "string",
+          "description": "The approval status of the student's internship registration by an admin.",
+          "enum": ["pending", "approved", "rejected"]
         }
       },
       "required": [
@@ -660,7 +665,8 @@
         "website": { "type": "string", "format": "uri", "description": "The company's official website." },
         "contactName": { "type": "string", "description": "Name of the primary contact person (e.g., HR manager)." },
         "contactEmail": { "type": "string", "format": "email", "description": "Email address of the contact person." },
-        "contactPhone": { "type": "string", "description": "Phone number of the contact person." }
+        "contactPhone": { "type": "string", "description": "Phone number of the contact person." },
+        "isLHU": { "type": "boolean", "description": "True if this entity is a department within LHU." }
       },
       "required": ["id", "name"]
     },
@@ -783,3 +789,4 @@
     }
   }
 }
+

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,6 +22,7 @@ import { doc, updateDoc } from 'firebase/firestore';
 import type { InternshipCompany } from '@/lib/types';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
+import { Switch } from './ui/switch';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên doanh nghiệp là bắt buộc.' }),
@@ -30,6 +32,7 @@ const formSchema = z.object({
   contactName: z.string().optional(),
   contactEmail: z.string().email({ message: 'Email không hợp lệ.' }).optional().or(z.literal('')),
   contactPhone: z.string().optional(),
+  isLHU: z.boolean().default(false),
 });
 
 interface EditCompanyFormProps {
@@ -51,6 +54,7 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
       contactName: company.contactName || '',
       contactEmail: company.contactEmail || '',
       contactPhone: company.contactPhone || '',
+      isLHU: company.isLHU || false,
     },
   });
 
@@ -92,11 +96,29 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Tên Doanh nghiệp</FormLabel>
+                    <FormLabel>Tên Doanh nghiệp / Phòng ban</FormLabel>
                     <FormControl>
                       <Input placeholder="Công ty TNHH ABC" {...field} />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="isLHU"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                    <div className="space-y-0.5">
+                      <FormLabel>Đây là phòng ban của LHU?</FormLabel>
+                      <FormMessage />
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
                   </FormItem>
                 )}
               />

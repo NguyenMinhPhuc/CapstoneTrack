@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -15,19 +16,28 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
+import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import type { Student, InternshipCompany } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, User as UserIcon, Mail, Phone, Building } from 'lucide-react';
 import { format } from 'date-fns';
 import { Calendar } from './ui/calendar';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Separator } from './ui/separator';
 
 const formSchema = z.object({
-  companyName: z.string().min(1, { message: 'Tên công ty/phòng ban là bắt buộc.' }),
-  companyAddress: z.string().optional(),
+  companyId: z.string().min(1, { message: 'Vui lòng chọn một phòng ban.' }),
   supervisorName: z.string().optional(),
   startDate: z.date({ required_error: 'Ngày bắt đầu là bắt buộc.' }),
   endDate: z.date().optional(),
@@ -43,23 +53,54 @@ interface EarlyInternshipFormProps {
 export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternshipFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [selectedDepartment, setSelectedDepartment] = useState<InternshipCompany | null>(null);
+
+  const lhuDepartmentsQuery = useMemoFirebase(
+    () => query(collection(firestore, 'internshipCompanies'), where('isLHU', '==', true)),
+    [firestore]
+  );
+  const { data: lhuDepartments, isLoading: isLoadingDepartments } = useCollection<InternshipCompany>(lhuDepartmentsQuery);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      companyName: '',
-      companyAddress: '',
       supervisorName: '',
       proofLink: '',
     },
   });
 
+  const companyId = useWatch({ control: form.control, name: 'companyId' });
+
+  useEffect(() => {
+    if (companyId && lhuDepartments) {
+      const department = lhuDepartments.find(d => d.id === companyId);
+      setSelectedDepartment(department || null);
+    } else {
+      setSelectedDepartment(null);
+    }
+  }, [companyId, lhuDepartments]);
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    const department = lhuDepartments?.find(d => d.id === values.companyId);
+    if (!department) {
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không tìm thấy thông tin phòng ban đã chọn.',
+      });
+      return;
+    }
+
     const newRecord = {
-      ...values,
       studentId: user.uid,
       studentName: `${student.firstName} ${student.lastName}`,
       studentIdentifier: student.studentId,
+      companyName: department.name,
+      companyAddress: department.address || '',
+      supervisorName: values.supervisorName,
+      startDate: values.startDate,
+      endDate: values.endDate,
+      proofLink: values.proofLink,
       status: 'ongoing' as const,
       createdAt: serverTimestamp(),
     };
@@ -87,36 +128,49 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
         <FormField
           control={form.control}
-          name="companyName"
+          name="companyId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tên Công ty / Phòng ban</FormLabel>
-              <FormControl>
-                <Input placeholder="Ví dụ: Trung tâm Thông tin và Quản trị mạng" {...field} />
-              </FormControl>
+              <FormLabel>Chọn Phòng ban</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingDepartments}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder={isLoadingDepartments ? "Đang tải..." : "Chọn một phòng ban..."} />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  {lhuDepartments?.map((dept) => (
+                    <SelectItem key={dept.id} value={dept.id}>
+                      {dept.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="companyAddress"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Địa chỉ</FormLabel>
-              <FormControl>
-                <Input placeholder="Ví dụ: Đại học Lạc Hồng" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {selectedDepartment && (
+          <Card>
+            <CardHeader>
+              <CardTitle>{selectedDepartment.name}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 text-sm">
+              <div className="flex items-start gap-3">
+                <Building className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                <p>{selectedDepartment.address || 'Chưa có thông tin địa chỉ'}</p>
+              </div>
+              <Separator/>
+              <p className="text-muted-foreground">{selectedDepartment.description || 'Không có mô tả.'}</p>
+            </CardContent>
+          </Card>
+        )}
         <FormField
           control={form.control}
           name="supervisorName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Người hướng dẫn tại đơn vị</FormLabel>
+              <FormLabel>Người hướng dẫn tại phòng ban</FormLabel>
               <FormControl>
                 <Input placeholder="Tên người hướng dẫn" {...field} />
               </FormControl>
