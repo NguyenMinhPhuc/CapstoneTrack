@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,9 +16,9 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration } from '@/lib/types';
+import type { DefenseRegistration, SystemSettings } from '@/lib/types';
 import React from 'react';
 import { MarkdownToolbar } from './markdown-toolbar';
 import ReactMarkdown from 'react-markdown';
@@ -42,6 +43,10 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
   const objectivesRef = React.useRef<HTMLTextAreaElement>(null);
   const expectedResultsRef = React.useRef<HTMLTextAreaElement>(null);
 
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  const requireApproval = settings?.requireReportApproval ?? true;
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -56,7 +61,12 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, 'defenseRegistrations', registration.id);
 
-    updateDoc(registrationDocRef, values)
+    const dataToUpdate = {
+        ...values,
+        reportStatus: requireApproval ? 'pending_approval' : 'approved',
+    }
+
+    updateDoc(registrationDocRef, dataToUpdate)
         .then(() => {
             toast({
                 title: 'Thành công',

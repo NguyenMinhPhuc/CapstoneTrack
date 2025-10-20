@@ -73,6 +73,7 @@ export type Supervisor = {
 export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting';
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
+export type FinalReportStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
 
 
 export type DefenseRegistration = {
@@ -91,6 +92,7 @@ export type DefenseRegistration = {
   projectRegistrationStatus?: ProjectRegistrationStatus;
   proposalStatus?: ProposalStatus;
   proposalLink?: string;
+  reportStatus?: FinalReportStatus;
   // General fields
   supervisorId?: string; // Graduation project supervisor
   supervisorName?: string; // Graduation project supervisor name
@@ -206,6 +208,7 @@ export type SystemSettings = {
     allowStudentRegistration?: boolean;
     allowEditingApprovedProposal?: boolean;
     forceOpenReportSubmission?: boolean;
+    requireReportApproval?: boolean;
 }
 
 export type ProjectTopic = {

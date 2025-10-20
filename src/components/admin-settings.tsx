@@ -125,6 +125,22 @@ export function AdminSettings() {
                             onCheckedChange={(checked) => handleFeatureToggle('forceOpenReportSubmission', checked)}
                         />
                     </div>
+                    <Separator />
+                     <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="require-report-approval-switch" className="text-base">
+                                Yêu cầu GVHD duyệt báo cáo cuối kỳ
+                            </Label>
+                             <p className="text-sm text-muted-foreground">
+                                Nếu bật, báo cáo sinh viên nộp cần được GVHD duyệt. Nếu tắt, báo cáo sẽ tự động được chấp nhận.
+                            </p>
+                        </div>
+                        <Switch
+                            id="require-report-approval-switch"
+                            checked={settings?.requireReportApproval ?? true} // Default to true
+                            onCheckedChange={(checked) => handleFeatureToggle('requireReportApproval', checked)}
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </div>

@@ -294,6 +294,11 @@
           "format": "uri",
           "description": "A URL link to the full graduation project report."
         },
+        "reportStatus": {
+            "type": "string",
+            "description": "The status of the final report submission.",
+            "enum": ["not_submitted", "pending_approval", "approved", "rejected"]
+        },
         "supervisorId": {
             "type": "string",
             "description": "Reference to the graduation project supervisor's document ID."
@@ -592,6 +597,10 @@
         "forceOpenReportSubmission": {
           "type": "boolean",
           "description": "If true, allows students to submit their final reports at any time, overriding the default submission window."
+        },
+        "requireReportApproval": {
+          "type": "boolean",
+          "description": "If true, final reports submitted by students must be approved by their supervisor."
         }
       }
     }
