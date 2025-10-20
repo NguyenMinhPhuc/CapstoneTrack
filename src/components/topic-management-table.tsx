@@ -23,7 +23,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Book, Target, CheckCircle } from 'lucide-react';
+import { MoreHorizontal, Search, Book, Target, CheckCircle, AlertTriangle } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, query } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession } from '@/lib/types';
@@ -43,6 +43,8 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
+import { RejectTopicDialog } from './reject-topic-dialog';
+import { Dialog } from './ui/dialog';
 
 const statusLabel: Record<ProjectTopic['status'], string> = {
   pending: 'Chờ duyệt',
@@ -64,6 +66,8 @@ export function TopicManagementTable() {
   const [sessionFilter, setSessionFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
+  const [topicToReject, setTopicToReject] = useState<ProjectTopic | null>(null);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
 
   const topicsQuery = useMemoFirebase(
     () => query(collection(firestore, 'projectTopics')),
@@ -96,10 +100,27 @@ export function TopicManagementTable() {
 
   }, [topics, sessionFilter, statusFilter, searchTerm]);
 
-  const handleStatusChange = async (topicId: string, newStatus: ProjectTopic['status']) => {
+  const handleStatusChange = async (topicId: string, newStatus: ProjectTopic['status'], reason?: string) => {
     const topicRef = doc(firestore, 'projectTopics', topicId);
+    
+    if (newStatus === 'rejected' && !reason) {
+        const topic = topics?.find(t => t.id === topicId);
+        if (topic) {
+            setTopicToReject(topic);
+            setIsRejectDialogOpen(true);
+        }
+        return;
+    }
+
     try {
-        await updateDoc(topicRef, { status: newStatus });
+        const updateData: any = { status: newStatus };
+        if (newStatus === 'rejected' && reason) {
+            updateData.rejectionReason = reason;
+        } else if (newStatus !== 'rejected') {
+            updateData.rejectionReason = ''; // Clear reason if not rejected
+        }
+
+        await updateDoc(topicRef, updateData);
         toast({
             title: "Thành công",
             description: `Trạng thái đề tài đã được cập nhật.`,
@@ -175,13 +196,14 @@ export function TopicManagementTable() {
         </CardHeader>
         <CardContent>
           <Accordion type="multiple" className="space-y-2">
-            {filteredTopics?.map((topic) => (
+            {filteredTopics?.map((topic, index) => (
                 <AccordionItem value={topic.id} key={topic.id} className="border rounded-md px-4 bg-background hover:bg-muted/50">
                     <AccordionTrigger className="hover:no-underline">
                         <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
+                            <div className="col-span-1 text-center">{index + 1}</div>
                             <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
                             <div className="col-span-2 truncate">{topic.supervisorName}</div>
-                            <div className="col-span-3 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
+                            <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
                             <div className="col-span-1 text-center">{topic.maxStudents}</div>
                             <div className="col-span-1">
                                 <Badge variant={statusVariant[topic.status]}>
@@ -205,7 +227,10 @@ export function TopicManagementTable() {
                                                     {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map(status => (
                                                         <DropdownMenuItem
                                                             key={status}
-                                                            onClick={() => handleStatusChange(topic.id, status)}
+                                                            onSelect={(e) => {
+                                                                e.preventDefault(); // Prevent closing
+                                                                handleStatusChange(topic.id, status)
+                                                            }}
                                                             disabled={topic.status === status}
                                                         >
                                                             {statusLabel[status]}
@@ -221,6 +246,13 @@ export function TopicManagementTable() {
                     </AccordionTrigger>
                     <AccordionContent className="pt-4 border-t">
                         <div className="space-y-6">
+                            {topic.status === 'rejected' && topic.rejectionReason && (
+                                <Alert variant="destructive">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <AlertTitle>Lý do từ chối</AlertTitle>
+                                    <AlertDescription>{topic.rejectionReason}</AlertDescription>
+                                </Alert>
+                            )}
                             <div className="space-y-1">
                                 <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
                                 <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
@@ -251,6 +283,25 @@ export function TopicManagementTable() {
             )}
         </CardContent>
       </Card>
+      
+      <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        {topicToReject && (
+          <RejectTopicDialog
+            topic={topicToReject}
+            onConfirm={(reason) => {
+              handleStatusChange(topicToReject.id, 'rejected', reason);
+              setIsRejectDialogOpen(false);
+              setTopicToReject(null);
+            }}
+            onCancel={() => {
+              setIsRejectDialogOpen(false);
+              setTopicToReject(null);
+            }}
+          />
+        )}
+      </Dialog>
     </div>
   );
 }
+
+    

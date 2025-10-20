@@ -227,6 +227,7 @@ export type ProjectTopic = {
     expectedResults: string;
     maxStudents: 1 | 2;
     status: 'pending' | 'approved' | 'rejected' | 'taken';
+    rejectionReason?: string;
     createdAt: any;
 }
 
@@ -287,5 +288,7 @@ export type EarlyInternshipWeeklyReport = {
     supervisorComments?: string;
     reviewDate: any;
 };
+
+    
 
     

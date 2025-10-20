@@ -590,6 +590,10 @@
           "type": "string",
           "description": "The current status of the topic.",
           "enum": ["pending", "approved", "rejected", "taken"]
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "The reason why the topic was rejected by an admin."
         }
       },
       "required": ["id", "sessionId", "supervisorId", "supervisorName", "title", "summary", "maxStudents", "status"]
@@ -663,6 +667,7 @@
         "address": { "type": "string", "description": "The physical address of the company." },
         "description": { "type": "string", "description": "A brief description of the company, its industry, and what it does." },
         "website": { "type": "string", "format": "uri", "description": "The company's official website." },
+        "supervisorId": { "type": "string", "description": "Reference to the supervisor who is the contact for this LHU department." },
         "contactName": { "type": "string", "description": "Name of the primary contact person (e.g., HR manager)." },
         "contactEmail": { "type": "string", "format": "email", "description": "Email address of the contact person." },
         "contactPhone": { "type": "string", "description": "Phone number of the contact person." },
@@ -695,9 +700,30 @@
         "statusNote": {
           "type": "string",
           "description": "A note explaining the reason for rejection or completion."
+        },
+        "batch": {
+            "type": "string",
+            "description": "The registration batch for the early internship, in MM/YYYY format."
         }
       },
-      "required": ["id", "studentId", "studentName", "studentIdentifier", "companyName", "supervisorId", "startDate", "status"]
+      "required": ["id", "studentId", "studentName", "studentIdentifier", "companyName", "supervisorId", "startDate", "status", "batch"]
+    },
+    "EarlyInternshipWeeklyReport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EarlyInternshipWeeklyReport",
+      "type": "object",
+      "description": "Stores a weekly progress report for an early internship.",
+      "properties": {
+        "id": { "type": "string" },
+        "earlyInternshipId": { "type": "string", "description": "Reference to the EarlyInternship record." },
+        "studentId": { "type": "string" },
+        "supervisorId": { "type": "string" },
+        "weekNumber": { "type": "number" },
+        "hours": { "type": "number", "description": "Number of hours completed for the week." },
+        "supervisorComments": { "type": "string", "description": "Comments from the supervisor." },
+        "reviewDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "earlyInternshipId", "studentId", "supervisorId", "weekNumber", "hours", "reviewDate"]
     }
   },
   "auth": {
@@ -791,6 +817,14 @@
         "$ref": "#/entities/EarlyInternship"
       },
       "description": "Stores records of students undertaking internships before an official session."
+    },
+     "/earlyInternshipWeeklyReports/{reportId}": {
+      "schema": {
+        "$ref": "#/entities/EarlyInternshipWeeklyReport"
+      },
+      "description": "Stores weekly progress for early internships."
     }
   }
 }
+
+    
