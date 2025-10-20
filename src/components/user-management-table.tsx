@@ -418,8 +418,6 @@ export function UserManagementTable() {
                             <KeyRound className="mr-2 h-4 w-4" />
                             <span>Send Password Reset</span>
                         </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem className="text-destructive">Delete</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>

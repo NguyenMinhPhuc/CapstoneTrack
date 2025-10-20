@@ -42,14 +42,27 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
-import type { Supervisor } from '@/lib/types';
+import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
+import type { Supervisor, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
 import { AddSupervisorForm } from './add-supervisor-form';
 import { EditSupervisorForm } from './edit-supervisor-form';
+import { Badge } from './ui/badge';
+
+const statusLabel: Record<SystemUser['status'], string> = {
+  active: 'Hoạt động',
+  pending: 'Chờ',
+  disabled: 'Vô hiệu hóa',
+};
+
+const statusVariant: Record<SystemUser['status'], 'default' | 'secondary' | 'destructive'> = {
+  active: 'default',
+  pending: 'secondary',
+  disabled: 'destructive',
+};
 
 export function SupervisorManagementTable() {
   const firestore = useFirestore();
@@ -57,7 +70,7 @@ export function SupervisorManagementTable() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [supervisorToDelete, setSupervisorToDelete] = useState<Supervisor | null>(null);
+  const [supervisorToDisable, setSupervisorToDisable] = useState<Supervisor | null>(null);
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -66,11 +79,27 @@ export function SupervisorManagementTable() {
     [firestore]
   );
   
-  const { data: supervisors, isLoading } = useCollection<Supervisor>(supervisorsCollectionRef);
+  const { data: supervisors, isLoading: isLoadingSupervisors } = useCollection<Supervisor>(supervisorsCollectionRef);
+
+  const usersCollectionRef = useMemoFirebase(
+    () => collection(firestore, 'users'),
+    [firestore]
+  );
+  const { data: users, isLoading: isLoadingUsers } = useCollection<SystemUser>(usersCollectionRef);
+
+  const supervisorsWithStatus = useMemo(() => {
+    if (!supervisors || !users) return [];
+    const userStatusMap = new Map(users.map(u => [u.id, u.status]));
+    return supervisors.map(s => ({
+      ...s,
+      status: userStatusMap.get(s.id) || 'pending',
+    }));
+  }, [supervisors, users]);
+
 
   const filteredSupervisors = useMemo(() => {
-    if (!supervisors) return [];
-    return supervisors.filter(supervisor => {
+    if (!supervisorsWithStatus) return [];
+    return supervisorsWithStatus.filter(supervisor => {
       const term = searchTerm.toLowerCase();
       const nameMatch = `${supervisor.firstName} ${supervisor.lastName}`.toLowerCase().includes(term);
       const emailMatch = supervisor.email?.toLowerCase().includes(term);
@@ -78,42 +107,40 @@ export function SupervisorManagementTable() {
       
       return nameMatch || emailMatch || departmentMatch;
     });
-  }, [supervisors, searchTerm]);
+  }, [supervisorsWithStatus, searchTerm]);
   
   const handleEditClick = (supervisor: Supervisor) => {
     setSelectedSupervisor(supervisor);
     setIsEditDialogOpen(true);
   };
   
-  const handleDeleteClick = (supervisor: Supervisor) => {
-    setSupervisorToDelete(supervisor);
+  const handleDisableClick = (supervisor: Supervisor) => {
+    setSupervisorToDisable(supervisor);
     setIsDeleteDialogOpen(true);
   };
 
-  const confirmDelete = async () => {
-    if (!supervisorToDelete) return;
-    
+  const confirmDisable = async () => {
+    if (!supervisorToDisable) return;
+    const userDocRef = doc(firestore, 'users', supervisorToDisable.id);
     try {
-      const batch = writeBatch(firestore);
-      batch.delete(doc(firestore, 'supervisors', supervisorToDelete.id));
-      batch.delete(doc(firestore, 'users', supervisorToDelete.id)); // Also delete from users collection
-      await batch.commit();
-
+      await updateDoc(userDocRef, { status: 'disabled' });
       toast({
         title: 'Thành công',
-        description: `Hồ sơ giáo viên ${supervisorToDelete.firstName} ${supervisorToDelete.lastName} đã được xóa.`,
+        description: `Tài khoản của giáo viên ${supervisorToDisable.firstName} ${supervisorToDisable.lastName} đã được vô hiệu hóa.`,
       });
     } catch (error: any) {
        toast({
         variant: 'destructive',
         title: 'Lỗi',
-        description: `Không thể xóa hồ sơ giáo viên: ${error.message}`,
+        description: `Không thể vô hiệu hóa tài khoản: ${error.message}`,
       });
     } finally {
         setIsDeleteDialogOpen(false);
-        setSupervisorToDelete(null);
+        setSupervisorToDisable(null);
     }
   };
+  
+  const isLoading = isLoadingSupervisors || isLoadingUsers;
 
   if (isLoading) {
     return (
@@ -179,6 +206,7 @@ export function SupervisorManagementTable() {
               <TableHead>Email</TableHead>
               <TableHead>Khoa</TableHead>
               <TableHead>Chức vụ</TableHead>
+              <TableHead>Trạng thái</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -191,6 +219,9 @@ export function SupervisorManagementTable() {
                 <TableCell>{supervisor.email}</TableCell>
                 <TableCell>{supervisor.department}</TableCell>
                 <TableCell>{supervisor.facultyRank}</TableCell>
+                <TableCell>
+                  <Badge variant={statusVariant[supervisor.status]}>{statusLabel[supervisor.status]}</Badge>
+                </TableCell>
                 <TableCell className="hidden md:table-cell">
                     {supervisor.createdAt?.toDate && format(supervisor.createdAt.toDate(), 'PPP')}
                 </TableCell>
@@ -203,7 +234,7 @@ export function SupervisorManagementTable() {
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
                       <DropdownMenuItem onClick={() => handleEditClick(supervisor)}>Sửa</DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(supervisor)}>Xóa</DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDisableClick(supervisor)}>Vô hiệu hóa</DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -234,14 +265,14 @@ export function SupervisorManagementTable() {
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
             <AlertDialogHeader>
-            <AlertDialogTitle>Bạn có chắc chắn không?</AlertDialogTitle>
+            <AlertDialogTitle>Vô hiệu hóa tài khoản?</AlertDialogTitle>
             <AlertDialogDescription>
-                Hành động này không thể được hoàn tác. Thao tác này sẽ xóa vĩnh viễn hồ sơ và tài khoản của giáo viên này.
+                Hành động này sẽ ngăn giáo viên đăng nhập vào hệ thống, nhưng tất cả dữ liệu lịch sử của họ sẽ được giữ lại. Bạn có chắc chắn muốn tiếp tục?
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
             <AlertDialogCancel>Hủy</AlertDialogCancel>
-            <AlertDialogAction onClick={confirmDelete} className="bg-destructive hover:bg-destructive/90">Tiếp tục</AlertDialogAction>
+            <AlertDialogAction onClick={confirmDisable} className="bg-destructive hover:bg-destructive/90">Xác nhận Vô hiệu hóa</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
     </AlertDialog>
