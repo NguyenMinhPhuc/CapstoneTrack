@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -21,15 +20,16 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileDown, Copy, MoreHorizontal, CheckCircle } from 'lucide-react';
+import { Search, FileDown, Copy, MoreHorizontal, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
 import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember, ReportStatus } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { CopyEvaluationDialog } from './copy-evaluation-dialog';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
-import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
+import { Checkbox } from './ui/checkbox';
+
 
 interface CouncilScore {
     role: string;
@@ -83,26 +83,37 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
   const [searchTerm, setSearchTerm] = useState('');
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleStatusUpdate = async (registrationId: string, statusKey: 'graduationStatus' | 'internshipStatus') => {
-      const docRef = doc(firestore, 'defenseRegistrations', registrationId);
+  const handleBatchStatusUpdate = async (registrationIds: string[], status: 'completed' | 'withdrawn') => {
+      if (registrationIds.length === 0) return;
+      
+      const batch = writeBatch(firestore);
+      const statusKey = reportType === 'graduation' ? 'graduationStatus' : 'internshipStatus';
+      
+      registrationIds.forEach(id => {
+          const docRef = doc(firestore, 'defenseRegistrations', id);
+          batch.update(docRef, { [statusKey]: status });
+      });
+
       try {
-          await updateDoc(docRef, { [statusKey]: 'completed' });
+          await batch.commit();
           toast({
               title: 'Thành công',
-              description: 'Đã xác nhận hoàn thành cho sinh viên.'
+              description: `Đã cập nhật trạng thái cho ${registrationIds.length} sinh viên.`,
           });
-          // Data will refresh automatically via useCollection hook in parent
+          setSelectedRowIds([]);
       } catch (error) {
-          console.error("Error updating status: ", error);
-          const contextualError = new FirestorePermissionError({
-              path: docRef.path,
+          console.error("Error updating statuses:", error);
+           const contextualError = new FirestorePermissionError({
+              path: 'batch update defenseRegistrations',
               operation: 'update',
-              requestResourceData: { [statusKey]: 'completed' },
+              requestResourceData: { [statusKey]: status },
           });
           errorEmitter.emit('permission-error', contextualError);
+          toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể cập nhật trạng thái.'});
       }
   }
 
@@ -227,6 +238,26 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
       );
   }, [processedData, searchTerm, reportType]);
 
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+        setSelectedRowIds(filteredData?.map(s => s.id) || []);
+    } else {
+        setSelectedRowIds([]);
+    }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedRowIds(prev => [...prev, id]);
+    } else {
+        setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
+  };
+
+  const isAllSelected = filteredData && selectedRowIds.length > 0 && selectedRowIds.length === filteredData.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredData || selectedRowIds.length < filteredData.length);
+
+
   const exportToExcel = () => {
     let dataToExport;
     let fileName = `BangDiem_${session?.name.replace(/\s+/g, '_') || 'report'}.xlsx`;
@@ -272,6 +303,14 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, 'BangDiem');
+    
+    // Auto-fit columns
+    const colWidths = Object.keys(dataToExport[0] || {}).map(key => ({
+        wch: Math.max(key.length, ...dataToExport.map(row => String(row[key]).length)) + 2
+    }));
+    worksheet['!cols'] = colWidths;
+
+
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
     saveAs(blob, fileName);
@@ -290,7 +329,12 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     <Table>
         <TableHeader className="sticky top-0 bg-background z-10">
         <TableRow>
-            <TableHead className="w-12">STT</TableHead>
+            <TableHead className="w-12">
+                <Checkbox
+                    checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                    onCheckedChange={handleSelectAll}
+                />
+            </TableHead>
             <TableHead>MSSV</TableHead>
             <TableHead>Họ và Tên</TableHead>
             <TableHead>Tiểu ban</TableHead>
@@ -305,9 +349,14 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         </TableHeader>
         <TableBody>
         {(filteredData as ProcessedGraduationData[]).length > 0 ? (
-            (filteredData as ProcessedGraduationData[]).map((item, index) => (
-            <TableRow key={item.id}>
-                <TableCell>{index + 1}</TableCell>
+            (filteredData as ProcessedGraduationData[]).map((item) => (
+            <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) && "selected"}>
+                 <TableCell>
+                    <Checkbox
+                        checked={selectedRowIds.includes(item.id)}
+                        onCheckedChange={(checked) => handleRowSelect(item.id, !!checked)}
+                    />
+                </TableCell>
                 <TableCell>{item.studentId}</TableCell>
                 <TableCell className="font-medium">{item.studentName}</TableCell>
                 <TableCell>{item.subCommitteeName}</TableCell>
@@ -329,27 +378,15 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 {item.finalGradScore !== null ? item.finalGradScore.toFixed(1) : '-'}
                 </TableCell>
                 <TableCell className="text-center">
-                     <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openCopyDialog(item.id)}>
-                                <Copy className="mr-2 h-4 w-4" /> Sao chép điểm
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => handleStatusUpdate(item.id, 'graduationStatus')} disabled={item.currentStatus === 'completed'}>
-                                <CheckCircle className="mr-2 h-4 w-4" /> Xác nhận Hoàn thành
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                     <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
+                        <Copy className="h-4 w-4" />
+                    </Button>
                 </TableCell>
             </TableRow>
             ))
         ) : (
             <TableRow>
-            <TableCell colSpan={9 + COUNCIL_ROLES.length} className="text-center h-24">
+            <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
                 Không có dữ liệu để hiển thị.
             </TableCell>
             </TableRow>
@@ -362,7 +399,12 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
       <Table>
           <TableHeader className="sticky top-0 bg-background z-10">
               <TableRow>
-                  <TableHead className="w-12">STT</TableHead>
+                   <TableHead className="w-12">
+                      <Checkbox
+                          checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                          onCheckedChange={handleSelectAll}
+                      />
+                  </TableHead>
                   <TableHead>MSSV</TableHead>
                   <TableHead>Họ và Tên</TableHead>
                   <TableHead>Công ty Thực tập</TableHead>
@@ -378,9 +420,14 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
           </TableHeader>
           <TableBody>
               {(filteredData as ProcessedInternshipData[]).length > 0 ? (
-                  (filteredData as ProcessedInternshipData[]).map((item, index) => (
-                      <TableRow key={item.id}>
-                          <TableCell>{index + 1}</TableCell>
+                  (filteredData as ProcessedInternshipData[]).map((item) => (
+                      <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) && "selected"}>
+                          <TableCell>
+                              <Checkbox
+                                  checked={selectedRowIds.includes(item.id)}
+                                  onCheckedChange={(checked) => handleRowSelect(item.id, !!checked)}
+                              />
+                          </TableCell>
                           <TableCell>{item.studentId}</TableCell>
                           <TableCell className="font-medium">{item.studentName}</TableCell>
                           <TableCell>{item.companyName || 'N/A'}</TableCell>
@@ -403,27 +450,15 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                               {item.finalInternScore !== null ? item.finalInternScore.toFixed(1) : '-'}
                           </TableCell>
                           <TableCell className="text-center">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => openCopyDialog(item.id)}>
-                                        <Copy className="mr-2 h-4 w-4" /> Sao chép điểm
-                                    </DropdownMenuItem>
-                                     <DropdownMenuItem onClick={() => handleStatusUpdate(item.id, 'internshipStatus')} disabled={item.currentStatus === 'completed'}>
-                                        <CheckCircle className="mr-2 h-4 w-4" /> Xác nhận Hoàn thành
-                                    </DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
+                             <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
+                                <Copy className="h-4 w-4" />
+                            </Button>
                           </TableCell>
                       </TableRow>
                   ))
               ) : (
                   <TableRow>
-                      <TableCell colSpan={9 + COUNCIL_ROLES.length} className="text-center h-24">
+                      <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
                           Không có dữ liệu để hiển thị.
                       </TableCell>
                   </TableRow>
@@ -461,6 +496,23 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 </Button>
             </div>
             </div>
+            {selectedRowIds.length > 0 && (
+                <div className="flex items-center gap-2 mt-4">
+                    <span className="text-sm text-muted-foreground">Đã chọn {selectedRowIds.length} sinh viên:</span>
+                    <Button size="sm" onClick={() => handleBatchStatusUpdate(selectedRowIds, 'completed')}>
+                        <CheckCircle className="mr-2 h-4 w-4" />
+                        Xác nhận Hoàn thành
+                    </Button>
+                    <Button size="sm" variant="destructive" onClick={() => handleBatchStatusUpdate(selectedRowIds, 'withdrawn')}>
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Chuyển sang 'Bỏ báo cáo'
+                    </Button>
+                     <Button size="sm" variant="secondary" onClick={() => handleBatchStatusUpdate(selectedRowIds, 'reporting')}>
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Hoàn tác về 'Báo cáo'
+                    </Button>
+                </div>
+            )}
         </CardHeader>
         <CardContent>
             <ScrollArea className="h-[60vh] w-full">
