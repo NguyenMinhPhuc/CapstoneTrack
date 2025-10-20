@@ -85,6 +85,9 @@ export function ImportCompaniesDialog({ onFinished }: ImportCompaniesDialogProps
             const row = data[i];
             const newCompanyRef = doc(companiesCollectionRef);
             
+            const isLHUValue = String(row.isLHU || 'false').toLowerCase();
+            const isLHU = ['true', '1', 'yes'].includes(isLHUValue);
+
             const companyData = {
                 name: String(row.name || ''),
                 address: String(row.address || ''),
@@ -93,6 +96,7 @@ export function ImportCompaniesDialog({ onFinished }: ImportCompaniesDialogProps
                 contactName: String(row.contactName || ''),
                 contactEmail: String(row.contactEmail || ''),
                 contactPhone: String(row.contactPhone || ''),
+                isLHU: isLHU,
                 createdAt: serverTimestamp(),
             };
 
@@ -125,7 +129,7 @@ export function ImportCompaniesDialog({ onFinished }: ImportCompaniesDialogProps
             <DialogHeader className="p-6 pb-0">
                 <DialogTitle>Nhập danh sách Doanh nghiệp từ Excel</DialogTitle>
                 <DialogDescription>
-                    Tải lên tệp Excel để thêm hàng loạt doanh nghiệp. Hệ thống sẽ đọc các cột có tiêu đề: name, address, website, description, contactName, contactEmail, contactPhone.
+                    Tải lên tệp Excel để thêm hàng loạt doanh nghiệp. Hệ thống sẽ đọc các cột có tiêu đề: name, address, website, description, contactName, contactEmail, contactPhone, isLHU.
                 </DialogDescription>
             </DialogHeader>
             <div className="py-4 px-6 space-y-4 overflow-y-auto">
