@@ -100,8 +100,10 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
     }
     
     const now = new Date();
-    const nextMonth = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-    const batch = `${String(nextMonth.getMonth() + 1).padStart(2, '0')}/${nextMonth.getFullYear()}`;
+    const batchMonth = now.getMonth() + 2; // getMonth() is 0-indexed, add 1 for current, add 1 for next.
+    const batchYear = now.getFullYear();
+
+    const batch = `${String(batchMonth > 12 ? batchMonth - 12 : batchMonth).padStart(2, '0')}/${batchMonth > 12 ? batchYear + 1 : batchYear}`;
 
 
     const newRecord = {
