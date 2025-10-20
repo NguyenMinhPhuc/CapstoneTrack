@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -70,7 +71,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     [firestore, supervisorId]
   );
   
-  const { data: internships, isLoading } = useCollection<EarlyInternship>(internshipsQuery);
+  const { data: internships, isLoading, forceRefresh } = useCollection<EarlyInternship>(internshipsQuery);
 
   const toDate = (timestamp: any): Date | undefined => {
     if (!timestamp) return undefined;
@@ -130,6 +131,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     studentId: internship.studentIdentifier,
                     studentName: internship.studentName,
                     graduationStatus: 'not_reporting',
+                    registrationDate: new Date(),
                 };
                  batch.set(newRegistrationRef, newRegistrationData, { merge: true });
             } else {
@@ -152,6 +154,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     try {
         await batch.commit();
         toast({ title: 'Thành công', description: 'Đã cập nhật trạng thái thực tập.' });
+        forceRefresh();
     } catch (error) {
         console.error("Error updating status:", error);
          toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể cập nhật trạng thái.' });

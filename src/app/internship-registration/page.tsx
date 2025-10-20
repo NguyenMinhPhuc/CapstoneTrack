@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, ClipboardList } from 'lucide-react';
 import { InternshipRegistrationForm } from '@/components/internship-registration-form';
-import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type InternshipCompany, EarlyInternship } from '@/lib/types';
+import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type InternshipCompany, type EarlyInternship } from '@/lib/types';
 
 
 export default function InternshipRegistrationPage() {
@@ -55,60 +55,63 @@ export default function InternshipRegistrationPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  useEffect(() => {
+  const fetchActiveData = async () => {
     if (!user || !firestore || isLoadingAllCompanies) return;
 
-    const findActiveRegistration = async () => {
-        setIsLoading(true);
-        try {
-            const sessionsQuery = query(
-                collection(firestore, 'graduationDefenseSessions'),
-                where('status', 'in', ['upcoming', 'ongoing'])
-            );
-            const sessionsSnapshot = await getDocs(sessionsQuery);
+    setIsLoading(true);
+    try {
+        const sessionsQuery = query(
+            collection(firestore, 'graduationDefenseSessions'),
+            where('status', 'in', ['upcoming', 'ongoing'])
+        );
+        const sessionsSnapshot = await getDocs(sessionsQuery);
 
-            if (sessionsSnapshot.empty) {
-                setActiveSession(null);
-                setActiveRegistration(null);
-                return;
-            }
-
-            const sessionData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession))
-                .sort((a,b) => (a.status === 'ongoing' ? -1 : 1) - (b.status === 'ongoing' ? -1 : 1))[0];
-            
-            setActiveSession(sessionData);
-
-            const registrationQuery = query(
-                collection(firestore, 'defenseRegistrations'),
-                where('sessionId', '==', sessionData.id),
-                where('studentDocId', '==', user.uid)
-            );
-            const registrationSnapshot = await getDocs(registrationQuery);
-
-            if (!registrationSnapshot.empty) {
-                const regData = { id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration;
-                setActiveRegistration(regData);
-            }
-
-            // Filter all companies to get only the ones for the current session
-            if (sessionData.companyIds && sessionData.companyIds.length > 0 && allCompanies) {
-                const companyIdSet = new Set(sessionData.companyIds);
-                const companiesForSession = allCompanies.filter(company => companyIdSet.has(company.id));
-                setSessionCompanies(companiesForSession);
-            } else {
-                setSessionCompanies([]);
-            }
-
-        } catch (error) {
-            console.error("Error finding active registration:", error);
-            setActiveRegistration(null);
+        if (sessionsSnapshot.empty) {
             setActiveSession(null);
-        } finally {
-            setIsLoading(false);
+            setActiveRegistration(null);
+            return;
         }
-    };
 
-    findActiveRegistration();
+        const sessionData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession))
+            .sort((a, b) => (a.status === 'ongoing' ? -1 : 1))[0]; // Prioritize ongoing
+        
+        setActiveSession(sessionData);
+
+        const registrationQuery = query(
+            collection(firestore, 'defenseRegistrations'),
+            where('sessionId', '==', sessionData.id),
+            where('studentDocId', '==', user.uid)
+        );
+        const registrationSnapshot = await getDocs(registrationQuery);
+
+        if (!registrationSnapshot.empty) {
+            const regData = { id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration;
+            setActiveRegistration(regData);
+        } else {
+            setActiveRegistration(null); // Explicitly set to null if no registration found
+        }
+
+        // Filter all companies to get only the ones for the current session
+        if (sessionData.companyIds && sessionData.companyIds.length > 0 && allCompanies) {
+            const companyIdSet = new Set(sessionData.companyIds);
+            const companiesForSession = allCompanies.filter(company => companyIdSet.has(company.id));
+            setSessionCompanies(companiesForSession);
+        } else {
+            setSessionCompanies([]);
+        }
+
+    } catch (error) {
+        console.error("Error finding active registration:", error);
+        setActiveRegistration(null);
+        setActiveSession(null);
+    } finally {
+        setIsLoading(false);
+    }
+  };
+
+
+  useEffect(() => {
+    fetchActiveData();
   }, [user, firestore, allCompanies, isLoadingAllCompanies]);
 
   if (isLoading || isUserDataLoading || isLoadingAllCompanies || isLoadingEarlyInternships) {
@@ -180,31 +183,7 @@ export default function InternshipRegistrationPage() {
                             earlyInternshipData={earlyInternshipData}
                             onSuccess={() => {
                                 // A simple way to re-trigger the effect to get fresh data
-                                 if (user && firestore && !isLoadingAllCompanies) {
-                                     // Re-running the logic here, can be refactored into a function
-                                    setIsLoading(true);
-                                    getDocs(query(collection(firestore, 'graduationDefenseSessions'), where('status', 'in', ['upcoming', 'ongoing'])))
-                                        .then(sessionsSnapshot => {
-                                            if (sessionsSnapshot.empty) {
-                                                setActiveSession(null);
-                                                setActiveRegistration(null);
-                                                return;
-                                            }
-                                            const sessionData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession)).sort((a,b) => (a.status === 'ongoing' ? -1 : 1) - (b.status === 'ongoing' ? -1 : 1))[0];
-                                            setActiveSession(sessionData);
-                                            return getDocs(query(collection(firestore, 'defenseRegistrations'), where('sessionId', '==', sessionData.id), where('studentDocId', '==', user.uid)));
-                                        })
-                                        .then(registrationSnapshot => {
-                                            if (registrationSnapshot && !registrationSnapshot.empty) {
-                                                const regData = { id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration;
-                                                setActiveRegistration(regData);
-                                            } else {
-                                                setActiveRegistration(null);
-                                            }
-                                        })
-                                        .catch(console.error)
-                                        .finally(() => setIsLoading(false));
-                                 }
+                                fetchActiveData();
                             }}
                         />
                     </div>
