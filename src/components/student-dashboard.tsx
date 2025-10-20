@@ -7,7 +7,7 @@ import type { User } from 'firebase/auth';
 import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon } from 'lucide-react';
+import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon, Briefcase } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -28,6 +28,13 @@ const registrationStatusConfig = {
     rejected: { label: "Bị từ chối", variant: "destructive" as const },
     default: { label: "Chưa đăng ký", variant: "outline" as const },
 };
+
+const internshipRegStatusConfig = {
+  pending: { label: "Chờ duyệt", variant: "secondary" as const },
+  approved: { label: "Đã duyệt", variant: "default" as const },
+  rejected: { label: "Bị từ chối", variant: "destructive" as const },
+  default: { label: "Chưa ĐK", variant: "outline" as const },
+}
 
 const earlyInternshipStatusLabel: Record<EarlyInternship['status'], string> = {
   pending_approval: 'Chờ duyệt',
@@ -174,6 +181,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const regStatusKey = activeRegistration?.projectRegistrationStatus || 'default';
   const regStatus = registrationStatusConfig[regStatusKey] || registrationStatusConfig.default;
 
+  const internshipRegStatusKey = activeRegistration?.internshipRegistrationStatus || 'default';
+  const internshipRegStatus = internshipRegStatusConfig[internshipRegStatusKey] || internshipRegStatusConfig.default;
+
   return (
     <main className="p-4 sm:p-6 lg:p-8 space-y-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -317,43 +327,70 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Book /> Thông tin Đề tài
+                  <Book /> Thông tin Học phần
                 </CardTitle>
                 <CardDescription>
-                  Đây là thông tin về đề tài tốt nghiệp bạn đã đăng ký.
+                  Đây là thông tin về đề tài tốt nghiệp và thực tập bạn đã đăng ký trong đợt này.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tên đề tài</p>
-                  <h3 className="text-xl font-semibold">{activeRegistration.projectTitle || "Chưa đăng ký đề tài"}</h3>
-                </div>
-                 <Separator />
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div className="space-y-1">
-                        <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> GVHD</p>
-                        <p className="font-medium">{activeRegistration.supervisorName || "Chưa có"}</p>
+                {/* Graduation Project Section */}
+                {activeRegistration.graduationStatus === 'reporting' && (
+                  <div className='space-y-4'>
+                    <div>
+                      <p className="text-sm text-muted-foreground">Tên đề tài</p>
+                      <h3 className="text-xl font-semibold">{activeRegistration.projectTitle || "Chưa đăng ký đề tài"}</h3>
                     </div>
-                     <div className="space-y-1">
-                        <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái đăng ký</p>
-                         <Badge variant={regStatus.variant}>{regStatus.label}</Badge>
+                    <Separator />
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div className="space-y-1">
+                            <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> GVHD</p>
+                            <p className="font-medium">{activeRegistration.supervisorName || "Chưa có"}</p>
+                        </div>
+                        <div className="space-y-1">
+                            <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái đăng ký</p>
+                            <Badge variant={regStatus.variant}>{regStatus.label}</Badge>
+                        </div>
                     </div>
-                </div>
 
-                <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                        <p className="font-medium">Tiến độ báo cáo hàng tuần</p>
-                        <p className="text-sm text-muted-foreground">{weeklyProgress.reportedWeeks}/{weeklyProgress.totalWeeks} tuần</p>
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <p className="font-medium">Tiến độ báo cáo hàng tuần</p>
+                            <p className="text-sm text-muted-foreground">{weeklyProgress.reportedWeeks}/{weeklyProgress.totalWeeks} tuần</p>
+                        </div>
+                        <Progress value={(weeklyProgress.reportedWeeks / weeklyProgress.totalWeeks) * 100} />
                     </div>
-                    <Progress value={(weeklyProgress.reportedWeeks / weeklyProgress.totalWeeks) * 100} />
-                </div>
+                  </div>
+                )}
+                 
+                 {/* Internship Section */}
+                 {activeRegistration.internshipStatus === 'reporting' && (
+                    <div className="space-y-4 pt-4 border-t">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Đơn vị thực tập</p>
+                          <h3 className="text-xl font-semibold">{activeRegistration.internship_companyName || "Chưa đăng ký"}</h3>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div className="space-y-1">
+                                <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> NHD tại ĐV</p>
+                                <p className="font-medium">{activeRegistration.internship_companySupervisorName || "Chưa có"}</p>
+                            </div>
+                            <div className="space-y-1">
+                                <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái đăng ký</p>
+                                <Badge variant={internshipRegStatus.variant}>{internshipRegStatus.label}</Badge>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+
               </CardContent>
                <CardFooter className="flex flex-col sm:flex-row gap-2">
                     <Button asChild variant="outline" className="w-full">
                         <Link href="/topic-registration"><Book className="mr-2 h-4 w-4"/> Quản lý Đề tài</Link>
                     </Button>
                     <Button asChild variant="outline" className="w-full">
-                        <Link href="/proposal-submission"><FileSignature className="mr-2 h-4 w-4"/> Nộp Thuyết minh</Link>
+                        <Link href="/internship-registration"><Briefcase className="mr-2 h-4 w-4"/> Đăng ký Thực tập</Link>
                     </Button>
                     <Button asChild variant="outline" className="w-full">
                          <Link href="/progress-report"><Activity className="mr-2 h-4 w-4"/> Báo cáo Tiến độ</Link>
