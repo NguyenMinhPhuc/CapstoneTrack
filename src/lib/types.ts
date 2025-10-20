@@ -36,6 +36,7 @@ export type DefenseSession = {
   zaloGroupLink?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
+  companyIds?: string[];
   councilGraduationRubricId?: string;
   councilInternshipRubricId?: string;
   supervisorGraduationRubricId?: string;
@@ -254,5 +255,7 @@ export type InternshipCompany = {
   contactPhone?: string;
   createdAt?: any;
 };
+
+    
 
     

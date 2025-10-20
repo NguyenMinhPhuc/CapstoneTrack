@@ -20,16 +20,19 @@ import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirestore, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { CalendarIcon, GraduationCap, Briefcase, UserCheck } from 'lucide-react';
+import { CalendarIcon, GraduationCap, Briefcase, UserCheck, Building, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Rubric } from '@/lib/types';
+import type { Rubric, InternshipCompany } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import * as React from 'react';
+import { Badge } from './ui/badge';
 
 const NO_RUBRIC_VALUE = "__NONE__";
 
@@ -43,6 +46,7 @@ const formSchema = z.object({
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
   zaloGroupLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
   description: z.string().optional(),
+  companyIds: z.array(z.string()).optional(),
   councilGraduationRubricId: z.string().optional(),
   councilInternshipRubricId: z.string().optional(),
   supervisorGraduationRubricId: z.string().optional(),
@@ -62,6 +66,10 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
   const rubricsCollectionRef = useMemoFirebase(() => collection(firestore, 'rubrics'), [firestore]);
   const { data: rubrics, isLoading: isLoadingRubrics } = useCollection<Rubric>(rubricsCollectionRef);
 
+  const companiesCollectionRef = useMemoFirebase(() => collection(firestore, 'internshipCompanies'), [firestore]);
+  const { data: companies, isLoading: isLoadingCompanies } = useCollection<InternshipCompany>(companiesCollectionRef);
+
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -69,6 +77,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       sessionType: 'combined',
       description: '',
       zaloGroupLink: '',
+      companyIds: [],
       councilGraduationRubricId: '',
       councilInternshipRubricId: '',
       supervisorGraduationRubricId: '',
@@ -142,6 +151,8 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
         )}
         />
   );
+  
+  const selectedCompanyIds = useWatch({ control: form.control, name: 'companyIds' }) || [];
 
   return (
     <>
@@ -387,6 +398,72 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
                             <FormMessage />
                             </FormItem>
                         )}
+                        />
+                         <Separator />
+                        <FormField
+                            control={form.control}
+                            name="companyIds"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel className="flex items-center gap-2">
+                                        <Building className="h-4 w-4" />
+                                        Doanh nghiệp tham gia
+                                    </FormLabel>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <FormControl>
+                                                <Button
+                                                    variant="outline"
+                                                    role="combobox"
+                                                    className="w-full justify-between h-auto min-h-10"
+                                                >
+                                                    <div className="flex flex-wrap gap-2">
+                                                        {selectedCompanyIds.length > 0 ? (
+                                                            companies
+                                                                ?.filter(c => selectedCompanyIds.includes(c.id))
+                                                                .map(c => <Badge key={c.id} variant="secondary">{c.name}</Badge>)
+                                                        ) : (
+                                                            <span className="font-normal text-muted-foreground">Chọn doanh nghiệp...</span>
+                                                        )}
+                                                    </div>
+                                                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                                                </Button>
+                                            </FormControl>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                            <Command>
+                                                <CommandInput placeholder="Tìm doanh nghiệp..." />
+                                                <CommandList>
+                                                    <CommandEmpty>Không tìm thấy doanh nghiệp.</CommandEmpty>
+                                                    <CommandGroup>
+                                                        {companies?.map(company => (
+                                                            <CommandItem
+                                                                key={company.id}
+                                                                onSelect={() => {
+                                                                    const currentIds = field.value || [];
+                                                                    const newIds = currentIds.includes(company.id)
+                                                                        ? currentIds.filter(id => id !== company.id)
+                                                                        : [...currentIds, company.id];
+                                                                    field.onChange(newIds);
+                                                                }}
+                                                            >
+                                                                <Check
+                                                                    className={cn(
+                                                                        "mr-2 h-4 w-4",
+                                                                        field.value?.includes(company.id) ? "opacity-100" : "opacity-0"
+                                                                    )}
+                                                                />
+                                                                {company.name}
+                                                            </CommandItem>
+                                                        ))}
+                                                    </CommandGroup>
+                                                </CommandList>
+                                            </Command>
+                                        </PopoverContent>
+                                    </Popover>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
                         />
                     </>
                  )}

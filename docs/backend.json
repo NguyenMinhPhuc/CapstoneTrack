@@ -194,6 +194,13 @@
             "completed"
           ]
         },
+        "companyIds": {
+            "type": "array",
+            "description": "A list of InternshipCompany IDs associated with this session.",
+            "items": {
+                "type": "string"
+            }
+        },
         "councilGraduationRubricId": {
           "type": "string",
           "description": "Reference to the Rubric used for graduation defense by the council in this session."
