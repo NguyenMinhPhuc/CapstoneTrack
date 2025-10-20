@@ -29,7 +29,8 @@ import {
 } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Building, Mail, Phone, User } from 'lucide-react';
+import { Building, Mail, Phone, User, XCircle } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 const formSchema = z.object({
@@ -73,7 +74,11 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
   const firestore = useFirestore();
   const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
 
-  const isFormDisabled = registration.internshipRegistrationStatus === 'approved';
+  const isApproved = registration.internshipRegistrationStatus === 'approved';
+  const isRejected = registration.internshipRegistrationStatus === 'rejected';
+  const isPending = registration.internshipRegistrationStatus === 'pending';
+  const isFormDisabled = isApproved || isPending;
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -108,6 +113,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
     let dataToUpdate: Partial<DefenseRegistration> = {
         internshipStatus: 'reporting',
         internshipRegistrationStatus: 'pending' as InternshipRegistrationStatus,
+        internshipStatusNote: '', // Clear previous rejection note on resubmission
         internship_registrationFormLink: values.internship_registrationFormLink,
         internship_acceptanceLetterLink: values.internship_acceptanceLetterLink,
         internship_commitmentFormLink: values.internship_commitmentFormLink,
@@ -149,6 +155,16 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
 
   return (
     <Form {...form}>
+       {isRejected && registration.internshipStatusNote && (
+            <Alert variant="destructive" className="mb-6">
+                <XCircle className="h-4 w-4" />
+                <AlertTitle>Đăng ký bị từ chối</AlertTitle>
+                <AlertDescription>
+                    <p>Lý do: {registration.internshipStatusNote}</p>
+                    <p className="mt-2">Vui lòng kiểm tra lại thông tin, chỉnh sửa và nộp lại.</p>
+                </AlertDescription>
+            </Alert>
+        )}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
             control={form.control}
@@ -359,11 +375,9 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
 
 
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isFormDisabled}>
-          {isFormDisabled ? 'Đã duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký')}
+          {isApproved ? 'Đã duyệt' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
         </Button>
       </form>
     </Form>
   );
 }
-
-    
