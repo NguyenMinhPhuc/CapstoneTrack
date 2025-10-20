@@ -133,7 +133,7 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
                   )}
               </div>
             </CardContent>
-             {regStatus === 'approved' && (
+             {regStatus === 'approved' && propStatus !== 'approved' && (
                 <CardFooter>
                     <Button asChild className="w-full">
                         <Link href="/proposal-submission">
