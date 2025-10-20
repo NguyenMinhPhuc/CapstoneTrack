@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -20,8 +19,8 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
-import type { EarlyInternship } from '@/lib/types';
+import { collection, query, where, doc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import type { EarlyInternship, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -81,22 +80,82 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     return timestamp;
   };
 
-  const handleStatusChange = async (internshipId: string, status: EarlyInternship['status'], note?: string) => {
-    const docRef = doc(firestore, 'earlyInternships', internshipId);
+  const handleStatusChange = async (internship: EarlyInternship, status: EarlyInternship['status'], note?: string) => {
+    const docRef = doc(firestore, 'earlyInternships', internship.id);
     const dataToUpdate: Partial<EarlyInternship> = { status, statusNote: note || '' };
     
-    updateDoc(docRef, dataToUpdate)
-      .then(() => {
+    const batch = writeBatch(firestore);
+    batch.update(docRef, dataToUpdate);
+
+    // If marking as completed, find ongoing session and add student
+    if (status === 'completed') {
+        try {
+            const sessionsQuery = query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing'));
+            const sessionsSnapshot = await getDocs(sessionsQuery);
+            if (sessionsSnapshot.empty) {
+                toast({
+                    variant: 'destructive',
+                    title: 'Không tìm thấy đợt báo cáo',
+                    description: 'Không có đợt báo cáo nào đang diễn ra để thêm sinh viên vào.',
+                });
+                return; // Stop if no ongoing session
+            }
+            const ongoingSession = sessionsSnapshot.docs[0]; // Use the first ongoing session found
+            const ongoingSessionId = ongoingSession.id;
+
+            // Check if student is already in this session
+            const registrationQuery = query(
+                collection(firestore, 'defenseRegistrations'),
+                where('sessionId', '==', ongoingSessionId),
+                where('studentDocId', '==', internship.studentId)
+            );
+            const registrationSnapshot = await getDocs(registrationQuery);
+            
+            const registrationData: Partial<DefenseRegistration> = {
+                internshipStatus: 'reporting',
+                internship_companyName: internship.companyName,
+                internship_companyAddress: internship.companyAddress,
+                internship_companySupervisorName: internship.supervisorName, // This is the early internship supervisor
+                internshipSupervisorId: internship.supervisorId, // This is the early internship supervisor
+                internshipSupervisorName: internship.supervisorName,
+            };
+
+            if (registrationSnapshot.empty) {
+                // Create new registration
+                const newRegistrationRef = doc(collection(firestore, 'defenseRegistrations'));
+                const newRegistrationData: Partial<DefenseRegistration> = {
+                     ...registrationData,
+                    sessionId: ongoingSessionId,
+                    studentDocId: internship.studentId,
+                    studentId: internship.studentIdentifier,
+                    studentName: internship.studentName,
+                    graduationStatus: 'not_reporting',
+                };
+                 batch.set(newRegistrationRef, newRegistrationData, { merge: true });
+            } else {
+                // Update existing registration
+                const existingRegistrationRef = registrationSnapshot.docs[0].ref;
+                batch.update(existingRegistrationRef, registrationData);
+            }
+
+        } catch (error) {
+            console.error("Error adding student to ongoing session:", error);
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi',
+                description: 'Không thể tự động thêm sinh viên vào đợt báo cáo.',
+            });
+            return;
+        }
+    }
+    
+    try {
+        await batch.commit();
         toast({ title: 'Thành công', description: 'Đã cập nhật trạng thái thực tập.' });
-      })
-      .catch((error) => {
-        const contextualError = new FirestorePermissionError({
-          path: docRef.path,
-          operation: 'update',
-          requestResourceData: dataToUpdate
-        });
-        errorEmitter.emit('permission-error', contextualError);
-      });
+    } catch (error) {
+        console.error("Error updating status:", error);
+         toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể cập nhật trạng thái.' });
+    }
   };
 
   const handleRejectClick = (internship: EarlyInternship) => {
@@ -161,7 +220,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                 <TableCell className="text-right">
                     {internship.status === 'pending_approval' && (
                         <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="outline" onClick={() => handleStatusChange(internship.id, 'ongoing')}>
+                            <Button size="sm" variant="outline" onClick={() => handleStatusChange(internship, 'ongoing')}>
                                 <Check className="mr-2 h-4 w-4" /> Duyệt
                             </Button>
                             <Button size="sm" variant="destructive" onClick={() => handleRejectClick(internship)}>
@@ -181,12 +240,12 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                                      <Activity className="mr-2 h-4 w-4" />
                                     <span>Xem tiến độ</span>
                                 </DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'completed', 'Hoàn thành tốt')}>
+                                <DropdownMenuItem onClick={() => handleStatusChange(internship, 'completed', 'Hoàn thành tốt')}>
                                      <CheckCircle className="mr-2 h-4 w-4" />
                                     <span>Đánh dấu Hoàn thành</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator/>
-                                <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(internship.id, 'cancelled', 'Không hoàn thành')}>
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(internship, 'cancelled', 'Không hoàn thành')}>
                                     <X className="mr-2 h-4 w-4" />
                                     <span>Hủy Thực tập</span>
                                 </DropdownMenuItem>
@@ -207,7 +266,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                 <RejectionReasonDialog
                     registration={selectedInternship as any} // Cast as any because the dialog expects DefenseRegistration
                     onConfirm={(reason) => {
-                        handleStatusChange(selectedInternship.id, 'rejected', reason);
+                        handleStatusChange(selectedInternship, 'rejected', reason);
                         setIsRejectDialogOpen(false);
                         setSelectedInternship(null);
                     }}
