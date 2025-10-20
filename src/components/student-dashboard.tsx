@@ -4,7 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship } from '@/lib/types';
+import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building } from 'lucide-react';
@@ -15,6 +15,8 @@ import { Button } from './ui/button';
 import { Progress } from './ui/progress';
 import { differenceInWeeks, startOfWeek, format } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
+import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
+import { ViewStudentEarlyInternshipProgressDialog } from './view-student-early-internship-progress-dialog';
 
 interface StudentDashboardProps {
   user: User;
@@ -48,6 +50,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const [activeRegistration, setActiveRegistration] = useState<DefenseRegistration | null>(null);
   const [activeSession, setActiveSession] = useState<GraduationDefenseSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
 
   const studentDocRef = useMemoFirebase(() => doc(firestore, 'students', user.uid), [firestore, user.uid]);
   const { data: studentData, isLoading: isLoadingStudent } = useDoc<Student>(studentDocRef);
@@ -66,9 +69,25 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   const activeEarlyInternship = useMemo(() => {
     if (!earlyInternships || earlyInternships.length === 0) return null;
-    // Sort to get the most recent one based on creation or start date
     return [...earlyInternships].sort((a, b) => (b.startDate?.toDate() || 0) - (a.startDate?.toDate() || 0))[0];
   }, [earlyInternships]);
+
+  const earlyInternshipReportsQuery = useMemoFirebase(
+    () => activeEarlyInternship ? query(collection(firestore, 'earlyInternshipWeeklyReports'), where('earlyInternshipId', '==', activeEarlyInternship.id)) : null,
+    [firestore, activeEarlyInternship]
+  );
+  const { data: earlyInternshipReports } = useCollection<EarlyInternshipWeeklyReport>(earlyInternshipReportsQuery);
+
+  const earlyInternshipProgress = useMemo(() => {
+    const totalHours = earlyInternshipReports?.reduce((sum, report) => sum + report.hours, 0) || 0;
+    const goalHours = 700;
+    return {
+      totalHours,
+      goalHours,
+      percentage: (totalHours / goalHours) * 100,
+    };
+  }, [earlyInternshipReports]);
+
 
   const weeklyProgress = useMemo(() => {
     const totalWeeksInSemester = 15; // Set a fixed 15-week duration
@@ -213,6 +232,13 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                 </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4 text-sm">
+                   <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                            <p className="font-medium">Tiến độ</p>
+                            <p className="text-sm text-muted-foreground">{earlyInternshipProgress.totalHours.toFixed(0)}/{earlyInternshipProgress.goalHours} giờ</p>
+                        </div>
+                        <Progress value={earlyInternshipProgress.percentage} />
+                    </div>
                     <div className="space-y-1">
                         <p className="text-muted-foreground flex items-center gap-1.5"><Building /> Công ty</p>
                         <p className="font-medium">{activeEarlyInternship.companyName}</p>
@@ -222,17 +248,32 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                         <p className="font-medium">{activeEarlyInternship.supervisorName}</p>
                     </div>
                      <div className="space-y-1">
-                        <p className="text-muted-foreground flex items-center gap-1.5"><Calendar /> Ngày bắt đầu</p>
-                        <p className="font-medium">{toDate(activeEarlyInternship.startDate) ? format(toDate(activeEarlyInternship.startDate)!, 'dd/MM/yyyy') : 'N/A'}</p>
-                    </div>
-                     <div className="space-y-1">
                         <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái</p>
                          <Badge variant={earlyInternshipStatusVariant[activeEarlyInternship.status]}>
                             {earlyInternshipStatusLabel[activeEarlyInternship.status]}
                         </Badge>
                     </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-2">
+                    <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+                        <DialogTrigger asChild>
+                             <Button variant="secondary" className="w-full">
+                                <Activity className="mr-2 h-4 w-4"/> Xem chi tiết tiến độ
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-xl">
+                            <ViewStudentEarlyInternshipProgressDialog
+                                internship={activeEarlyInternship}
+                                reports={earlyInternshipReports || []}
+                                onFinished={() => setIsProgressDialogOpen(false)}
+                            />
+                        </DialogContent>
+                    </Dialog>
+                    {earlyInternshipProgress.totalHours >= earlyInternshipProgress.goalHours && (
+                        <Button asChild className="w-full">
+                            <Link href="/internship-submission"><FileUp className="mr-2 h-4 w-4"/> Đăng ký Báo cáo Thực tập</Link>
+                        </Button>
+                    )}
                     <Button asChild variant="outline" className="w-full">
                         <Link href="/early-internship-registration"><Clock className="mr-2 h-4 w-4"/> Quản lý Thực tập sớm</Link>
                     </Button>
