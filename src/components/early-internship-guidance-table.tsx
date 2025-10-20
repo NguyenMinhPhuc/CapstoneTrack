@@ -18,7 +18,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity, Search } from 'lucide-react';
+import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity, Search, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, updateDoc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { EarlyInternship, DefenseRegistration } from '@/lib/types';
@@ -59,6 +59,9 @@ const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' |
   cancelled: 'destructive',
 };
 
+type SortKey = 'studentName' | 'companyName' | 'batch' | 'startDate';
+type SortDirection = 'asc' | 'desc';
+
 
 export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGuidanceTableProps) {
   const firestore = useFirestore();
@@ -68,6 +71,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [batchFilter, setBatchFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
   const internshipsQuery = useMemoFirebase(
     () => query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', supervisorId)),
@@ -90,9 +94,53 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     });
   }, [internships]);
 
-  const filteredInternships = useMemo(() => {
+  const toDate = (timestamp: any): Date | undefined => {
+    if (!timestamp) return undefined;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
+  
+  const sortedAndFilteredInternships = useMemo(() => {
     if (!internships) return [];
-    return internships.filter(internship => {
+    
+    let sortableInternships = [...internships];
+
+     if (sortConfig !== null) {
+      sortableInternships.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+        
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
+        
+        if (sortConfig.key === 'startDate') {
+          const dateA = toDate(aValue)?.getTime() || 0;
+          const dateB = toDate(bValue)?.getTime() || 0;
+           if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+           if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+           return 0;
+        }
+
+        // For batch, we need to sort by year then month
+        if (sortConfig.key === 'batch') {
+            const [aMonth, aYear] = (aValue as string).split('/');
+            const [bMonth, bYear] = (bValue as string).split('/');
+            if (aYear !== bYear) {
+                return sortConfig.direction === 'asc' ? aYear.localeCompare(bYear) : bYear.localeCompare(aYear);
+            }
+             const monthComparison = parseInt(aMonth) - parseInt(bMonth);
+            return sortConfig.direction === 'asc' ? monthComparison : -monthComparison;
+        }
+
+        if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    
+    return sortableInternships.filter(internship => {
       const term = searchTerm.toLowerCase();
       const searchMatch =
         internship.studentName.toLowerCase().includes(term) ||
@@ -102,16 +150,23 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
 
       return searchMatch && batchMatch;
     });
-  }, [internships, searchTerm, batchFilter]);
+  }, [internships, searchTerm, batchFilter, sortConfig]);
 
-
-  const toDate = (timestamp: any): Date | undefined => {
-    if (!timestamp) return undefined;
-    if (timestamp && typeof timestamp.toDate === 'function') {
-        return timestamp.toDate();
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
     }
-    return timestamp;
+    setSortConfig({ key, direction });
   };
+
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
+  };
+
 
   const handleStatusChange = async (internship: EarlyInternship, status: EarlyInternship['status'], note?: string) => {
     const docRef = doc(firestore, 'earlyInternships', internship.id);
@@ -250,16 +305,32 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Sinh viên</TableHead>
-              <TableHead>Công ty</TableHead>
-              <TableHead>Đợt ĐK</TableHead>
-              <TableHead>Ngày bắt đầu</TableHead>
+              <TableHead>
+                 <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
+                    Sinh viên {getSortIcon('studentName')}
+                  </Button>
+              </TableHead>
+              <TableHead>
+                 <Button variant="ghost" onClick={() => requestSort('companyName')} className="px-0 hover:bg-transparent">
+                    Công ty {getSortIcon('companyName')}
+                  </Button>
+              </TableHead>
+              <TableHead>
+                 <Button variant="ghost" onClick={() => requestSort('batch')} className="px-0 hover:bg-transparent">
+                    Đợt ĐK {getSortIcon('batch')}
+                  </Button>
+              </TableHead>
+              <TableHead>
+                 <Button variant="ghost" onClick={() => requestSort('startDate')} className="px-0 hover:bg-transparent">
+                    Ngày bắt đầu {getSortIcon('startDate')}
+                  </Button>
+              </TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredInternships?.map((internship) => (
+            {sortedAndFilteredInternships?.map((internship) => (
               <TableRow key={internship.id}>
                 <TableCell>
                   <div className="font-medium">{internship.studentName}</div>
