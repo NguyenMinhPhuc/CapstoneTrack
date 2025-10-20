@@ -52,7 +52,7 @@ import {
 import { cn } from '@/lib/utils';
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { Dialog, DialogContent } from './ui/dialog';
+import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
 import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 
