@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -24,11 +23,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
-import { MoreHorizontal, Search, Check, X, Link as LinkIcon } from 'lucide-react';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { MoreHorizontal, Search, Check, X, Link as LinkIcon, FileUp } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, updateDoc, query, where } from 'firebase/firestore';
-import type { GraduationDefenseSession, DefenseRegistration, InternshipRegistrationStatus } from '@/lib/types';
+import { collection, doc, updateDoc, query, where, writeBatch } from 'firebase/firestore';
+import type { GraduationDefenseSession, DefenseRegistration, InternshipRegistrationStatus, ReportStatus } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
@@ -47,17 +46,32 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
+import { Checkbox } from './ui/checkbox';
 
-const statusLabel: Record<InternshipRegistrationStatus, string> = {
+const registrationStatusLabel: Record<InternshipRegistrationStatus, string> = {
   pending: 'Chờ duyệt',
   approved: 'Đã duyệt',
   rejected: 'Bị từ chối',
 };
 
-const statusVariant: Record<InternshipRegistrationStatus, 'secondary' | 'default' | 'destructive'> = {
+const registrationStatusVariant: Record<InternshipRegistrationStatus, 'secondary' | 'default' | 'destructive'> = {
   pending: 'secondary',
   approved: 'default',
   rejected: 'destructive',
+};
+
+const reportStatusLabel: Record<ReportStatus, string> = {
+    reporting: 'Báo cáo',
+    exempted: 'Đặc cách',
+    withdrawn: 'Bỏ báo cáo',
+    not_reporting: 'Chưa ĐK',
+};
+
+const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
+    reporting: 'default',
+    exempted: 'secondary',
+    withdrawn: 'destructive',
+    not_reporting: 'outline',
 };
 
 export function InternshipApprovalTable() {
@@ -67,6 +81,7 @@ export function InternshipApprovalTable() {
   const [selectedSessionId, setSelectedSessionId] = useState('all');
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -82,6 +97,10 @@ export function InternshipApprovalTable() {
     [firestore]
   );
   const { data: registrations, isLoading: isLoadingRegistrations } = useCollection<DefenseRegistration>(registrationsQuery);
+
+  useEffect(() => {
+    setSelectedRowIds([]);
+  }, [registrations]);
 
   const isLoading = isLoadingSessions || isLoadingRegistrations;
 
@@ -130,9 +149,71 @@ export function InternshipApprovalTable() {
       });
   };
 
+  const handleConfirmReporting = async () => {
+    if (selectedRowIds.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Chưa chọn sinh viên",
+        description: "Vui lòng chọn ít nhất một sinh viên đã được duyệt.",
+      });
+      return;
+    }
+    
+    const registrationsToUpdate = filteredRegistrations.filter(
+        reg => selectedRowIds.includes(reg.id) && reg.internshipRegistrationStatus === 'approved'
+    );
+
+     if (registrationsToUpdate.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Không có sinh viên hợp lệ",
+        description: "Chỉ có thể xác nhận báo cáo cho các sinh viên có đăng ký đã được duyệt.",
+      });
+      return;
+    }
+
+    const batch = writeBatch(firestore);
+    registrationsToUpdate.forEach(reg => {
+        const docRef = doc(firestore, 'defenseRegistrations', reg.id);
+        batch.update(docRef, { internshipStatus: 'reporting' });
+    });
+
+    try {
+        await batch.commit();
+        toast({
+            title: 'Thành công',
+            description: `Đã xác nhận báo cáo cho ${registrationsToUpdate.length} sinh viên.`,
+        });
+        setSelectedRowIds([]);
+    } catch(error) {
+        console.error("Error confirming reporting status:", error);
+        toast({
+            variant: "destructive",
+            title: "Lỗi",
+            description: "Không thể cập nhật trạng thái báo cáo.",
+        });
+    }
+  }
+
   const handleRejectClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
     setIsRejectDialogOpen(true);
+  };
+  
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+        if (checked === true) {
+            setSelectedRowIds(filteredRegistrations?.map(c => c.id) || []);
+        } else {
+            setSelectedRowIds([]);
+        }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedRowIds(prev => [...prev, id]);
+    } else {
+        setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
   };
 
   if (isLoading) {
@@ -166,6 +247,8 @@ export function InternshipApprovalTable() {
     );
   };
 
+  const isAllSelected = filteredRegistrations && selectedRowIds.length > 0 && selectedRowIds.length === filteredRegistrations.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredRegistrations || selectedRowIds.length < filteredRegistrations.length);
 
   return (
      <>
@@ -179,6 +262,12 @@ export function InternshipApprovalTable() {
                 </CardDescription>
             </div>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                 {selectedRowIds.length > 0 && (
+                    <Button onClick={handleConfirmReporting} size="sm">
+                        <FileUp className="mr-2 h-4 w-4" />
+                        Xác nhận Báo cáo ({selectedRowIds.length})
+                    </Button>
+                )}
                 <div className="relative w-full sm:w-auto">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -208,11 +297,18 @@ export function InternshipApprovalTable() {
             <Table>
                 <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
+                     <TableHead className="w-[50px]">
+                        <Checkbox
+                            checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                            onCheckedChange={handleSelectAll}
+                        />
+                    </TableHead>
                     <TableHead>STT</TableHead>
                     <TableHead>Sinh viên</TableHead>
                     <TableHead>Công ty</TableHead>
                     <TableHead>Đợt báo cáo</TableHead>
-                    <TableHead>Trạng thái</TableHead>
+                    <TableHead>Trạng thái ĐK</TableHead>
+                    <TableHead>Trạng thái BC</TableHead>
                     <TableHead className="text-center">Minh chứng</TableHead>
                     <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
@@ -220,7 +316,13 @@ export function InternshipApprovalTable() {
                 <TableBody>
                 {filteredRegistrations.length > 0 ? (
                     filteredRegistrations.map((reg, index) => (
-                    <TableRow key={reg.id}>
+                    <TableRow key={reg.id} data-state={selectedRowIds.includes(reg.id) && "selected"}>
+                        <TableCell>
+                            <Checkbox
+                                checked={selectedRowIds.includes(reg.id)}
+                                onCheckedChange={(checked) => handleRowSelect(reg.id, !!checked)}
+                            />
+                        </TableCell>
                         <TableCell>{index + 1}</TableCell>
                         <TableCell>
                         <div>{reg.studentName}</div>
@@ -229,8 +331,13 @@ export function InternshipApprovalTable() {
                         <TableCell>{reg.internship_companyName}</TableCell>
                         <TableCell>{sessionMap.get(reg.sessionId)}</TableCell>
                         <TableCell>
-                            <Badge variant={statusVariant[reg.internshipRegistrationStatus || 'pending']}>
-                                {statusLabel[reg.internshipRegistrationStatus || 'pending']}
+                            <Badge variant={registrationStatusVariant[reg.internshipRegistrationStatus || 'pending']}>
+                                {registrationStatusLabel[reg.internshipRegistrationStatus || 'pending']}
+                            </Badge>
+                        </TableCell>
+                         <TableCell>
+                            <Badge variant={reportStatusVariant[reg.internshipStatus || 'not_reporting']}>
+                                {reportStatusLabel[reg.internshipStatus || 'not_reporting']}
                             </Badge>
                         </TableCell>
                         <TableCell>
@@ -263,7 +370,7 @@ export function InternshipApprovalTable() {
                     ))
                 ) : (
                     <TableRow>
-                    <TableCell colSpan={7} className="h-24 text-center">
+                    <TableCell colSpan={9} className="h-24 text-center">
                         Không có đơn đăng ký thực tập nào cần duyệt.
                     </TableCell>
                     </TableRow>
@@ -294,3 +401,4 @@ export function InternshipApprovalTable() {
     </>
   );
 }
+
