@@ -55,8 +55,12 @@ export function AssignCompaniesToSessionDialog({
 
   const availableSessions = useMemo(() => {
     if (!sessions) return [];
-    // Filter for sessions that include internship
-    return sessions.filter(session => session.status !== 'completed' && (session.sessionType === 'internship' || session.sessionType === 'combined'));
+    // Filter for sessions that are not completed AND either
+    // include internship OR don't have a sessionType specified (for backward compatibility).
+    return sessions.filter(session => 
+        session.status !== 'completed' &&
+        (!session.sessionType || session.sessionType === 'internship' || session.sessionType === 'combined')
+    );
   }, [sessions]);
   
   const companiesToAssign = useMemo(() => {
