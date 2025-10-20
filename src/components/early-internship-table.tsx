@@ -32,7 +32,7 @@ import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { EarlyInternship, Student } from '@/lib/types';
+import type { EarlyInternship, Student, EarlyInternshipWeeklyReport } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -55,6 +55,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
 import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
+import { Progress } from './ui/progress';
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
   pending_approval: 'Chờ duyệt',
@@ -72,7 +73,7 @@ const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' |
   cancelled: 'destructive',
 };
 
-type SortKey = 'studentName' | 'companyName' | 'supervisorName' | 'startDate' | 'batch';
+type SortKey = 'studentName' | 'companyName' | 'supervisorName' | 'startDate' | 'batch' | 'progress';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -105,8 +106,32 @@ export function EarlyInternshipTable() {
     [firestore]
   );
   const { data: allStudents, isLoading: isLoadingStudents } = useCollection<Student>(studentsCollectionRef);
+
+  const internshipIds = useMemo(() => internships?.map(i => i.id) || [], [internships]);
+
+  const reportsQuery = useMemoFirebase(
+    () => internshipIds.length > 0 ? query(collection(firestore, 'earlyInternshipWeeklyReports'), where('earlyInternshipId', 'in', internshipIds)) : null,
+    [firestore, internshipIds]
+  );
+  const { data: allReports, isLoading: isLoadingReports } = useCollection<EarlyInternshipWeeklyReport>(reportsQuery);
   
-  const isLoading = isLoadingInternships || isLoadingStudents;
+  const isLoading = isLoadingInternships || isLoadingStudents || isLoadingReports;
+
+  const progressData = useMemo(() => {
+    const data = new Map<string, { totalHours: number; percentage: number }>();
+    if (!allReports || !internships) return data;
+
+    const goalHours = 700;
+    internships.forEach(internship => {
+      const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id);
+      const totalHours = reportsForInternship.reduce((sum, report) => sum + report.hours, 0);
+      data.set(internship.id, {
+        totalHours,
+        percentage: (totalHours / goalHours) * 100
+      });
+    });
+    return data;
+  }, [allReports, internships]);
 
   useEffect(() => {
     setSelectedRowIds([]);
@@ -148,8 +173,16 @@ export function EarlyInternshipTable() {
 
      if (sortConfig !== null) {
       sortableInternships.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === 'progress') {
+            aValue = progressData.get(a.id)?.totalHours ?? 0;
+            bValue = progressData.get(b.id)?.totalHours ?? 0;
+        } else {
+             aValue = a[sortConfig.key];
+             bValue = b[sortConfig.key];
+        }
         
         if (aValue === undefined || aValue === null) return 1;
         if (bValue === undefined || bValue === null) return -1;
@@ -162,7 +195,6 @@ export function EarlyInternshipTable() {
            return 0;
         }
 
-        // For batch, we need to sort by year then month
         if (sortConfig.key === 'batch') {
             const [aMonth, aYear] = (aValue as string).split('/');
             const [bMonth, bYear] = (bValue as string).split('/');
@@ -172,9 +204,15 @@ export function EarlyInternshipTable() {
              const monthComparison = parseInt(aMonth) - parseInt(bMonth);
             return sortConfig.direction === 'asc' ? monthComparison : -monthComparison;
         }
+        
+        if (typeof aValue === 'number' && typeof bValue === 'number') {
+            if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        } else {
+            if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
+            if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
+        }
 
-        if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
@@ -193,7 +231,7 @@ export function EarlyInternshipTable() {
 
       return searchMatch && companyMatch && supervisorMatch && batchMatch;
     });
-  }, [internships, searchTerm, companyFilter, supervisorFilter, batchFilter, sortConfig]);
+  }, [internships, searchTerm, companyFilter, supervisorFilter, batchFilter, sortConfig, progressData]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -415,12 +453,19 @@ export function EarlyInternshipTable() {
                         Ngày bắt đầu {getSortIcon('startDate')}
                     </Button>
                 </TableHead>
+                 <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('progress')} className="px-0 hover:bg-transparent">
+                        Tiến độ (giờ) {getSortIcon('progress')}
+                    </Button>
+                </TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredInternships?.map((internship, index) => (
+                {filteredInternships?.map((internship) => {
+                  const progress = progressData.get(internship.id);
+                  return (
                 <TableRow key={internship.id} data-state={selectedRowIds.includes(internship.studentId) && "selected"}>
                     <TableCell>
                         <Checkbox
@@ -437,6 +482,16 @@ export function EarlyInternshipTable() {
                     <TableCell>{internship.batch}</TableCell>
                     <TableCell>
                     {toDate(internship.startDate) ? format(toDate(internship.startDate)!, 'PPP') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                        {progress ? (
+                            <div className="w-24">
+                               <Progress value={progress.percentage} />
+                               <span className="text-xs text-muted-foreground">{progress.totalHours.toFixed(0)}/700</span>
+                            </div>
+                        ) : (
+                            <span className="text-xs text-muted-foreground">N/A</span>
+                        )}
                     </TableCell>
                     <TableCell>
                         <Badge variant={statusVariant[internship.status]}>
@@ -479,7 +534,7 @@ export function EarlyInternshipTable() {
                         </DropdownMenu>
                     </TableCell>
                 </TableRow>
-                ))}
+                )})}
             </TableBody>
             </Table>
         </CardContent>
