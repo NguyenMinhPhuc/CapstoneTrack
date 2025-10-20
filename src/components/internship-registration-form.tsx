@@ -27,7 +27,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Building, Mail, Phone, User } from 'lucide-react';
 
 
 const formSchema = z.object({
@@ -69,6 +71,7 @@ interface InternshipRegistrationFormProps {
 export function InternshipRegistrationForm({ registration, sessionCompanies, onSuccess }: InternshipRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -86,6 +89,16 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
   });
 
   const registrationType = useWatch({ control: form.control, name: 'registrationType' });
+  const selectedCompanyId = useWatch({ control: form.control, name: 'selectedCompanyId' });
+
+  useEffect(() => {
+    if (registrationType === 'from_list' && selectedCompanyId) {
+      const company = sessionCompanies.find(c => c.id === selectedCompanyId);
+      setSelectedCompany(company || null);
+    } else {
+      setSelectedCompany(null);
+    }
+  }, [selectedCompanyId, registrationType, sessionCompanies]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, 'defenseRegistrations', registration.id);
@@ -164,30 +177,71 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
             <Separator />
         
         {registrationType === 'from_list' && (
-             <FormField
-                control={form.control}
-                name="selectedCompanyId"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Chọn Doanh nghiệp</FormLabel>
-                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Chọn một doanh nghiệp từ danh sách..." />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                        {sessionCompanies.map((company) => (
-                            <SelectItem key={company.id} value={company.id}>
-                                {company.name}
-                            </SelectItem>
-                        ))}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                    </FormItem>
+             <div className="space-y-4">
+                 <FormField
+                    control={form.control}
+                    name="selectedCompanyId"
+                    render={({ field }) => (
+                        <FormItem>
+                        <FormLabel>Chọn Doanh nghiệp</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                            <SelectTrigger>
+                                <SelectValue placeholder="Chọn một doanh nghiệp từ danh sách..." />
+                            </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                            {sessionCompanies.map((company) => (
+                                <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                </SelectItem>
+                            ))}
+                            </SelectContent>
+                        </Select>
+                        <FormMessage />
+                        </FormItem>
+                    )}
+                    />
+                {selectedCompany && (
+                     <Card>
+                        <CardHeader>
+                            <CardTitle>{selectedCompany.name}</CardTitle>
+                            <CardDescription>{selectedCompany.website ? <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedCompany.website}</a> : 'Không có website'}</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 text-sm">
+                             <div className="flex items-start gap-3">
+                                <Building className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                <div>
+                                    <p className="font-medium">Địa chỉ</p>
+                                    <p className="text-muted-foreground">{selectedCompany.address || 'Chưa có thông tin'}</p>
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="flex items-start gap-3">
+                                <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                <div>
+                                    <p className="font-medium">Người liên hệ</p>
+                                    <p className="text-muted-foreground">{selectedCompany.contactName || 'Chưa có thông tin'}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-3">
+                                <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                <div>
+                                    <p className="font-medium">Số điện thoại</p>
+                                    <p className="text-muted-foreground">{selectedCompany.contactPhone || 'Chưa có thông tin'}</p>
+                                </div>
+                            </div>
+                             <div className="flex items-start gap-3">
+                                <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                <div>
+                                    <p className="font-medium">Email</p>
+                                    <p className="text-muted-foreground">{selectedCompany.contactEmail || 'Chưa có thông tin'}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
                 )}
-                />
+            </div>
         )}
 
         {registrationType === 'self_arranged' && (
@@ -307,5 +361,3 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
     </Form>
   );
 }
-
-    
