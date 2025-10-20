@@ -24,6 +24,7 @@ import { collection } from 'firebase/firestore';
 import type { EarlyInternship } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
+import { format } from 'date-fns';
 
 export function EarlyInternshipTable() {
   const firestore = useFirestore();
@@ -35,6 +36,15 @@ export function EarlyInternshipTable() {
   );
   
   const { data: internships, isLoading } = useCollection<EarlyInternship>(earlyInternshipsCollectionRef);
+
+  const toDate = (timestamp: any): Date | undefined => {
+    if (!timestamp) return undefined;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
+
 
   if (isLoading) {
     return (
@@ -82,7 +92,9 @@ export function EarlyInternshipTable() {
                   <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
                 </TableCell>
                 <TableCell>{internship.companyName}</TableCell>
-                <TableCell>{internship.startDate?.toDate().toLocaleDateString()}</TableCell>
+                <TableCell>
+                  {toDate(internship.startDate) ? format(toDate(internship.startDate)!, 'PPP') : 'N/A'}
+                </TableCell>
                 <TableCell>{internship.status}</TableCell>
                 <TableCell className="text-right">
                   <Button variant="ghost" size="icon">

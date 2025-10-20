@@ -139,6 +139,11 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/early-internship-registration")} tooltip="Đăng ký Thực tập sớm">
+                        <Link href="/early-internship-registration"><Clock /><span>ĐK Thực tập sớm</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/internship-submission")} tooltip="Nộp hồ sơ thực tập">
                         <Link href="/internship-submission"><Briefcase /><span>Nộp hồ sơ thực tập</span></Link>
                     </SidebarMenuButton>
@@ -278,5 +283,4 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
-
     
