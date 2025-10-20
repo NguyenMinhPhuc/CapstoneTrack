@@ -2,6 +2,8 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Table,
   TableBody,
@@ -40,7 +42,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Users, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Users, Trash2, Upload, FileDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import type { InternshipCompany } from '@/lib/types';
@@ -51,12 +53,14 @@ import { AddCompanyForm } from './add-company-form';
 import { EditCompanyForm } from './edit-company-form';
 import { Checkbox } from './ui/checkbox';
 import { AssignCompaniesToSessionDialog } from './assign-companies-to-session-dialog';
+import { ImportCompaniesDialog } from './import-companies-dialog';
 
 
 export function CompanyManagementTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignToSessionDialogOpen, setIsAssignToSessionDialogOpen] = useState(false);
@@ -151,6 +155,20 @@ export function CompanyManagementTable() {
     setIsAssignToSessionDialogOpen(false);
     setSelectedRowIds([]);
   }
+
+  const handleExportTemplate = () => {
+    const headers = ["name", "address", "website", "description", "contactName", "contactEmail", "contactPhone"];
+    const worksheet = XLSX.utils.json_to_sheet([{}], { header: headers });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachDoanhNghiep");
+    
+    // Set column widths
+    worksheet['!cols'] = headers.map(() => ({ wch: 30 }));
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {type: 'application/octet-stream'});
+    saveAs(data, 'Template_DoanhNghiep.xlsx');
+  };
   
   const isAllSelected = filteredCompanies && selectedRowIds.length === filteredCompanies.length;
   const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredCompanies?.length ?? 0);
@@ -207,17 +225,32 @@ export function CompanyManagementTable() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Thêm Doanh nghiệp
-                        </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-lg">
-                        <AddCompanyForm onFinished={() => setIsAddDialogOpen(false)} />
-                    </DialogContent>
-                </Dialog>
+                 <div className="flex gap-2 w-full sm:w-auto">
+                    <Button variant="outline" className="w-full" onClick={handleExportTemplate}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Xuất mẫu
+                    </Button>
+                    <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline" className="w-full">
+                                <Upload className="mr-2 h-4 w-4" />
+                                Nhập từ Excel
+                            </Button>
+                        </DialogTrigger>
+                        <ImportCompaniesDialog onFinished={() => setIsImportDialogOpen(false)} />
+                    </Dialog>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Thêm Doanh nghiệp
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-lg">
+                            <AddCompanyForm onFinished={() => setIsAddDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </div>
       </CardHeader>
