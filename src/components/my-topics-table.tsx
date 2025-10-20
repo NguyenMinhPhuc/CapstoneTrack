@@ -403,7 +403,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                         )}
                                                         {reg.projectRegistrationStatus === 'approved' && (
                                                             <>
-                                                                <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted' || reg.proposalStatus === 'approved'}>
+                                                                <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted'}>
                                                                     <Eye className="mr-2 h-4 w-4"/> Xem TM
                                                                 </Button>
                                                                 <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
