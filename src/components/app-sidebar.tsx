@@ -166,7 +166,7 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
                             <div className="flex items-center justify-between w-full">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Admin</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Quản lý chung</p>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
                                      <ChevronDown className="h-4 w-4" />
                                 </Button>
@@ -187,11 +187,6 @@ export function AppSidebar() {
                                  <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/rubrics")} tooltip="Rubric Management">
                                         <Link href="/admin/rubrics"><ClipboardCheck /><span>Quản lý Rubric</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/companies")} tooltip="Company Management">
-                                        <Link href="/admin/companies"><Building /><span>Quản lý Doanh nghiệp</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                  <SidebarMenuItem>
@@ -222,6 +217,27 @@ export function AppSidebar() {
                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/settings")} tooltip="Settings">
                                         <Link href="/admin/settings"><Settings /><span>Cài đặt hệ thống</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
+                 <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Quản lý Thực tập</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/companies")} tooltip="Company Management">
+                                        <Link href="/admin/companies"><Building /><span>Quản lý Doanh nghiệp</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             </SidebarMenu>
