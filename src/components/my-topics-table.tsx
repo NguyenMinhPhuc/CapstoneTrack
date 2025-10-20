@@ -247,7 +247,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Danh sách Đề tài</CardTitle>
-              <CardDescription>Các đề tài bạn đã đề xuất cho các đợt báo cáo.</CardDescription>
+              <CardDescription>Các đề tài bạn đã đề xuất cho các đợt báo cáo. Nhấp vào số lượng sinh viên ở cột "SL SV" để xác nhận đăng ký.</CardDescription>
             </div>
              <div className="flex items-center gap-2">
                 <Select value={sessionFilter} onValueChange={setSessionFilter}>
