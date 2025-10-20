@@ -11,7 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Skeleton } from '@/components/ui/skeleton';
 import { CalendarIcon, LinkIcon, Users, UserCheck, FileText, ShieldCheck, FileCheck2, Star, XCircle, ClipboardCheck, GraduationCap, Briefcase, Building, ChevronDown, ChevronUp } from 'lucide-react';
-import { type GraduationDefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails, type Rubric } from '@/lib/types';
+import { type DefenseSession, type DefenseRegistration, type Student, type StudentWithRegistrationDetails, type Rubric } from '@/lib/types';
 import { StudentRegistrationTable } from '@/components/student-registration-table';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
@@ -36,11 +36,11 @@ export default function DefenseSessionDetailPage() {
   const sessionId = params.id as string;
 
   const sessionDocRef = useMemoFirebase(
-    () => (sessionId ? doc(firestore, 'graduationDefenseSessions', sessionId) : null),
+    () => (sessionId ? doc(firestore, 'defenseSessions', sessionId) : null),
     [firestore, sessionId]
   );
   
-  const { data: session, isLoading: isSessionLoading } = useDoc<GraduationDefenseSession>(sessionDocRef);
+  const { data: session, isLoading: isSessionLoading } = useDoc<DefenseSession>(sessionDocRef);
 
   // Fetch all 4 rubrics
   const councilGradRubricDocRef = useMemoFirebase(() => (session?.councilGraduationRubricId ? doc(firestore, 'rubrics', session.councilGraduationRubricId) : null), [firestore, session]);
@@ -428,3 +428,5 @@ export default function DefenseSessionDetailPage() {
     </main>
   );
 }
+
+    

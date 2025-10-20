@@ -52,7 +52,7 @@ import {
 import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
-import type { GraduationDefenseSession } from '@/lib/types';
+import type { DefenseSession } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { AddDefenseSessionForm } from './add-defense-session-form';
@@ -83,17 +83,17 @@ export function DefenseSessionsTable() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [selectedSession, setSelectedSession] = useState<GraduationDefenseSession | null>(null);
-  const [sessionToDelete, setSessionToDelete] = useState<GraduationDefenseSession | null>(null);
+  const [selectedSession, setSelectedSession] = useState<DefenseSession | null>(null);
+  const [sessionToDelete, setSessionToDelete] = useState<DefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const sessionsCollectionRef = useMemoFirebase(
-    () => collection(firestore, 'graduationDefenseSessions'),
+    () => collection(firestore, 'defenseSessions'),
     [firestore]
   );
 
-  const { data: sessions, isLoading } = useCollection<GraduationDefenseSession>(sessionsCollectionRef);
+  const { data: sessions, isLoading } = useCollection<DefenseSession>(sessionsCollectionRef);
 
   const sessionStats = useMemo(() => {
     const stats = {
@@ -122,19 +122,19 @@ export function DefenseSessionsTable() {
     });
   }, [sessions, searchTerm, statusFilter]);
   
-  const handleEditClick = (session: GraduationDefenseSession) => {
+  const handleEditClick = (session: DefenseSession) => {
     setSelectedSession(session);
     setIsEditDialogOpen(true);
   };
   
-  const handleDeleteClick = (session: GraduationDefenseSession) => {
+  const handleDeleteClick = (session: DefenseSession) => {
     setSessionToDelete(session);
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
-    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionToDelete.id);
+    const sessionDocRef = doc(firestore, 'defenseSessions', sessionToDelete.id);
     
     deleteDoc(sessionDocRef)
         .then(() => {
@@ -157,7 +157,7 @@ export function DefenseSessionsTable() {
   };
 
   const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
-    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionId);
+    const sessionDocRef = doc(firestore, 'defenseSessions', sessionId);
     const updateData = { status: newStatus };
     
     updateDoc(sessionDocRef, updateData)
@@ -422,3 +422,5 @@ export function DefenseSessionsTable() {
     </div>
   );
 }
+
+    

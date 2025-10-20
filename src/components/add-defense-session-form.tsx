@@ -2,7 +2,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -29,11 +29,15 @@ import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 const NO_RUBRIC_VALUE = "__NONE__";
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên đợt là bắt buộc.' }),
+  sessionType: z.enum(['graduation', 'internship', 'combined'], {
+    required_error: 'Vui lòng chọn loại đợt báo cáo.',
+  }),
   startDate: z.date({ required_error: 'Ngày bắt đầu là bắt buộc.' }),
   registrationDeadline: z.date({ required_error: 'Ngày hết hạn đăng ký là bắt buộc.' }),
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
@@ -62,6 +66,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
     resolver: zodResolver(formSchema),
     defaultValues: {
       name: '',
+      sessionType: 'combined',
       description: '',
       zaloGroupLink: '',
       councilGraduationRubricId: '',
@@ -72,11 +77,16 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       internshipCouncilWeight: 50, // Default to 50%
     },
   });
+
+  const sessionType = useWatch({
+      control: form.control,
+      name: 'sessionType'
+  });
   
   const cleanRubricId = (value: string | undefined) => value === NO_RUBRIC_VALUE ? '' : value;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const collectionRef = collection(firestore, 'graduationDefenseSessions');
+    const collectionRef = collection(firestore, 'defenseSessions');
     const newSessionData = {
       ...values,
       councilGraduationRubricId: cleanRubricId(values.councilGraduationRubricId),
@@ -157,6 +167,36 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
                     <FormMessage />
                     </FormItem>
                 )}
+                />
+                 <FormField
+                  control={form.control}
+                  name="sessionType"
+                  render={({ field }) => (
+                    <FormItem className="space-y-3">
+                      <FormLabel>Loại đợt báo cáo</FormLabel>
+                      <FormControl>
+                        <RadioGroup
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                          className="flex items-center space-x-4"
+                        >
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="graduation" /></FormControl>
+                            <FormLabel className="font-normal">Chỉ Tốt nghiệp</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="internship" /></FormControl>
+                            <FormLabel className="font-normal">Chỉ Thực tập</FormLabel>
+                          </FormItem>
+                          <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="combined" /></FormControl>
+                            <FormLabel className="font-normal">Kết hợp cả hai</FormLabel>
+                          </FormItem>
+                        </RadioGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <FormField
@@ -282,56 +322,75 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
                 <p className="text-sm font-medium">Gán Rubric cho đợt báo cáo</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <RubricSelector name="councilGraduationRubricId" label="Hội đồng chấm Tốt nghiệp" icon={<GraduationCap className="h-4 w-4" />} />
-                    <RubricSelector name="councilInternshipRubricId" label="Hội đồng chấm Thực tập" icon={<Briefcase className="h-4 w-4" />} />
-                    <RubricSelector name="supervisorGraduationRubricId" label="GVHD chấm Tốt nghiệp" icon={<GraduationCap className="h-4 w-4" />} />
-                    <RubricSelector name="companyInternshipRubricId" label="Đơn vị chấm Thực tập" icon={<UserCheck className="h-4 w-4" />} />
+                  {(sessionType === 'graduation' || sessionType === 'combined') && (
+                    <>
+                      <RubricSelector name="councilGraduationRubricId" label="Hội đồng chấm Tốt nghiệp" icon={<GraduationCap className="h-4 w-4" />} />
+                      <RubricSelector name="supervisorGraduationRubricId" label="GVHD chấm Tốt nghiệp" icon={<GraduationCap className="h-4 w-4" />} />
+                    </>
+                  )}
+                  {(sessionType === 'internship' || sessionType === 'combined') && (
+                    <>
+                      <RubricSelector name="councilInternshipRubricId" label="Hội đồng chấm Thực tập" icon={<Briefcase className="h-4 w-4" />} />
+                      <RubricSelector name="companyInternshipRubricId" label="Đơn vị chấm Thực tập" icon={<UserCheck className="h-4 w-4" />} />
+                    </>
+                  )}
                 </div>
                 
-                <Separator />
-                <p className="text-sm font-medium">Tùy chỉnh Tỷ lệ điểm</p>
+                {(sessionType === 'graduation' || sessionType === 'combined') && (
+                  <>
+                    <Separator />
+                    <p className="text-sm font-medium">Tùy chỉnh Tỷ lệ điểm Tốt nghiệp</p>
 
-                <FormField
-                control={form.control}
-                name="graduationCouncilWeight"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Tỷ lệ điểm Tốt nghiệp</FormLabel>
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs text-muted-foreground">HĐ: {field.value}%</span>
-                        <Slider
-                        value={[field.value ?? 80]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        max={100}
-                        step={5}
-                        />
-                        <span className="text-xs text-muted-foreground">GVHD: {100 - (field.value ?? 80)}%</span>
-                    </div>
-                    <FormMessage />
-                    </FormItem>
+                    <FormField
+                      control={form.control}
+                      name="graduationCouncilWeight"
+                      render={({ field }) => (
+                          <FormItem>
+                          <FormLabel>Tỷ lệ điểm Hội đồng/GVHD</FormLabel>
+                          <div className="flex items-center gap-4">
+                              <span className="text-xs text-muted-foreground">HĐ: {field.value}%</span>
+                              <Slider
+                              value={[field.value ?? 80]}
+                              onValueChange={(value) => field.onChange(value[0])}
+                              max={100}
+                              step={5}
+                              />
+                              <span className="text-xs text-muted-foreground">GVHD: {100 - (field.value ?? 80)}%</span>
+                          </div>
+                          <FormMessage />
+                          </FormItem>
+                      )}
+                    />
+                  </>
                 )}
-                />
+                
+                 {(sessionType === 'internship' || sessionType === 'combined') && (
+                    <>
+                      {sessionType !== 'graduation' && <Separator />}
+                      <p className="text-sm font-medium">Tùy chỉnh Tỷ lệ điểm Thực tập</p>
+                      <FormField
+                        control={form.control}
+                        name="internshipCouncilWeight"
+                        render={({ field }) => (
+                            <FormItem>
+                            <FormLabel>Tỷ lệ điểm Hội đồng/Đơn vị</FormLabel>
+                            <div className="flex items-center gap-4">
+                                <span className="text-xs text-muted-foreground">HĐ: {field.value}%</span>
+                                <Slider
+                                value={[field.value ?? 50]}
+                                onValueChange={(value) => field.onChange(value[0])}
+                                max={100}
+                                step={5}
+                                />
+                                <span className="text-xs text-muted-foreground">ĐV: {100 - (field.value ?? 50)}%</span>
+                            </div>
+                            <FormMessage />
+                            </FormItem>
+                        )}
+                        />
+                    </>
+                 )}
 
-                <FormField
-                control={form.control}
-                name="internshipCouncilWeight"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Tỷ lệ điểm Thực tập</FormLabel>
-                    <div className="flex items-center gap-4">
-                        <span className="text-xs text-muted-foreground">HĐ: {field.value}%</span>
-                        <Slider
-                        value={[field.value ?? 50]}
-                        onValueChange={(value) => field.onChange(value[0])}
-                        max={100}
-                        step={5}
-                        />
-                        <span className="text-xs text-muted-foreground">ĐV: {100 - (field.value ?? 50)}%</span>
-                    </div>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
 
                 <Separator />
 
@@ -379,3 +438,5 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
     </>
   );
 }
+
+    

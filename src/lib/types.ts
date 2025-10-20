@@ -25,9 +25,10 @@ export type SystemUser = {
   createdAt: any; 
 };
 
-export type GraduationDefenseSession = {
+export type DefenseSession = {
   id: string;
   name: string;
+  sessionType: 'graduation' | 'internship' | 'combined';
   startDate: any;
   expectedReportDate: any;
   registrationDeadline: any;
@@ -35,10 +36,10 @@ export type GraduationDefenseSession = {
   zaloGroupLink?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
-  councilGraduationRubricId?: string; // Renamed from graduationRubricId
-  councilInternshipRubricId?: string; // Renamed from internshipRubricId
-  supervisorGraduationRubricId?: string; // New
-  companyInternshipRubricId?: string;    // New
+  councilGraduationRubricId?: string;
+  councilInternshipRubricId?: string;
+  supervisorGraduationRubricId?: string;
+  companyInternshipRubricId?: string;
   graduationCouncilWeight?: number;
   internshipCouncilWeight?: number;
 }
@@ -253,3 +254,5 @@ export type InternshipCompany = {
   contactPhone?: string;
   createdAt?: any;
 };
+
+    

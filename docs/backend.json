@@ -143,11 +143,11 @@
         "department"
       ]
     },
-    "GraduationDefenseSession": {
+    "DefenseSession": {
       "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "GraduationDefenseSession",
+      "title": "DefenseSession",
       "type": "object",
-      "description": "Represents a period for organizing graduation project defenses.",
+      "description": "Represents a period for organizing project defenses and/or internship reports.",
       "properties": {
         "id": {
           "type": "string",
@@ -156,6 +156,11 @@
         "name": {
           "type": "string",
           "description": "Name of the defense session (e.g., 'Spring 2024 Defense')."
+        },
+        "sessionType": {
+          "type": "string",
+          "description": "The type of the session.",
+          "enum": ["graduation", "internship", "combined"]
         },
         "startDate": {
           "type": "string",
@@ -217,6 +222,7 @@
       "required": [
         "id",
         "name",
+        "sessionType",
         "startDate",
         "expectedReportDate",
         "registrationDeadline",
@@ -235,7 +241,7 @@
         },
         "sessionId": {
           "type": "string",
-          "description": "Reference to the GraduationDefenseSession this registration belongs to."
+          "description": "Reference to the DefenseSession this registration belongs to."
         },
         "studentDocId": {
           "type": "string",
@@ -430,7 +436,7 @@
         },
         "sessionId": {
           "type": "string",
-          "description": "Reference to the GraduationDefenseSession this council belongs to."
+          "description": "Reference to the DefenseSession this council belongs to."
         },
         "supervisorId": {
           "type": "string",
@@ -460,7 +466,7 @@
         },
         "sessionId": {
           "type": "string",
-          "description": "Reference to the GraduationDefenseSession this sub-committee belongs to."
+          "description": "Reference to the DefenseSession this sub-committee belongs to."
         },
         "name": {
           "type": "string",
@@ -559,7 +565,7 @@
       "description": "Represents a project topic proposed by a supervisor for a specific defense session.",
       "properties": {
         "id": { "type": "string" },
-        "sessionId": { "type": "string", "description": "Reference to the GraduationDefenseSession." },
+        "sessionId": { "type": "string", "description": "Reference to the DefenseSession." },
         "supervisorId": { "type": "string", "description": "The ID of the supervisor who proposed the topic." },
         "supervisorName": { "type": "string", "description": "The name of the supervisor." },
         "title": { "type": "string", "description": "The title of the project." },
@@ -678,11 +684,11 @@
       },
       "description": "Stores detailed information about supervisors."
     },
-    "/graduationDefenseSessions/{sessionId}": {
+    "/defenseSessions/{sessionId}": {
       "schema": {
-        "$ref": "#/entities/GraduationDefenseSession"
+        "$ref": "#/entities/DefenseSession"
       },
-      "description": "Stores information about graduation defense sessions."
+      "description": "Stores information about defense sessions."
     },
     "/defenseRegistrations/{registrationId}": {
       "schema": {
@@ -690,13 +696,13 @@
       },
       "description": "Stores student registrations for all defense sessions."
     },
-     "/graduationDefenseSessions/{sessionId}/council/{councilMemberId}": {
+     "/defenseSessions/{sessionId}/council/{councilMemberId}": {
       "schema": {
         "$ref": "#/entities/DefenseCouncil"
       },
       "description": "Stores the members of the main defense council for a specific session."
     },
-    "/graduationDefenseSessions/{sessionId}/subCommittees/{subCommitteeId}": {
+    "/defenseSessions/{sessionId}/subCommittees/{subCommitteeId}": {
       "schema": {
         "$ref": "#/entities/DefenseSubCommittee"
       },
@@ -740,3 +746,5 @@
     }
   }
 }
+
+    
