@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
@@ -58,11 +58,15 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
-    const password = uuidv4().substring(0, 8);
+    const password = uuidv4(); // Generate a strong random password
 
     try {
         const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
         const user = userCredential.user;
+
+        // After creating the user, immediately send a password reset email
+        // This allows them to set their own password securely.
+        await sendPasswordResetEmail(tempAuth, values.email);
 
         const batch = writeBatch(firestore);
 
@@ -90,7 +94,7 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
             .then(() => {
                 toast({
                     title: 'Thành công',
-                    description: `Giáo viên ${values.firstName} ${values.lastName} đã được tạo. Mật khẩu tạm thời: ${password}`,
+                    description: `Đã tạo tài khoản cho ${values.firstName} ${values.lastName}. Một email hướng dẫn tạo mật khẩu đã được gửi đến họ.`,
                     duration: 9000,
                 });
                 onFinished();

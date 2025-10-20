@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
@@ -67,16 +67,19 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
-    const password = uuidv4().substring(0, 8); // Generate a random password
+    const password = uuidv4(); // Generate a strong random password
 
     try {
       // 1. Create Auth user
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
       const user = userCredential.user;
 
+      // 2. Send password reset email
+      await sendPasswordResetEmail(tempAuth, values.email);
+
       const batch = writeBatch(firestore);
 
-      // 2. Create 'users' collection document
+      // 3. Create 'users' collection document
       const userDocRef = doc(firestore, 'users', user.uid);
       const userData = {
         id: user.uid,
@@ -88,7 +91,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
       batch.set(userDocRef, userData);
 
 
-      // 3. Create 'students' collection document
+      // 4. Create 'students' collection document
       const studentDocRef = doc(firestore, 'students', user.uid);
       const studentData = {
         ...values,
@@ -104,7 +107,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
         .then(() => {
             toast({
                 title: 'Thành công',
-                description: `Sinh viên ${values.firstName} ${values.lastName} đã được tạo. Mật khẩu tạm thời: ${password}`,
+                description: `Đã tạo tài khoản cho sinh viên ${values.firstName} ${values.lastName}. Một email hướng dẫn tạo mật khẩu đã được gửi đến họ.`,
                 duration: 9000,
             });
             onFinished();
