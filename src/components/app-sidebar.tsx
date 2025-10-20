@@ -35,6 +35,7 @@ import {
   FileSignature,
   Activity,
   Building,
+  ClipboardList,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -128,6 +129,11 @@ export function AppSidebar() {
                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
                         <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/internship-registration")} tooltip="Đăng ký Thực tập">
+                        <Link href="/internship-registration"><ClipboardList /><span>Đăng ký Thực tập</span></Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
