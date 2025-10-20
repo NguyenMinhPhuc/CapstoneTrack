@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -22,7 +23,8 @@ import {
   DialogTrigger,
   DialogHeader,
   DialogTitle,
-  DialogDescription
+  DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -41,9 +43,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -57,6 +59,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
+
 
 interface MyTopicsTableProps {
     supervisorId: string;
@@ -89,13 +95,30 @@ const registrationStatusVariant: Record<string, 'secondary' | 'default' | 'destr
     rejected: 'destructive',
 };
 
+const proposalStatusLabel: Record<string, string> = {
+    not_submitted: 'Chưa nộp',
+    pending_approval: 'Chờ duyệt',
+    approved: 'Đã duyệt',
+    rejected: 'Bị từ chối',
+};
+
+const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
+    not_submitted: 'outline',
+    pending_approval: 'secondary',
+    approved: 'default',
+    rejected: 'destructive',
+};
+
+
 export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
   const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
+  const [selectedRegistrationForProposal, setSelectedRegistrationForProposal] = useState<DefenseRegistration | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
 
   const topicsQuery = useMemoFirebase(
@@ -154,6 +177,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     setSelectedTopic(topic);
     setIsDeleteDialogOpen(true);
   };
+  
+  const handleViewProposalClick = (registration: DefenseRegistration) => {
+    setSelectedRegistrationForProposal(registration);
+    setIsProposalDialogOpen(true);
+  }
 
   const confirmDelete = async () => {
     if (!selectedTopic) return;
@@ -216,6 +244,28 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
          const contextualError = new FirestorePermissionError({
             path: `batch write on topic ${topic.id} and registration ${registrationId}`,
             operation: 'update',
+        });
+        errorEmitter.emit('permission-error', contextualError);
+    }
+  }
+
+  const handleProposalAction = async (registration: DefenseRegistration, action: 'approve' | 'reject') => {
+    const regDocRef = doc(firestore, 'defenseRegistrations', registration.id);
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+    try {
+      await updateDoc(regDocRef, { proposalStatus: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Đã ${action === 'approve' ? 'duyệt' : 'yêu cầu chỉnh sửa'} thuyết minh.`,
+      });
+      setIsProposalDialogOpen(false);
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+        const contextualError = new FirestorePermissionError({
+            path: regDocRef.path,
+            operation: 'update',
+            requestResourceData: { proposalStatus: newStatus }
         });
         errorEmitter.emit('permission-error', contextualError);
     }
@@ -307,7 +357,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                     <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
                                 </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="sm:max-w-3xl">
                                 <DialogHeader>
                                     <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
                                     <DialogDescription>
@@ -319,7 +369,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                         <TableRow>
                                             <TableHead>MSSV</TableHead>
                                             <TableHead>Họ và Tên</TableHead>
-                                            <TableHead>Trạng thái</TableHead>
+                                            <TableHead>Trạng thái ĐK</TableHead>
+                                            <TableHead>Trạng thái TM</TableHead>
                                             <TableHead className="text-right">Hành động</TableHead>
                                         </TableRow>
                                     </TableHeader>
@@ -333,22 +384,34 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                         {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
                                                     </Badge>
                                                 </TableCell>
+                                                <TableCell>
+                                                     <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
+                                                        {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
+                                                    </Badge>
+                                                </TableCell>
                                                 <TableCell className="text-right">
-                                                    {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
-                                                        <div className="flex gap-2 justify-end">
-                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>
-                                                                <Check className="mr-2 h-4 w-4"/> Chấp nhận
-                                                            </Button>
-                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}>
-                                                                <X className="mr-2 h-4 w-4"/> Từ chối
-                                                            </Button>
-                                                        </div>
-                                                    )}
-                                                     {reg.projectRegistrationStatus === 'approved' && (
-                                                        <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
-                                                            <X className="mr-2 h-4 w-4"/> Hủy đăng ký
-                                                        </Button>
-                                                    )}
+                                                     <div className="flex gap-2 justify-end">
+                                                        {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
+                                                            <>
+                                                                <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>
+                                                                    <Check className="mr-2 h-4 w-4"/> Chấp nhận
+                                                                </Button>
+                                                                <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}>
+                                                                    <X className="mr-2 h-4 w-4"/> Từ chối
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                        {reg.projectRegistrationStatus === 'approved' && (
+                                                            <>
+                                                                <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted' || reg.proposalStatus === 'approved'}>
+                                                                    <Eye className="mr-2 h-4 w-4"/> Xem TM
+                                                                </Button>
+                                                                <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
+                                                                    <X className="mr-2 h-4 w-4"/> Hủy ĐK
+                                                                </Button>
+                                                            </>
+                                                        )}
+                                                    </div>
                                                 </TableCell>
                                             </TableRow>
                                         ))}
@@ -394,6 +457,50 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           )}
         </DialogContent>
       </Dialog>
+      
+       <Dialog open={isProposalDialogOpen} onOpenChange={setIsProposalDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+              {selectedRegistrationForProposal && (
+                  <>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><FileSignature /> Thuyết minh của sinh viên</DialogTitle>
+                        <DialogDescription>
+                            Xem xét và phê duyệt thuyết minh của sinh viên: {selectedRegistrationForProposal.studentName} ({selectedRegistrationForProposal.studentId})
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                        <h3 className="font-semibold">{selectedRegistrationForProposal.projectTitle}</h3>
+                        <div className="prose prose-sm max-w-none [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                            <h4>Tóm tắt</h4>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.summary || ''}</ReactMarkdown>
+                            <h4>Mục tiêu</h4>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.objectives || ''}</ReactMarkdown>
+                            <h4>Phương pháp & Công nghệ</h4>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.implementationPlan || ''}</ReactMarkdown>
+                            <h4>Kết quả mong đợi</h4>
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.expectedResults || ''}</ReactMarkdown>
+                        </div>
+                        {selectedRegistrationForProposal.proposalLink && (
+                            <div>
+                                <h4 className="font-semibold">Link file toàn văn</h4>
+                                <a href={selectedRegistrationForProposal.proposalLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                    {selectedRegistrationForProposal.proposalLink}
+                                </a>
+                            </div>
+                        )}
+                    </div>
+                     <DialogFooter>
+                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistrationForProposal, 'reject')}>
+                            Yêu cầu chỉnh sửa
+                        </Button>
+                        <Button onClick={() => handleProposalAction(selectedRegistrationForProposal, 'approve')}>
+                            Duyệt thuyết minh
+                        </Button>
+                    </DialogFooter>
+                  </>
+              )}
+          </DialogContent>
+       </Dialog>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
