@@ -203,6 +203,8 @@ export default function TopicRegistrationPage() {
     );
   }
 
+  const canStudentCancel = !activeRegistration?.projectRegistrationStatus || activeRegistration.projectRegistrationStatus === 'pending';
+
   return (
     <main className="p-4 sm:p-6 lg:p-8">
       <div className="space-y-6">
@@ -242,25 +244,27 @@ export default function TopicRegistrationPage() {
             activeRegistration.projectTitle && registeredTopic ? (
                 <div>
                     <RegisteredTopicDetails topic={registeredTopic} registration={activeRegistration} />
-                    <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="mt-4 w-full sm:w-auto" disabled={isCancelling}>
-                                {isCancelling ? 'Đang hủy...' : 'Hủy đăng ký'}
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Xác nhận hủy đăng ký?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    Bạn có chắc chắn muốn hủy đăng ký đề tài <span className="font-bold">"{registeredTopic.title}"</span>?
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                            <AlertDialogFooter>
-                                <AlertDialogCancel>Không</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleCancelRegistration}>Xác nhận hủy</AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
+                    {canStudentCancel && (
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" className="mt-4 w-full sm:w-auto" disabled={isCancelling}>
+                                    {isCancelling ? 'Đang hủy...' : 'Hủy đăng ký'}
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Xác nhận hủy đăng ký?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        Bạn có chắc chắn muốn hủy đăng ký đề tài <span className="font-bold">"{registeredTopic.title}"</span>?
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Không</AlertDialogCancel>
+                                    <AlertDialogAction onClick={handleCancelRegistration}>Xác nhận hủy</AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    )}
                 </div>
             ) : (
                 <TopicRegistrationList session={activeSession} registration={activeRegistration} />

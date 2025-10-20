@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -43,7 +42,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Check, X } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
@@ -57,7 +56,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from './ui/select';
 
 interface MyTopicsTableProps {
     supervisorId: string;
@@ -176,33 +175,23 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     }
   };
 
-  const handleRegistrationConfirmation = async (registrationId: string, topic: ProjectTopic, action: 'approve' | 'reject') => {
+  const handleRegistrationAction = async (registrationId: string, topic: ProjectTopic, action: 'approve' | 'reject' | 'cancel') => {
     const regDocRef = doc(firestore, 'defenseRegistrations', registrationId);
     const topicRef = doc(firestore, 'projectTopics', topic.id);
-
     const batch = writeBatch(firestore);
 
     if (action === 'approve') {
         batch.update(regDocRef, { projectRegistrationStatus: 'approved' });
 
-        // Check if the topic will be full after this approval
         const registrationsForThisTopic = allRegistrations?.filter(r => r.sessionId === topic.sessionId && r.projectTitle === topic.title) || [];
         const approvedCount = registrationsForThisTopic.filter(r => r.projectRegistrationStatus === 'approved').length;
 
         if (approvedCount + 1 >= topic.maxStudents) {
             batch.update(topicRef, { status: 'taken' });
         }
-
-        try {
-            await batch.commit();
-            toast({ title: 'Thành công', description: 'Đã xác nhận hướng dẫn sinh viên.' });
-        } catch (error: any) {
-             toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
-        }
-
-    } else { // reject action
+    } else { // 'reject' or 'cancel' have the same logic of clearing the student's topic
         batch.update(regDocRef, { 
-            projectRegistrationStatus: 'rejected',
+            projectRegistrationStatus: action === 'reject' ? 'rejected' : null,
             projectTitle: '',
             summary: '',
             objectives: '',
@@ -211,17 +200,24 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             supervisorName: '',
         });
 
-        // If the topic was 'taken', set it back to 'approved' so others can register
         if (topic.status === 'taken') {
             batch.update(topicRef, { status: 'approved' });
         }
-        
-        try {
-            await batch.commit();
-            toast({ title: 'Thành công', description: 'Đã từ chối hướng dẫn. Đề tài đã được mở lại.' });
-        } catch (error: any) {
-             toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
-        }
+    }
+
+    try {
+        await batch.commit();
+        const successMessage = action === 'approve' 
+            ? 'Đã xác nhận hướng dẫn sinh viên.'
+            : (action === 'reject' ? 'Đã từ chối hướng dẫn.' : 'Đã hủy đăng ký cho sinh viên.');
+        toast({ title: 'Thành công', description: successMessage });
+    } catch (error: any) {
+         toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+         const contextualError = new FirestorePermissionError({
+            path: `batch write on topic ${topic.id} and registration ${registrationId}`,
+            operation: 'update',
+        });
+        errorEmitter.emit('permission-error', contextualError);
     }
   }
   
@@ -247,7 +243,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Danh sách Đề tài</CardTitle>
-              <CardDescription>Các đề tài bạn đã đề xuất cho các đợt báo cáo. Nhấp vào số lượng sinh viên ở cột "SL SV" để xác nhận đăng ký.</CardDescription>
+              <CardDescription>Các đề tài bạn đã đề xuất. Nhấp vào số lượng ở cột "SL SV" để xác nhận đăng ký của sinh viên.</CardDescription>
             </div>
              <div className="flex items-center gap-2">
                 <Select value={sessionFilter} onValueChange={setSessionFilter}>
@@ -340,13 +336,18 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                 <TableCell className="text-right">
                                                     {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
                                                         <div className="flex gap-2 justify-end">
-                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, topic, 'approve')}>
+                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>
                                                                 <Check className="mr-2 h-4 w-4"/> Chấp nhận
                                                             </Button>
-                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, topic, 'reject')}>
+                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}>
                                                                 <X className="mr-2 h-4 w-4"/> Từ chối
                                                             </Button>
                                                         </div>
+                                                    )}
+                                                     {reg.projectRegistrationStatus === 'approved' && (
+                                                        <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
+                                                            <X className="mr-2 h-4 w-4"/> Hủy đăng ký
+                                                        </Button>
                                                     )}
                                                 </TableCell>
                                             </TableRow>
