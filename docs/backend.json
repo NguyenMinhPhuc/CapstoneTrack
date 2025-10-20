@@ -331,7 +331,7 @@
         "graduationStatus": {
           "type": "string",
           "description": "The registration status for the graduation defense.",
-          "enum": ["reporting", "exempted", "withdrawn", "not_reporting"]
+          "enum": ["reporting", "exempted", "withdrawn", "not_reporting", "completed"]
         },
         "graduationStatusNote": {
             "type": "string",
@@ -354,7 +354,7 @@
         "internshipStatus": {
           "type": "string",
           "description": "The registration status for the internship report.",
-          "enum": ["reporting", "exempted", "withdrawn", "not_reporting"]
+          "enum": ["reporting", "exempted", "withdrawn", "not_reporting", "completed"]
         },
         "internshipStatusNote": {
             "type": "string",
@@ -830,5 +830,3 @@
     }
   }
 }
-
-    

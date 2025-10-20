@@ -21,11 +21,15 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileDown, Copy } from 'lucide-react';
-import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember } from '@/lib/types';
+import { Search, FileDown, Copy, MoreHorizontal, CheckCircle } from 'lucide-react';
+import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember, ReportStatus } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { CopyEvaluationDialog } from './copy-evaluation-dialog';
+import { doc, updateDoc } from 'firebase/firestore';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from './ui/dropdown-menu';
 
 interface CouncilScore {
     role: string;
@@ -42,6 +46,7 @@ interface ProcessedGraduationData {
   councilScores: CouncilScore[];
   councilGradAvg: number | null;
   finalGradScore: number | null;
+  currentStatus: ReportStatus;
 }
 
 interface ProcessedInternshipData {
@@ -54,6 +59,7 @@ interface ProcessedInternshipData {
     councilScores: CouncilScore[];
     councilInternAvg: number | null;
     finalInternScore: number | null;
+    currentStatus: ReportStatus;
 }
 
 
@@ -77,6 +83,28 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
   const [searchTerm, setSearchTerm] = useState('');
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const handleStatusUpdate = async (registrationId: string, statusKey: 'graduationStatus' | 'internshipStatus') => {
+      const docRef = doc(firestore, 'defenseRegistrations', registrationId);
+      try {
+          await updateDoc(docRef, { [statusKey]: 'completed' });
+          toast({
+              title: 'Thành công',
+              description: 'Đã xác nhận hoàn thành cho sinh viên.'
+          });
+          // Data will refresh automatically via useCollection hook in parent
+      } catch (error) {
+          console.error("Error updating status: ", error);
+          const contextualError = new FirestorePermissionError({
+              path: docRef.path,
+              operation: 'update',
+              requestResourceData: { [statusKey]: 'completed' },
+          });
+          errorEmitter.emit('permission-error', contextualError);
+      }
+  }
 
 
   const processedData = useMemo(() => {
@@ -88,7 +116,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         const gradSupervisorWeight = 1 - gradCouncilWeight;
         
         return registrations
-            .filter(reg => reg.graduationStatus === 'reporting')
+            .filter(reg => reg.graduationStatus === 'reporting' || reg.graduationStatus === 'completed')
             .map((reg): ProcessedGraduationData => {
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
             
@@ -132,13 +160,14 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 councilScores: councilScores,
                 councilGradAvg: councilGradAvg,
                 finalGradScore: finalGradScore,
+                currentStatus: reg.graduationStatus,
             };
         });
     } else { // internship report
         const internCouncilWeight = (session.internshipCouncilWeight ?? 50) / 100;
         const internCompanyWeight = 1 - internCouncilWeight;
         return registrations
-        .filter(reg => reg.internshipStatus === 'reporting')
+        .filter(reg => reg.internshipStatus === 'reporting' || reg.internshipStatus === 'completed')
         .map((reg): ProcessedInternshipData => {
             const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
             const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
@@ -181,6 +210,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 councilScores: councilScores,
                 councilInternAvg: councilInternAvg,
                 finalInternScore: finalInternScore,
+                currentStatus: reg.internshipStatus,
             };
         });
     }
@@ -270,7 +300,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             ))}
             <TableHead className="text-center">Điểm TB HĐ</TableHead>
             <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
-            <TableHead className="text-center">Sao chép</TableHead>
+            <TableHead className="text-center">Hành động</TableHead>
         </TableRow>
         </TableHeader>
         <TableBody>
@@ -299,9 +329,21 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 {item.finalGradScore !== null ? item.finalGradScore.toFixed(1) : '-'}
                 </TableCell>
                 <TableCell className="text-center">
-                    <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
-                        <Copy className="h-4 w-4" />
-                    </Button>
+                     <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => openCopyDialog(item.id)}>
+                                <Copy className="mr-2 h-4 w-4" /> Sao chép điểm
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => handleStatusUpdate(item.id, 'graduationStatus')} disabled={item.currentStatus === 'completed'}>
+                                <CheckCircle className="mr-2 h-4 w-4" /> Xác nhận Hoàn thành
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
                 </TableCell>
             </TableRow>
             ))
@@ -331,7 +373,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   ))}
                   <TableHead className="text-center">Điểm TB HĐ</TableHead>
                   <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
-                   <TableHead className="text-center">Sao chép</TableHead>
+                   <TableHead className="text-center">Hành động</TableHead>
               </TableRow>
           </TableHeader>
           <TableBody>
@@ -361,9 +403,21 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                               {item.finalInternScore !== null ? item.finalInternScore.toFixed(1) : '-'}
                           </TableCell>
                           <TableCell className="text-center">
-                            <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
-                                <Copy className="h-4 w-4" />
-                            </Button>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => openCopyDialog(item.id)}>
+                                        <Copy className="mr-2 h-4 w-4" /> Sao chép điểm
+                                    </DropdownMenuItem>
+                                     <DropdownMenuItem onClick={() => handleStatusUpdate(item.id, 'internshipStatus')} disabled={item.currentStatus === 'completed'}>
+                                        <CheckCircle className="mr-2 h-4 w-4" /> Xác nhận Hoàn thành
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                           </TableCell>
                       </TableRow>
                   ))

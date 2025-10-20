@@ -72,7 +72,7 @@ export type Supervisor = {
     createdAt: any;
 }
 
-export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting';
+export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting' | 'completed';
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
 export type FinalReportStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
