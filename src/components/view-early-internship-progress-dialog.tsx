@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -20,6 +19,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { Input } from './ui/input';
 import { Textarea } from './ui/textarea';
 import { Label } from './ui/label';
+import { Badge } from './ui/badge';
 
 interface ViewEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
