@@ -210,14 +210,19 @@ function SubcommitteeGradingView({
             await batch.commit();
             toast({ title: 'Thành công', description: `Đã ghi nhận vắng mặt cho ${registrations.length} sinh viên.` });
             onRefresh();
-        } catch (error) {
-             const contextualError = new FirestorePermissionError({
-                path: 'evaluations',
-                operation: 'write',
-                requestResourceData: { error: 'Batch write for absent evaluations' },
-            });
-            errorEmitter.emit('permission-error', contextualError);
-            toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể ghi nhận vắng mặt.' });
+        } catch (error: any) {
+            console.error("Error marking absent:", error);
+            // Check if it's a permission error before creating a contextual error
+            if (error.code === 'permission-denied') {
+                const contextualError = new FirestorePermissionError({
+                    path: 'evaluations',
+                    operation: 'write',
+                    requestResourceData: { error: 'Batch write for absent evaluations failed' },
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            } else {
+                 toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể ghi nhận vắng mặt: ${error.message}` });
+            }
         }
     };
     
