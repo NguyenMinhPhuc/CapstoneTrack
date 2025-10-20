@@ -86,7 +86,18 @@ export function RegisteredTopicDetails({ topic, registration, session }: Registe
   const reportSubmission = useMemo(() => {
     if (!session.expectedReportDate) return null;
     
-    const reportDate = session.expectedReportDate.toDate();
+    // Convert Firestore Timestamp to Date
+    const toDate = (timestamp: any): Date | undefined => {
+        if (!timestamp) return undefined;
+        if (timestamp && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+        }
+        return timestamp; // Assume it's already a Date object
+    };
+
+    const reportDate = toDate(session.expectedReportDate);
+    if (!reportDate) return null;
+
     const startDate = sub(reportDate, { weeks: 2 });
     const endDate = sub(reportDate, { weeks: 1 });
     const now = new Date();
