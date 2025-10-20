@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -238,5 +237,3 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     </main>
   );
 }
-
-    
