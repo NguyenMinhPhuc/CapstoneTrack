@@ -91,7 +91,7 @@ interface StudentRegistrationTableProps {
 type SortKey = 'studentName' | 'projectTitle' | 'supervisorName' | 'internshipSupervisorName' | 'subCommitteeName';
 type SortDirection = 'asc' | 'desc';
 
-type ReportStatusType = 'graduationStatus' | 'internshipStatus' | 'both';
+type ReportStatusType = 'graduation' | 'internship' | 'both';
 
 const registrationStatusLabel: Record<DefenseRegistration['graduationStatus'], string> = {
     reporting: 'Báo cáo',
