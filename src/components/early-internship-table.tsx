@@ -77,6 +77,7 @@ export function EarlyInternshipTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>Sinh viên</TableHead>
               <TableHead>Công ty</TableHead>
               <TableHead>Ngày bắt đầu</TableHead>
@@ -85,8 +86,9 @@ export function EarlyInternshipTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {internships?.map((internship) => (
+            {internships?.map((internship, index) => (
               <TableRow key={internship.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell>
                   <div className="font-medium">{internship.studentName}</div>
                   <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
