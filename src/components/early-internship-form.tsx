@@ -23,7 +23,7 @@ import type { User } from 'firebase/auth';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { cn } from '@/lib/utils';
 import { CalendarIcon, User as UserIcon, Mail, Phone, Building } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, addMonths } from 'date-fns';
 import { Calendar } from './ui/calendar';
 import {
   Select,
@@ -67,10 +67,19 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
     resolver: zodResolver(formSchema),
     defaultValues: {
       proofLink: '',
+      startDate: new Date(),
+      endDate: addMonths(new Date(), 12),
     },
   });
 
   const companyId = useWatch({ control: form.control, name: 'companyId' });
+  const startDate = useWatch({ control: form.control, name: 'startDate' });
+
+  useEffect(() => {
+    if (startDate) {
+      form.setValue('endDate', addMonths(startDate, 12));
+    }
+  }, [startDate, form]);
 
   useEffect(() => {
     if (companyId && lhuDepartments) {
@@ -99,12 +108,7 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
         return;
     }
     
-    const now = new Date();
-    const batchMonth = now.getMonth() + 2; // getMonth() is 0-indexed, add 1 for current, add 1 for next.
-    const batchYear = now.getFullYear();
-
-    const batch = `${String(batchMonth > 12 ? batchMonth - 12 : batchMonth).padStart(2, '0')}/${batchMonth > 12 ? batchYear + 1 : batchYear}`;
-
+    const batch = format(values.startDate, 'MM/yyyy');
 
     const newRecord = {
       studentId: user.uid,
