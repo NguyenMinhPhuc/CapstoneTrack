@@ -217,7 +217,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
         if (approvedCount + 1 >= topic.maxStudents) {
             batch.update(topicRef, { status: 'taken' });
         }
-    } else { // 'reject' or 'cancel' have the same logic of clearing the student's topic
+    } else { // 'reject' or 'cancel' have the same logic of clearing the student's topic registration
         batch.update(regDocRef, { 
             projectRegistrationStatus: action === 'reject' ? 'rejected' : null,
             projectTitle: '',
