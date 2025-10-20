@@ -213,6 +213,7 @@ export type SystemSettings = {
     allowEditingApprovedProposal?: boolean;
     forceOpenReportSubmission?: boolean;
     requireReportApproval?: boolean;
+    earlyInternshipGoalHours?: number;
 }
 
 export type ProjectTopic = {

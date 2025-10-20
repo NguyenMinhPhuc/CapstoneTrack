@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -19,9 +20,9 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity, Search, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, useDoc } from '@/firebase';
 import { collection, query, where, doc, updateDoc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
-import type { EarlyInternship, DefenseRegistration, EarlyInternshipWeeklyReport } from '@/lib/types';
+import type { EarlyInternship, DefenseRegistration, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -74,6 +75,10 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   const [batchFilter, setBatchFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  const goalHours = settings?.earlyInternshipGoalHours ?? 700;
 
   const internshipsQuery = useMemoFirebase(
     () => query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', supervisorId)),
@@ -94,7 +99,6 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     const data = new Map<string, { totalHours: number; percentage: number }>();
     if (!allReports || !internships) return data;
 
-    const goalHours = 700;
     internships.forEach(internship => {
       const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id);
       const totalHours = reportsForInternship.reduce((sum, report) => sum + report.hours, 0);
@@ -104,7 +108,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
       });
     });
     return data;
-  }, [allReports, internships]);
+  }, [allReports, internships, goalHours]);
 
   const uniqueBatches = useMemo(() => {
     if (!internships) return [];
@@ -407,7 +411,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                    {progress ? (
                         <div className="w-24">
                            <Progress value={progress.percentage} />
-                           <span className="text-xs text-muted-foreground">{progress.totalHours.toFixed(0)}/700</span>
+                           <span className="text-xs text-muted-foreground">{progress.totalHours.toFixed(0)}/{goalHours}</span>
                         </div>
                     ) : (
                         <span className="text-xs text-muted-foreground">N/A</span>

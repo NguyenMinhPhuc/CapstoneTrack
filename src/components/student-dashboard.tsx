@@ -1,10 +1,11 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
+import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon, Briefcase } from 'lucide-react';
@@ -61,6 +62,10 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   const studentDocRef = useMemoFirebase(() => doc(firestore, 'students', user.uid), [firestore, user.uid]);
   const { data: studentData, isLoading: isLoadingStudent } = useDoc<Student>(studentDocRef);
+  
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  const goalHours = settings?.earlyInternshipGoalHours ?? 700;
 
   const reportsQuery = useMemoFirebase(
     () => activeRegistration ? query(collection(firestore, 'weeklyProgressReports'), where('registrationId', '==', activeRegistration.id)) : null,
@@ -87,13 +92,12 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   const earlyInternshipProgress = useMemo(() => {
     const totalHours = earlyInternshipReports?.reduce((sum, report) => sum + report.hours, 0) || 0;
-    const goalHours = 700;
     return {
       totalHours,
       goalHours,
       percentage: (totalHours / goalHours) * 100,
     };
-  }, [earlyInternshipReports]);
+  }, [earlyInternshipReports, goalHours]);
 
 
   const weeklyProgress = useMemo(() => {

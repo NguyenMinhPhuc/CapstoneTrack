@@ -30,9 +30,9 @@ import {
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2 } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, useDoc } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { EarlyInternship, Student, EarlyInternshipWeeklyReport } from '@/lib/types';
+import type { EarlyInternship, Student, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -46,7 +46,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
@@ -94,6 +93,10 @@ export function EarlyInternshipTable() {
   const [batchFilter, setBatchFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  const goalHours = settings?.earlyInternshipGoalHours ?? 700;
+
 
   const earlyInternshipsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'earlyInternships'),
@@ -121,7 +124,6 @@ export function EarlyInternshipTable() {
     const data = new Map<string, { totalHours: number; percentage: number }>();
     if (!allReports || !internships) return data;
 
-    const goalHours = 700;
     internships.forEach(internship => {
       const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id);
       const totalHours = reportsForInternship.reduce((sum, report) => sum + report.hours, 0);
@@ -131,7 +133,7 @@ export function EarlyInternshipTable() {
       });
     });
     return data;
-  }, [allReports, internships]);
+  }, [allReports, internships, goalHours]);
 
   useEffect(() => {
     setSelectedRowIds([]);
@@ -489,7 +491,7 @@ export function EarlyInternshipTable() {
                         {progress ? (
                             <div className="w-24">
                                <Progress value={progress.percentage} />
-                               <span className="text-xs text-muted-foreground">{progress.totalHours.toFixed(0)}/700</span>
+                               <span className="text-xs text-muted-foreground">{progress.totalHours.toFixed(0)}/{goalHours}</span>
                             </div>
                         ) : (
                             <span className="text-xs text-muted-foreground">N/A</span>

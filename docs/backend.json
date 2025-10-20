@@ -590,6 +590,10 @@
           "type": "string",
           "description": "The current status of the topic.",
           "enum": ["pending", "approved", "rejected", "taken"]
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "The reason why the topic was rejected by an admin."
         }
       },
       "required": ["id", "sessionId", "supervisorId", "supervisorName", "title", "summary", "maxStudents", "status"]
@@ -649,6 +653,10 @@
         "requireReportApproval": {
           "type": "boolean",
           "description": "If true, final reports submitted by students must be approved by their supervisor."
+        },
+        "earlyInternshipGoalHours": {
+          "type": "number",
+          "description": "The target number of hours for the early internship program."
         }
       }
     },

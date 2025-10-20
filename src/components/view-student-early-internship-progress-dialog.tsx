@@ -1,7 +1,8 @@
+
 'use client';
 
 import { useMemo } from 'react';
-import type { EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
+import type { EarlyInternship, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
 import {
   DialogHeader,
   DialogTitle,
@@ -16,6 +17,9 @@ import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
 import { Badge } from './ui/badge';
 import { Progress } from './ui/progress';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+
 
 interface ViewStudentEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
@@ -24,6 +28,10 @@ interface ViewStudentEarlyInternshipProgressDialogProps {
 }
 
 export function ViewStudentEarlyInternshipProgressDialog({ internship, reports, onFinished }: ViewStudentEarlyInternshipProgressDialogProps) {
+  const firestore = useFirestore();
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  const goalHours = settings?.earlyInternshipGoalHours ?? 700;
 
   const sortedReports = useMemo(() => {
     if (!reports) return [];
@@ -32,13 +40,12 @@ export function ViewStudentEarlyInternshipProgressDialog({ internship, reports, 
 
   const progress = useMemo(() => {
     const totalHours = reports.reduce((sum, report) => sum + report.hours, 0);
-    const goalHours = 700;
     return {
       totalHours,
       goalHours,
       percentage: (totalHours / goalHours) * 100,
     };
-  }, [reports]);
+  }, [reports, goalHours]);
 
   return (
     <DialogContent className="sm:max-w-2xl">

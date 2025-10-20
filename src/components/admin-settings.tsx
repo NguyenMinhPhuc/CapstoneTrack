@@ -11,12 +11,22 @@ import { Switch } from '@/components/ui/switch';
 import type { SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
+import { Input } from './ui/input';
+import { useState, useEffect } from 'react';
+import { Button } from './ui/button';
 
 export function AdminSettings() {
     const firestore = useFirestore();
     const { toast } = useToast();
     const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
     const { data: settings, isLoading } = useDoc<SystemSettings>(settingsDocRef);
+    const [goalHours, setGoalHours] = useState(700);
+    
+    useEffect(() => {
+        if (settings?.earlyInternshipGoalHours) {
+            setGoalHours(settings.earlyInternshipGoalHours);
+        }
+    }, [settings]);
 
     const handleFeatureToggle = async (feature: keyof Omit<SystemSettings, 'id'>, enabled: boolean) => {
         const updateData = { [feature]: enabled };
@@ -25,6 +35,25 @@ export function AdminSettings() {
                  toast({
                     title: 'Thành công',
                     description: 'Cài đặt đã được cập nhật.',
+                });
+            })
+            .catch(error => {
+                const contextualError = new FirestorePermissionError({
+                    path: settingsDocRef.path,
+                    operation: 'update',
+                    requestResourceData: updateData,
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            });
+    }
+
+    const handleGoalHoursSave = async () => {
+        const updateData = { earlyInternshipGoalHours: Number(goalHours) };
+         setDoc(settingsDocRef, updateData, { merge: true })
+            .then(() => {
+                 toast({
+                    title: 'Thành công',
+                    description: 'Số giờ mục tiêu đã được cập nhật.',
                 });
             })
             .catch(error => {
@@ -140,6 +169,34 @@ export function AdminSettings() {
                             checked={settings?.requireReportApproval ?? true} // Default to true
                             onCheckedChange={(checked) => handleFeatureToggle('requireReportApproval', checked)}
                         />
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                 <CardHeader>
+                    <CardTitle>Cài đặt Thực tập sớm</CardTitle>
+                    <CardDescription>
+                        Cấu hình các thông số cho chương trình thực tập sớm.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="space-y-2 rounded-lg border p-4">
+                         <Label htmlFor="goal-hours-input" className="text-base">
+                            Số giờ mục tiêu
+                        </Label>
+                        <p className="text-sm text-muted-foreground">
+                            Tổng số giờ sinh viên cần hoàn thành trong chương trình thực tập sớm.
+                        </p>
+                        <div className="flex items-center gap-2 pt-2">
+                             <Input
+                                id="goal-hours-input"
+                                type="number"
+                                value={goalHours}
+                                onChange={(e) => setGoalHours(Number(e.target.value))}
+                                className="max-w-xs"
+                            />
+                            <Button onClick={handleGoalHoursSave}>Lưu</Button>
+                        </div>
                     </div>
                 </CardContent>
             </Card>
