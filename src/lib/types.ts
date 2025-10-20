@@ -5,6 +5,7 @@
 
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -137,7 +138,7 @@ export type DefenseSessionRegistration = {
 // Combined type for the student registration table
 export type StudentWithRegistrationDetails = DefenseRegistration & {
   status: Student['status'];
-  className?: string; // Add className
+  className?: string;
 };
 
 export type SubmissionReport = DefenseRegistration & {
@@ -190,6 +191,7 @@ export type Evaluation = {
     evaluatorId: string;
     rubricId: string;
     evaluationType: 'graduation' | 'internship';
+    attendance?: 'present' | 'absent';
     scores: {
         criterionId: string;
         score: number;

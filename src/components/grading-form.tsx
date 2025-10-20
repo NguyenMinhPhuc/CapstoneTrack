@@ -214,18 +214,18 @@ export function GradingForm({ projectGroup, rubric, evaluationType, supervisorId
         const evaluationId = existingEvaluation?.registrationId === student.id ? existingEvaluation.id : doc(evaluationsCollection).id;
         const evaluationDocRef = doc(firestore, 'evaluations', evaluationId);
             
-        const evaluationData: Omit<Evaluation, 'id'> = {
+        const evaluationData: Omit<Evaluation, 'id' | 'evaluationDate'> = {
             sessionId: sessionId,
             registrationId: student.id,
             evaluatorId: supervisorId,
             rubricId: rubric.id,
             evaluationType: evaluationType,
             scores: scoresToSave,
+            attendance: 'present',
             totalScore: totalScoreToSave,
             comments: values.comments || '',
-            evaluationDate: serverTimestamp(),
         };
-        batch.set(evaluationDocRef, evaluationData);
+        batch.set(evaluationDocRef, { ...evaluationData, evaluationDate: new Date() });
     });
 
     try {

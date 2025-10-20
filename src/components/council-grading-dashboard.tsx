@@ -2,14 +2,14 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, where, getDocs, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, query, where, getDocs, doc, writeBatch, deleteDoc } from 'firebase/firestore';
 import type { GraduationDefenseSession, DefenseCouncilMember, DefenseSubCommittee, Rubric, DefenseRegistration, Evaluation } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
-import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle, Search } from 'lucide-react';
+import { ClipboardCheck, Info, Users, FileText, Book, Target, CheckCircle, Link as LinkIcon, GraduationCap, Briefcase, Building, Phone, UserCircle, Search, UserX, UserCheck as UserCheckIcon, MoreHorizontal } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
@@ -17,6 +17,24 @@ import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Input } from './ui/input';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 interface CouncilGradingDashboardProps {
@@ -38,7 +56,8 @@ function SubcommitteeGradingView({
     councilGraduationRubric,
     councilInternshipRubric,
     supervisorId,
-    sessionId
+    sessionId,
+    onRefresh
 }: { 
     subcommittee: DefenseSubCommittee, 
     registrations: DefenseRegistration[],
@@ -47,7 +66,10 @@ function SubcommitteeGradingView({
     councilInternshipRubric: Rubric | null,
     supervisorId: string,
     sessionId: string,
+    onRefresh: () => void;
 }) {
+    const { toast } = useToast();
+    const firestore = useFirestore();
     const [selectedGroupForGrading, setSelectedGroupForGrading] = useState<ProjectGroup | null>(null);
     const [selectedRubric, setSelectedRubric] = useState<Rubric | null>(null);
     const [selectedEvalType, setSelectedEvalType] = useState<'graduation' | 'internship' | null>(null);
@@ -114,28 +136,30 @@ function SubcommitteeGradingView({
     }, [studentsInSubcommittee, searchTerm]);
     
     // Find evaluations for each group/student, specific to the evaluator and rubric
-    const getEvaluationForGroup = (group: ProjectGroup) => {
-        const studentId = group.students[0].id; // Use one student's ID for the group
+    const getEvaluationForGroup = (group: ProjectGroup, rubric: Rubric | null) => {
+        if (!rubric) return null;
+        const studentId = group.students[0].id;
         return evaluations.find(e => 
             e.registrationId === studentId && 
             e.evaluationType === 'graduation' &&
-            e.evaluatorId === supervisorId && // Ensure it's this evaluator's score
-            e.rubricId === councilGraduationRubric?.id // Ensure it's for the correct rubric
-        );
+            e.evaluatorId === supervisorId &&
+            e.rubricId === rubric.id
+        ) || null;
     }
     
-    const getEvaluationForInternship = (student: DefenseRegistration) => {
+    const getEvaluationForInternship = (student: DefenseRegistration, rubric: Rubric | null) => {
+         if (!rubric) return null;
         return evaluations.find(e => 
             e.registrationId === student.id &&
             e.evaluationType === 'internship' &&
-            e.evaluatorId === supervisorId && // Ensure it's this evaluator's score
-            e.rubricId === councilInternshipRubric?.id // Ensure it's for the correct rubric
-        );
+            e.evaluatorId === supervisorId &&
+            e.rubricId === rubric.id
+        ) || null;
     }
 
     const handleGradeGraduationClick = (group: (typeof projectGroups)[0]) => {
         if (!councilGraduationRubric) return;
-        setExistingEvaluation(getEvaluationForGroup(group) || null);
+        setExistingEvaluation(getEvaluationForGroup(group, councilGraduationRubric) || null);
         setSelectedGroupForGrading({
             projectTitle: group.projectTitle,
             students: group.students
@@ -147,15 +171,72 @@ function SubcommitteeGradingView({
 
     const handleGradeInternshipClick = (student: DefenseRegistration) => {
         if (!councilInternshipRubric) return;
-        setExistingEvaluation(getEvaluationForInternship(student) || null);
+        setExistingEvaluation(getEvaluationForInternship(student, councilInternshipRubric) || null);
         setSelectedGroupForGrading({
             projectTitle: `Thực tập của ${student.studentName}`,
-            students: [student] // Pass only the single student
+            students: [student]
         });
         setSelectedRubric(councilInternshipRubric);
         setSelectedEvalType('internship');
         setIsGradingDialogOpen(true);
     };
+
+    const handleMarkAbsent = async (registrations: DefenseRegistration[], rubric: Rubric | null, type: 'graduation' | 'internship') => {
+        if (!rubric) {
+            toast({ variant: 'destructive', title: 'Lỗi', description: 'Chưa gán rubric cho loại báo cáo này.' });
+            return;
+        }
+
+        const batch = writeBatch(firestore);
+        registrations.forEach(reg => {
+            const existingEval = evaluations.find(e => e.registrationId === reg.id && e.evaluatorId === supervisorId && e.rubricId === rubric.id);
+            const evalDocRef = existingEval ? doc(firestore, 'evaluations', existingEval.id) : doc(collection(firestore, 'evaluations'));
+            
+            const absentEval: Omit<Evaluation, 'id' | 'evaluationDate'> = {
+                sessionId: sessionId,
+                registrationId: reg.id,
+                evaluatorId: supervisorId,
+                rubricId: rubric.id,
+                evaluationType: type,
+                attendance: 'absent',
+                scores: rubric.criteria.map(c => ({ criterionId: c.id, score: 0 })),
+                totalScore: 0,
+                comments: 'Vắng mặt',
+            };
+            batch.set(evalDocRef, { ...absentEval, evaluationDate: new Date() });
+        });
+
+        try {
+            await batch.commit();
+            toast({ title: 'Thành công', description: `Đã ghi nhận vắng mặt cho ${registrations.length} sinh viên.` });
+            onRefresh();
+        } catch (error) {
+             const contextualError = new FirestorePermissionError({
+                path: 'evaluations',
+                operation: 'write',
+                requestResourceData: { error: 'Batch write for absent evaluations' },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể ghi nhận vắng mặt.' });
+        }
+    };
+    
+    const handleRevertAbsence = async (evaluationId: string) => {
+        const evalDocRef = doc(firestore, 'evaluations', evaluationId);
+        try {
+            await deleteDoc(evalDocRef);
+            toast({ title: 'Thành công', description: 'Đã hoàn tác ghi vắng.' });
+            onRefresh();
+        } catch (error) {
+            const contextualError = new FirestorePermissionError({
+                path: evalDocRef.path,
+                operation: 'delete',
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể hoàn tác.' });
+        }
+    };
+
 
     const InternshipInfo = ({ student }: { student: DefenseRegistration }) => (
         <div className="mt-2 space-y-3 text-xs">
@@ -228,7 +309,8 @@ function SubcommitteeGradingView({
                         {projectGroups.length > 0 ? (
                             <Accordion type="multiple" className="w-full space-y-4">
                                 {projectGroups.map((group) => {
-                                    const gradEvaluation = getEvaluationForGroup(group);
+                                    const gradEvaluation = getEvaluationForGroup(group, councilGraduationRubric);
+                                    const isAbsent = gradEvaluation?.attendance === 'absent';
 
                                     return (
                                         <AccordionItem value={group.projectTitle} key={group.projectTitle} className="border rounded-lg px-4 bg-background">
@@ -244,20 +326,51 @@ function SubcommitteeGradingView({
                                                     </div>
                                                 </AccordionTrigger>
                                                 <div className="ml-auto pl-4 flex items-center gap-2">
-                                                    {gradEvaluation && (
+                                                     {isAbsent ? (
+                                                        <Badge variant="destructive">Vắng</Badge>
+                                                    ) : gradEvaluation && (
                                                         <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
                                                             {gradEvaluation.totalScore.toFixed(2)}
                                                         </Badge>
                                                     )}
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm"
-                                                        disabled={!councilGraduationRubric}
-                                                        onClick={() => handleGradeGraduationClick(group)}
-                                                    >
-                                                        <GraduationCap className="mr-2 h-4 w-4"/>
-                                                        {gradEvaluation ? 'Sửa điểm' : 'Chấm điểm'}
-                                                    </Button>
+                                                     <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleGradeGraduationClick(group)} disabled={!councilGraduationRubric || isAbsent}>
+                                                                <UserCheckIcon className="mr-2 h-4 w-4" />
+                                                                <span>{gradEvaluation && !isAbsent ? 'Sửa điểm' : 'Chấm điểm'}</span>
+                                                            </DropdownMenuItem>
+                                                            {isAbsent ? (
+                                                                <DropdownMenuItem onClick={() => handleRevertAbsence(gradEvaluation.id)}>
+                                                                    <UserCheckIcon className="mr-2 h-4 w-4 text-green-500" />
+                                                                    <span>Hoàn tác ghi vắng</span>
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                 <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                         <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!councilGraduationRubric}>
+                                                                            <UserX className="mr-2 h-4 w-4 text-red-500" />
+                                                                            <span>Ghi vắng</span>
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                     <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Xác nhận ghi vắng?</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Hành động này sẽ ghi nhận sinh viên vắng mặt và cho điểm 0 cho tất cả các mục. Bạn có thể hoàn tác sau.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleMarkAbsent(group.students, councilGraduationRubric, 'graduation')}>Xác nhận</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                             <AccordionContent>
@@ -301,26 +414,58 @@ function SubcommitteeGradingView({
                         {internshipStudents.length > 0 ? (
                             <div className="space-y-4">
                                 {internshipStudents.map((student) => {
-                                    const internEvaluation = getEvaluationForInternship(student);
+                                    const internEvaluation = getEvaluationForInternship(student, councilInternshipRubric);
+                                    const isAbsent = internEvaluation?.attendance === 'absent';
                                     return (
                                         <Card key={student.id} className="p-4">
                                             <div className="flex items-start justify-between gap-4">
                                                 <InternshipInfo student={student} />
                                                 <div className="flex items-center gap-2 flex-shrink-0">
-                                                    {internEvaluation && (
+                                                     {isAbsent ? (
+                                                        <Badge variant="destructive">Vắng</Badge>
+                                                    ) : internEvaluation && (
                                                         <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
                                                             {internEvaluation.totalScore.toFixed(2)}
                                                         </Badge>
                                                     )}
-                                                    <Button 
-                                                        variant="outline" 
-                                                        size="sm"
-                                                        disabled={!councilInternshipRubric}
-                                                        onClick={() => handleGradeInternshipClick(student)}
-                                                    >
-                                                        <Briefcase className="mr-2 h-4 w-4"/>
-                                                        {internEvaluation ? 'Sửa điểm' : 'Chấm điểm'}
-                                                    </Button>
+                                                    <DropdownMenu>
+                                                        <DropdownMenuTrigger asChild>
+                                                            <Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4" /></Button>
+                                                        </DropdownMenuTrigger>
+                                                        <DropdownMenuContent align="end">
+                                                            <DropdownMenuItem onClick={() => handleGradeInternshipClick(student)} disabled={!councilInternshipRubric || isAbsent}>
+                                                                <UserCheckIcon className="mr-2 h-4 w-4" />
+                                                                <span>{internEvaluation && !isAbsent ? 'Sửa điểm' : 'Chấm điểm'}</span>
+                                                            </DropdownMenuItem>
+                                                            {isAbsent ? (
+                                                                <DropdownMenuItem onClick={() => handleRevertAbsence(internEvaluation.id)}>
+                                                                    <UserCheckIcon className="mr-2 h-4 w-4 text-green-500" />
+                                                                    <span>Hoàn tác ghi vắng</span>
+                                                                </DropdownMenuItem>
+                                                            ) : (
+                                                                <AlertDialog>
+                                                                    <AlertDialogTrigger asChild>
+                                                                        <DropdownMenuItem onSelect={(e) => e.preventDefault()} disabled={!councilInternshipRubric}>
+                                                                            <UserX className="mr-2 h-4 w-4 text-red-500" />
+                                                                            <span>Ghi vắng</span>
+                                                                        </DropdownMenuItem>
+                                                                    </AlertDialogTrigger>
+                                                                    <AlertDialogContent>
+                                                                        <AlertDialogHeader>
+                                                                            <AlertDialogTitle>Xác nhận ghi vắng?</AlertDialogTitle>
+                                                                            <AlertDialogDescription>
+                                                                                Hành động này sẽ ghi nhận sinh viên vắng mặt và cho điểm 0 cho tất cả các mục. Bạn có thể hoàn tác sau.
+                                                                            </AlertDialogDescription>
+                                                                        </AlertDialogHeader>
+                                                                        <AlertDialogFooter>
+                                                                            <AlertDialogCancel>Hủy</AlertDialogCancel>
+                                                                            <AlertDialogAction onClick={() => handleMarkAbsent([student], councilInternshipRubric, 'internship')}>Xác nhận</AlertDialogAction>
+                                                                        </AlertDialogFooter>
+                                                                    </AlertDialogContent>
+                                                                </AlertDialog>
+                                                            )}
+                                                        </DropdownMenuContent>
+                                                    </DropdownMenu>
                                                 </div>
                                             </div>
                                         </Card>
@@ -342,7 +487,10 @@ function SubcommitteeGradingView({
                             evaluationType={selectedEvalType}
                             supervisorId={supervisorId}
                             sessionId={sessionId}
-                            onFinished={() => setIsGradingDialogOpen(false)}
+                            onFinished={() => {
+                                setIsGradingDialogOpen(false);
+                                onRefresh();
+                            }}
                             existingEvaluation={existingEvaluation}
                          />
                     </DialogContent>
@@ -356,7 +504,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
   const firestore = useFirestore();
 
   const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')), [firestore]);
-  const { data: allSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
+  const { data: allSessions, isLoading: isLoadingSessions, forceRefresh: forceRefreshSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
   const [councilAssignments, setCouncilAssignments] = useState<SessionWithCouncilAssignments[]>([]);
   const [isLoadingAssignments, setIsLoadingAssignments] = useState(true);
@@ -367,7 +515,17 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
       () => ongoingSessionIds.length > 0 ? query(collection(firestore, 'evaluations'), where('sessionId', 'in', ongoingSessionIds)) : null,
       [firestore, ongoingSessionIds]
   );
-  const { data: allEvaluations, isLoading: isLoadingEvaluations } = useCollection<Evaluation>(evaluationsQuery);
+  const { data: allEvaluations, isLoading: isLoadingEvaluations, forceRefresh: forceRefreshEvaluations } = useCollection<Evaluation>(evaluationsQuery);
+
+  const forceRefreshAll = () => {
+    forceRefreshSessions();
+    forceRefreshEvaluations();
+    // A small delay to allow data to propagate if needed, or just let useEffect handle it
+    setTimeout(() => {
+        // You might not even need this if useEffect dependencies are set up correctly
+    }, 100);
+  };
+
 
   useEffect(() => {
     if (isLoadingSessions || !allSessions) return;
@@ -482,6 +640,7 @@ export function CouncilGradingDashboard({ supervisorId, userRole }: CouncilGradi
                                 councilInternshipRubric={councilInternshipRubric || null}
                                 supervisorId={supervisorId}
                                 sessionId={session.id}
+                                onRefresh={forceRefreshAll}
                             />
                         )}
                        </AccordionContent>
