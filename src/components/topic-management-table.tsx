@@ -34,6 +34,9 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Check, X, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -103,7 +106,7 @@ export function TopicManagementTable() {
 
   }, [topics, sessionFilter, statusFilter, searchTerm]);
 
-  const handleStatusChange = async (topicId: string, newStatus: 'approved' | 'rejected') => {
+  const handleStatusChange = async (topicId: string, newStatus: ProjectTopic['status']) => {
     const topicRef = doc(firestore, 'projectTopics', topicId);
     try {
         await updateDoc(topicRef, { status: newStatus });
@@ -214,19 +217,29 @@ export function TopicManagementTable() {
                   <TableCell className="text-right">
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon" disabled={topic.status !== 'pending'}>
+                        <Button variant="ghost" size="icon">
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => handleStatusChange(topic.id, 'approved')}>
-                            <Check className="mr-2 h-4 w-4" />
-                            Duyệt
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(topic.id, 'rejected')}>
-                            <X className="mr-2 h-4 w-4" />
-                            Từ chối
-                        </DropdownMenuItem>
+                         <DropdownMenuSub>
+                            <DropdownMenuSubTrigger>
+                                <span>Thay đổi trạng thái</span>
+                            </DropdownMenuSubTrigger>
+                            <DropdownMenuPortal>
+                                <DropdownMenuSubContent>
+                                     {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map(status => (
+                                        <DropdownMenuItem
+                                            key={status}
+                                            onClick={() => handleStatusChange(topic.id, status)}
+                                            disabled={topic.status === status}
+                                        >
+                                            {statusLabel[status]}
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuSubContent>
+                            </DropdownMenuPortal>
+                         </DropdownMenuSub>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
