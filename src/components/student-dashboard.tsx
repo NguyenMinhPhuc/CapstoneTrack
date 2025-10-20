@@ -7,7 +7,7 @@ import type { User } from 'firebase/auth';
 import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building } from 'lucide-react';
+import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -206,21 +206,49 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
           </Card>
            {activeSession && (
               <Card>
-                  <CardHeader>
-                      <CardTitle className="flex items-center gap-2">
-                          <Calendar /> Đợt báo cáo hiện tại
-                      </CardTitle>
-                  </CardHeader>
-                   <CardContent className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                            <span className="text-muted-foreground">Tên đợt</span>
-                            <span className="font-semibold">{activeSession.name}</span>
+                <CardHeader>
+                    <div className="flex justify-between items-start">
+                        <CardTitle className="flex items-center gap-2">
+                            <Calendar /> Đợt báo cáo hiện tại
+                        </CardTitle>
+                        <Badge>{activeSession.status}</Badge>
+                    </div>
+                     <CardDescription>{activeSession.name}</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                    <div className="flex items-center gap-3">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <p className="font-semibold">Ngày bắt đầu</p>
+                            <p>{toDate(activeSession.startDate) ? format(toDate(activeSession.startDate)!, 'PPP') : 'N/A'}</p>
                         </div>
-                         <div className="flex justify-between">
-                            <span className="text-muted-foreground">Trạng thái</span>
-                            <Badge>{activeSession.status}</Badge>
+                    </div>
+                     <div className="flex items-center gap-3">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <p className="font-semibold">Hạn đăng ký</p>
+                            <p>{toDate(activeSession.registrationDeadline) ? format(toDate(activeSession.registrationDeadline)!, 'PPP') : 'N/A'}</p>
                         </div>
-                   </CardContent>
+                    </div>
+                     <div className="flex items-center gap-3">
+                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
+                        <div>
+                            <p className="font-semibold">Ngày báo cáo dự kiến</p>
+                            <p>{toDate(activeSession.expectedReportDate) ? format(toDate(activeSession.expectedReportDate)!, 'PPP') : 'N/A'}</p>
+                        </div>
+                    </div>
+                     {activeSession.zaloGroupLink && (
+                         <div className="flex items-center gap-3">
+                            <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                                <p className="font-semibold">Nhóm Zalo</p>
+                                <a href={activeSession.zaloGroupLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
+                                    Tham gia
+                                </a>
+                             </div>
+                         </div>
+                     )}
+                </CardContent>
               </Card>
           )}
 
