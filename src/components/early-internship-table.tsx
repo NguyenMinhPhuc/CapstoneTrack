@@ -28,15 +28,27 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal
+} from '@/components/ui/dropdown-menu';
+import { cn } from '@/lib/utils';
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
   pending_approval: 'Chờ duyệt',
@@ -96,6 +108,24 @@ export function EarlyInternshipTable() {
   const handleDeleteClick = (internship: EarlyInternship) => {
     setInternshipToDelete(internship);
     setIsDeleteDialogOpen(true);
+  };
+  
+  const handleStatusChange = async (internshipId: string, status: EarlyInternship['status']) => {
+    const docRef = doc(firestore, 'earlyInternships', internshipId);
+    const dataToUpdate: Partial<EarlyInternship> = { status };
+    
+    updateDoc(docRef, dataToUpdate)
+      .then(() => {
+        toast({ title: 'Thành công', description: 'Đã cập nhật trạng thái thực tập.' });
+      })
+      .catch((error) => {
+        const contextualError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'update',
+          requestResourceData: dataToUpdate
+        });
+        errorEmitter.emit('permission-error', contextualError);
+      });
   };
   
   const confirmDelete = async () => {
@@ -211,9 +241,39 @@ export function EarlyInternshipTable() {
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                    <Button variant="ghost" size="icon" onClick={() => handleDeleteClick(internship)}>
-                        <MoreHorizontal className="h-4 w-4" />
-                    </Button>
+                       <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem>Sửa thông tin</DropdownMenuItem>
+                                <DropdownMenuSub>
+                                    <DropdownMenuSubTrigger>
+                                        <span>Thay đổi trạng thái</span>
+                                    </DropdownMenuSubTrigger>
+                                    <DropdownMenuPortal>
+                                        <DropdownMenuSubContent>
+                                            <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'ongoing')} disabled={internship.status === 'ongoing'}>
+                                                <Clock className="mr-2 h-4 w-4" />
+                                                <span>{statusLabel.ongoing}</span>
+                                            </DropdownMenuItem>
+                                             <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'completed')} disabled={internship.status === 'completed'}>
+                                                <CheckCircle className="mr-2 h-4 w-4" />
+                                                <span>{statusLabel.completed}</span>
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem className="text-red-500" onClick={() => handleStatusChange(internship.id, 'cancelled')} disabled={internship.status === 'cancelled'}>
+                                                <X className="mr-2 h-4 w-4" />
+                                                <span>{statusLabel.cancelled}</span>
+                                            </DropdownMenuItem>
+                                        </DropdownMenuSubContent>
+                                    </DropdownMenuPortal>
+                                </DropdownMenuSub>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(internship)}>Xóa</DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                     </TableCell>
                 </TableRow>
                 ))}
@@ -238,4 +298,3 @@ export function EarlyInternshipTable() {
     </>
   );
 }
-
