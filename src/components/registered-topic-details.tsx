@@ -1,3 +1,4 @@
+
 'use client';
 
 import type { ProjectTopic, DefenseRegistration, SystemSettings, GraduationDefenseSession } from '@/lib/types';
@@ -20,6 +21,7 @@ import Link from 'next/link';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { sub, add, format, isWithinInterval } from 'date-fns';
+import { useMemo } from 'react';
 
 
 interface RegisteredTopicDetailsProps {
