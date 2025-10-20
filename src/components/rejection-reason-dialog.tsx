@@ -11,11 +11,11 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import type { DefenseRegistration } from '@/lib/types';
+import type { DefenseRegistration, EarlyInternship } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface RejectionReasonDialogProps {
-  registration: DefenseRegistration;
+  registration: DefenseRegistration | EarlyInternship;
   onConfirm: (reason: string) => void;
   onCancel: () => void;
 }
@@ -39,13 +39,15 @@ export function RejectionReasonDialog({
     }
     onConfirm(reason);
   };
+  
+  const studentName = (registration as DefenseRegistration).studentName || (registration as EarlyInternship).studentName;
 
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Từ chối Đăng ký Thực tập</DialogTitle>
+        <DialogTitle>Từ chối Đơn đăng ký</DialogTitle>
         <DialogDescription>
-          Nhập lý do từ chối đăng ký cho sinh viên <span className="font-bold">{registration.studentName}</span>.
+          Nhập lý do từ chối đơn đăng ký cho sinh viên <span className="font-bold">{studentName}</span>.
         </DialogDescription>
       </DialogHeader>
       <div className="py-4 space-y-2">

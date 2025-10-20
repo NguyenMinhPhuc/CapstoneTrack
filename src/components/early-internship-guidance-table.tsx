@@ -33,6 +33,8 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent } from './ui/dialog';
+import { RejectionReasonDialog } from './rejection-reason-dialog';
 
 interface EarlyInternshipGuidanceTableProps {
   supervisorId: string;
@@ -58,6 +60,8 @@ const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' |
 export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGuidanceTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
 
   const internshipsQuery = useMemoFirebase(
     () => query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', supervisorId)),
@@ -91,6 +95,11 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
         errorEmitter.emit('permission-error', contextualError);
       });
   };
+
+  const handleRejectClick = (internship: EarlyInternship) => {
+    setSelectedInternship(internship);
+    setIsRejectDialogOpen(true);
+  };
   
   if (isLoading) {
     return (
@@ -106,6 +115,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   }
 
   return (
+    <>
     <Card>
       <CardHeader>
         <div>
@@ -146,7 +156,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                             <Button size="sm" variant="outline" onClick={() => handleStatusChange(internship.id, 'ongoing')}>
                                 <Check className="mr-2 h-4 w-4" /> Duyệt
                             </Button>
-                            <Button size="sm" variant="destructive" onClick={() => handleStatusChange(internship.id, 'rejected', 'Không phù hợp')}>
+                            <Button size="sm" variant="destructive" onClick={() => handleRejectClick(internship)}>
                                 <X className="mr-2 h-4 w-4" /> Từ chối
                             </Button>
                         </div>
@@ -178,5 +188,25 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
         </Table>
       </CardContent>
     </Card>
+
+    <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+        <DialogContent>
+            {selectedInternship && (
+                <RejectionReasonDialog
+                    registration={selectedInternship as any} // Cast as any because the dialog expects DefenseRegistration
+                    onConfirm={(reason) => {
+                        handleStatusChange(selectedInternship.id, 'rejected', reason);
+                        setIsRejectDialogOpen(false);
+                        setSelectedInternship(null);
+                    }}
+                    onCancel={() => {
+                        setIsRejectDialogOpen(false);
+                        setSelectedInternship(null);
+                    }}
+                />
+            )}
+        </DialogContent>
+    </Dialog>
+    </>
   );
 }
