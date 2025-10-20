@@ -1,18 +1,18 @@
 'use client';
 
 import { Skeleton } from '@/components/ui/skeleton';
-import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
+import { useUser, useDoc, useMemoFirebase, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { doc, collection, query, where } from 'firebase/firestore';
+import { doc, collection, query, where, deleteDoc } from 'firebase/firestore';
 import { EarlyInternshipForm } from '@/components/early-internship-form';
 import { useCollection } from '@/firebase/firestore/use-collection';
 import type { EarlyInternship } from '@/lib/types';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -21,12 +21,26 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 export default function EarlyInternshipRegistrationPage() {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const userDocRef = useMemoFirebase(() => {
     if (!user) return null;
@@ -49,24 +63,17 @@ export default function EarlyInternshipRegistrationPage() {
   const { data: pastRegistrations, isLoading: isLoadingRegistrations } = useCollection<EarlyInternship>(earlyInternshipsQuery);
 
   useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.push('/login');
+    // This effect can stay as it is, ensuring only students can access the page.
+    if (isUserLoading || isUserDataLoading) return;
+    if (!user) {
+        router.push('/login');
+    } else if (userData && userData.role !== 'student') {
+        router.push('/');
     }
-     if (!isUserDataLoading && userData && userData.role !== 'student') {
-      router.push('/');
-    }
-  }, [user, userData, isUserLoading, isUserDataLoading, router]);
+}, [user, userData, isUserLoading, isUserDataLoading, router]);
+
 
   const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistrations || isLoadingStudentData;
-
-  if (isLoading || !userData || !user) {
-    return (
-      <div className="p-4 sm:p-6 lg:p-8 space-y-8">
-        <Skeleton className="h-24 w-full" />
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  }
 
   const handleFormSuccess = () => {
     setIsFormOpen(false);
@@ -79,6 +86,43 @@ export default function EarlyInternshipRegistrationPage() {
     }
     return timestamp;
   };
+  
+  const handleCancelRegistration = async (registrationId: string) => {
+    setIsCancelling(true);
+    const docRef = doc(firestore, 'earlyInternships', registrationId);
+    
+    deleteDoc(docRef)
+      .then(() => {
+        toast({
+            title: 'Thành công',
+            description: 'Bạn đã hủy đăng ký thực tập sớm thành công.',
+        });
+      })
+      .catch((error) => {
+         const contextualError = new FirestorePermissionError({
+          path: docRef.path,
+          operation: 'delete',
+        });
+        errorEmitter.emit('permission-error', contextualError);
+         toast({
+            variant: 'destructive',
+            title: 'Lỗi',
+            description: 'Không thể hủy đăng ký. Vui lòng thử lại.',
+        });
+      })
+      .finally(() => {
+        setIsCancelling(false);
+      });
+  };
+
+  if (isLoading || !user) {
+    return (
+      <div className="p-4 sm:p-6 lg:p-8 space-y-8">
+        <Skeleton className="h-24 w-full" />
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-8">
@@ -142,6 +186,30 @@ export default function EarlyInternshipRegistrationPage() {
                                 <span>{toDate(reg.endDate) ? format(toDate(reg.endDate)!, 'dd/MM/yyyy') : 'N/A'}</span>
                             </div>
                         </CardContent>
+                        {reg.status === 'pending_approval' && (
+                            <CardFooter>
+                                 <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="destructive" size="sm" className="w-full" disabled={isCancelling}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            {isCancelling ? 'Đang hủy...' : 'Hủy Đăng ký'}
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Xác nhận hủy?</AlertDialogTitle>
+                                            <AlertDialogDescription>
+                                                Bạn có chắc chắn muốn hủy đơn đăng ký thực tập tại <strong>{reg.companyName}</strong> không? Hành động này không thể hoàn tác.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel>Không</AlertDialogCancel>
+                                            <AlertDialogAction onClick={() => handleCancelRegistration(reg.id)}>Xác nhận hủy</AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </CardFooter>
+                        )}
                     </Card>
                   ))}
                 </div>
