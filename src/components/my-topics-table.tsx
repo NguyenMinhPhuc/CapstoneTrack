@@ -410,86 +410,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                         <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
                                         <div className="col-span-2 truncate">{topic.field}</div>
                                         <div className="col-span-1 text-center">
-                                            <Dialog>
-                                                <DialogTrigger asChild>
-                                                    <Button variant="ghost" disabled={registeredCount === 0} className="p-1 h-auto">
-                                                        <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
-                                                    </Button>
-                                                </DialogTrigger>
-                                                <DialogContent className="sm:max-w-4xl">
-                                                    <DialogHeader>
-                                                        <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
-                                                        <DialogDescription>
-                                                            Đề tài: {topic.title}
-                                                        </DialogDescription>
-                                                    </DialogHeader>
-                                                    <Table>
-                                                        <TableHeader>
-                                                            <TableRow>
-                                                                <TableHead>MSSV</TableHead>
-                                                                <TableHead>Họ và Tên</TableHead>
-                                                                <TableHead>Trạng thái ĐK</TableHead>
-                                                                <TableHead>Trạng thái TM</TableHead>
-                                                                <TableHead>Trạng thái BC</TableHead>
-                                                                <TableHead className="text-right">Hành động</TableHead>
-                                                            </TableRow>
-                                                        </TableHeader>
-                                                        <TableBody>
-                                                            {registeredStudents.map(reg => (
-                                                                <TableRow key={reg.id}>
-                                                                    <TableCell>{reg.studentId}</TableCell>
-                                                                    <TableCell>{reg.studentName}</TableCell>
-                                                                    <TableCell>
-                                                                        <Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>
-                                                                            {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
-                                                                        </Badge>
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
-                                                                            {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
-                                                                        </Badge>
-                                                                    </TableCell>
-                                                                    <TableCell>
-                                                                        <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
-                                                                            {reportStatusLabel[reg.reportStatus || 'not_submitted']}
-                                                                        </Badge>
-                                                                    </TableCell>
-                                                                    <TableCell className="text-right">
-                                                                        <div className="flex gap-2 justify-end">
-                                                                            {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
-                                                                                <>
-                                                                                    <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>
-                                                                                        <Check className="mr-2 h-4 w-4"/> Chấp nhận
-                                                                                    </Button>
-                                                                                    <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}>
-                                                                                        <X className="mr-2 h-4 w-4"/> Từ chối
-                                                                                    </Button>
-                                                                                </>
-                                                                            )}
-                                                                            {reg.projectRegistrationStatus === 'approved' && (
-                                                                                <>
-                                                                                    <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProgressClick(reg)}>
-                                                                                        <Activity className="mr-2 h-4 w-4"/> Xem TĐ
-                                                                                    </Button>
-                                                                                    <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted'}>
-                                                                                        <Eye className="mr-2 h-4 w-4"/> Xem TM
-                                                                                    </Button>
-                                                                                    <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewReportClick(reg)} disabled={reg.reportStatus === 'not_submitted'}>
-                                                                                        <Eye className="mr-2 h-4 w-4"/> Xem BC
-                                                                                    </Button>
-                                                                                    <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
-                                                                                        <X className="mr-2 h-4 w-4"/> Hủy ĐK
-                                                                                    </Button>
-                                                                                </>
-                                                                            )}
-                                                                        </div>
-                                                                    </TableCell>
-                                                                </TableRow>
-                                                            ))}
-                                                        </TableBody>
-                                                    </Table>
-                                                </DialogContent>
-                                            </Dialog>
+                                            {/* This div is for alignment inside the trigger */}
+                                            <Badge variant="outline" className="pointer-events-none">{registeredCount}/{topic.maxStudents}</Badge>
                                         </div>
                                         <div className="col-span-1">
                                             <Badge variant={statusVariant[topic.status]}>
@@ -498,19 +420,99 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                         </div>
                                     </div>
                                 </AccordionTrigger>
-                                <div className="col-span-1 flex justify-end">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => handleEditClick(topic)} disabled={topic.status === 'taken'}>Sửa</DropdownMenuItem>
-                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)} disabled={topic.status === 'taken'}>Xóa</DropdownMenuItem>
-                                    </DropdownMenuContent>
+                                 <div className="col-span-1 flex justify-end items-center gap-2 pl-4">
+                                    <Dialog>
+                                        <DialogTrigger asChild>
+                                            <Button variant="ghost" disabled={registeredCount === 0} className="p-1 h-auto">
+                                                 <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
+                                            </Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-4xl">
+                                            <DialogHeader>
+                                                <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
+                                                <DialogDescription>
+                                                    Đề tài: {topic.title}
+                                                </DialogDescription>
+                                            </DialogHeader>
+                                            <Table>
+                                                <TableHeader>
+                                                    <TableRow>
+                                                        <TableHead>MSSV</TableHead>
+                                                        <TableHead>Họ và Tên</TableHead>
+                                                        <TableHead>Trạng thái ĐK</TableHead>
+                                                        <TableHead>Trạng thái TM</TableHead>
+                                                        <TableHead>Trạng thái BC</TableHead>
+                                                        <TableHead className="text-right">Hành động</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {registeredStudents.map(reg => (
+                                                        <TableRow key={reg.id}>
+                                                            <TableCell>{reg.studentId}</TableCell>
+                                                            <TableCell>{reg.studentName}</TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>
+                                                                    {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
+                                                                    {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell>
+                                                                <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
+                                                                    {reportStatusLabel[reg.reportStatus || 'not_submitted']}
+                                                                </Badge>
+                                                            </TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex gap-2 justify-end">
+                                                                    {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
+                                                                        <>
+                                                                            <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>
+                                                                                <Check className="mr-2 h-4 w-4"/> Chấp nhận
+                                                                            </Button>
+                                                                            <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}>
+                                                                                <X className="mr-2 h-4 w-4"/> Từ chối
+                                                                            </Button>
+                                                                        </>
+                                                                    )}
+                                                                    {reg.projectRegistrationStatus === 'approved' && (
+                                                                        <>
+                                                                            <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProgressClick(reg)}>
+                                                                                <Activity className="mr-2 h-4 w-4"/> Xem TĐ
+                                                                            </Button>
+                                                                            <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted'}>
+                                                                                <Eye className="mr-2 h-4 w-4"/> Xem TM
+                                                                            </Button>
+                                                                            <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewReportClick(reg)} disabled={reg.reportStatus === 'not_submitted'}>
+                                                                                <Eye className="mr-2 h-4 w-4"/> Xem BC
+                                                                            </Button>
+                                                                            <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>
+                                                                                <X className="mr-2 h-4 w-4"/> Hủy ĐK
+                                                                            </Button>
+                                                                        </>
+                                                                    )}
+                                                                </div>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </DialogContent>
+                                    </Dialog>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuItem onClick={() => handleEditClick(topic)} disabled={topic.status === 'taken'}>Sửa</DropdownMenuItem>
+                                            <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)} disabled={topic.status === 'taken'}>Xóa</DropdownMenuItem>
+                                        </DropdownMenuContent>
                                     </DropdownMenu>
-                                </div>
+                                 </div>
                             </div>
                             <AccordionContent className="pt-4 pb-4 px-4 border-t">
                                 <div className="space-y-6">
@@ -691,5 +693,3 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     </div>
   );
 }
-
-    
