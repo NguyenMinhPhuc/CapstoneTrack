@@ -53,7 +53,6 @@ export function ProgressReportDashboard({ user }: { user: User }) {
   const [activeRegistration, setActiveRegistration] = useState<DefenseRegistration | null>(null);
   const [activeSession, setActiveSession] = useState<GraduationDefenseSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentWeek, setCurrentWeek] = useState(0);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const reportsQuery = useMemoFirebase(
@@ -68,20 +67,16 @@ export function ProgressReportDashboard({ user }: { user: User }) {
   }, [pastReports]);
 
   const availableWeeksForSubmission = useMemo(() => {
-    if (currentWeek <= 0) return [];
+    const totalWeeks = 15;
     const submittedWeeks = new Set(pastReports?.map(r => r.weekNumber) || []);
     const weeks = [];
-    for (let i = 1; i <= currentWeek; i++) {
+    for (let i = 1; i <= totalWeeks; i++) {
         if (!submittedWeeks.has(i)) {
             weeks.push(i);
         }
     }
-    // If all weeks up to the current one are submitted, and the session is ongoing, add the next week as an option.
-    if (weeks.length === 0 && currentWeek > 0) {
-      weeks.push(currentWeek + 1);
-    }
     return weeks;
-  }, [currentWeek, pastReports]);
+  }, [pastReports]);
 
   useEffect(() => {
       // Auto-select the smallest available week if not already selected
@@ -131,11 +126,6 @@ export function ProgressReportDashboard({ user }: { user: User }) {
         if (!registrationSnapshot.empty) {
           const regData = { id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration;
           setActiveRegistration(regData);
-
-          const sessionStartDate = sessionData.startDate.toDate();
-          const today = new Date();
-          const weekNum = differenceInWeeks(today, startOfWeek(sessionStartDate, { weekStartsOn: 1 })) + 1;
-          setCurrentWeek(weekNum > 0 ? weekNum : 1);
         }
 
       } catch (error) {
@@ -346,5 +336,3 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     </div>
   );
 }
-
-    
