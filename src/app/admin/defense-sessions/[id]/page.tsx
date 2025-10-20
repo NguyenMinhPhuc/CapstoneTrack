@@ -36,7 +36,7 @@ export default function DefenseSessionDetailPage() {
   const sessionId = params.id as string;
 
   const sessionDocRef = useMemoFirebase(
-    () => (sessionId ? doc(firestore, 'defenseSessions', sessionId) : null),
+    () => (sessionId ? doc(firestore, 'graduationDefenseSessions', sessionId) : null),
     [firestore, sessionId]
   );
   

@@ -86,7 +86,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
   const cleanRubricId = (value: string | undefined) => value === NO_RUBRIC_VALUE ? '' : value;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const collectionRef = collection(firestore, 'defenseSessions');
+    const collectionRef = collection(firestore, 'graduationDefenseSessions');
     const newSessionData = {
       ...values,
       councilGraduationRubricId: cleanRubricId(values.councilGraduationRubricId),

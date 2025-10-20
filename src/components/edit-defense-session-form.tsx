@@ -101,7 +101,7 @@ export function EditDefenseSessionForm({ session, onFinished }: EditDefenseSessi
   const cleanRubricId = (value: string | undefined) => value === NO_RUBRIC_VALUE ? '' : value;
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const sessionDocRef = doc(firestore, 'defenseSessions', session.id);
+    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', session.id);
     
     const dataToUpdate = {
         ...values,

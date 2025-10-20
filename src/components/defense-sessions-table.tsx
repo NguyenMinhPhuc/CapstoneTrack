@@ -89,7 +89,7 @@ export function DefenseSessionsTable() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const sessionsCollectionRef = useMemoFirebase(
-    () => collection(firestore, 'defenseSessions'),
+    () => collection(firestore, 'graduationDefenseSessions'),
     [firestore]
   );
 
@@ -134,7 +134,7 @@ export function DefenseSessionsTable() {
 
   const confirmDelete = async () => {
     if (!sessionToDelete) return;
-    const sessionDocRef = doc(firestore, 'defenseSessions', sessionToDelete.id);
+    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionToDelete.id);
     
     deleteDoc(sessionDocRef)
         .then(() => {
@@ -157,7 +157,7 @@ export function DefenseSessionsTable() {
   };
 
   const handleStatusChange = async (sessionId: string, newStatus: SessionStatus) => {
-    const sessionDocRef = doc(firestore, 'defenseSessions', sessionId);
+    const sessionDocRef = doc(firestore, 'graduationDefenseSessions', sessionId);
     const updateData = { status: newStatus };
     
     updateDoc(sessionDocRef, updateData)
