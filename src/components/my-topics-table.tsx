@@ -338,7 +338,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                     </Badge>
                                                 </TableCell>
                                                 <TableCell className="text-right">
-                                                    {reg.projectRegistrationStatus === 'pending' && (
+                                                    {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (
                                                         <div className="flex gap-2 justify-end">
                                                             <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationConfirmation(reg.id, topic, 'approve')}>
                                                                 <Check className="mr-2 h-4 w-4"/> Chấp nhận
