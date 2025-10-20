@@ -18,7 +18,7 @@ import {
   CardDescription,
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, Check, X, CheckCircle, Clock } from 'lucide-react';
+import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship } from '@/lib/types';
@@ -35,6 +35,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Dialog, DialogContent } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
+import { ViewEarlyInternshipProgressDialog } from './view-early-internship-progress-dialog';
+
 
 interface EarlyInternshipGuidanceTableProps {
   supervisorId: string;
@@ -61,6 +63,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
   const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
 
   const internshipsQuery = useMemoFirebase(
@@ -100,6 +103,11 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     setSelectedInternship(internship);
     setIsRejectDialogOpen(true);
   };
+
+  const handleProgressClick = (internship: EarlyInternship) => {
+    setSelectedInternship(internship);
+    setIsProgressDialogOpen(true);
+  }
   
   if (isLoading) {
     return (
@@ -161,7 +169,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                             </Button>
                         </div>
                     )}
-                    {internship.status === 'ongoing' && (
+                    {(internship.status === 'ongoing' || internship.status === 'completed') && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -169,9 +177,13 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleProgressClick(internship)}>
+                                     <Activity className="mr-2 h-4 w-4" />
+                                    <span>Xem tiến độ</span>
+                                </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'completed', 'Hoàn thành tốt')}>
                                      <CheckCircle className="mr-2 h-4 w-4" />
-                                    <span>Kết thúc Thực tập</span>
+                                    <span>Đánh dấu Hoàn thành</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator/>
                                 <DropdownMenuItem className="text-destructive" onClick={() => handleStatusChange(internship.id, 'cancelled', 'Không hoàn thành')}>
@@ -201,6 +213,20 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     }}
                     onCancel={() => {
                         setIsRejectDialogOpen(false);
+                        setSelectedInternship(null);
+                    }}
+                />
+            )}
+        </DialogContent>
+    </Dialog>
+
+    <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+            {selectedInternship && (
+                <ViewEarlyInternshipProgressDialog
+                    internship={selectedInternship}
+                    onFinished={() => {
+                        setIsProgressDialogOpen(false);
                         setSelectedInternship(null);
                     }}
                 />
