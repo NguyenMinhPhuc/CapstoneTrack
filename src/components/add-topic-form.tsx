@@ -29,6 +29,8 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { GraduationDefenseSession } from '@/lib/types';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
+import { MarkdownToolbar } from './markdown-toolbar';
+import React from 'react';
 
 const formSchema = z.object({
   sessionId: z.string({ required_error: 'Vui lòng chọn một đợt báo cáo.' }),
@@ -50,6 +52,9 @@ interface AddTopicFormProps {
 export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinished }: AddTopicFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const summaryRef = React.useRef<HTMLTextAreaElement>(null);
+  const objectivesRef = React.useRef<HTMLTextAreaElement>(null);
+  const expectedResultsRef = React.useRef<HTMLTextAreaElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -158,8 +163,10 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mô tả tóm tắt</FormLabel>
+                    <MarkdownToolbar textareaRef={summaryRef} />
                     <FormControl>
                       <Textarea
+                        ref={summaryRef}
                         placeholder="Mô tả ngắn gọn về bối cảnh, vấn đề và hướng giải quyết của đề tài."
                         className="resize-y"
                         {...field}
@@ -175,8 +182,10 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
+                    <MarkdownToolbar textareaRef={objectivesRef} />
                     <FormControl>
                       <Textarea
+                        ref={objectivesRef}
                         placeholder="Liệt kê các mục tiêu cụ thể, ví dụ: &#10;- Nghiên cứu... &#10;- Xây dựng mô hình... &#10;- Triển khai ứng dụng..."
                         className="resize-y"
                         {...field}
@@ -192,8 +201,10 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
+                    <MarkdownToolbar textareaRef={expectedResultsRef} />
                     <FormControl>
                       <Textarea
+                        ref={expectedResultsRef}
                         placeholder="Liệt kê các sản phẩm, kết quả cụ thể, ví dụ: &#10;- Báo cáo toàn văn &#10;- Source code ứng dụng &#10;- Bộ dữ liệu đã xử lý..."
                         className="resize-y"
                         {...field}
@@ -246,5 +257,3 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
     </>
   );
 }
-
-    

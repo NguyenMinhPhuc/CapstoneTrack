@@ -29,6 +29,8 @@ import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import type { GraduationDefenseSession, ProjectTopic } from '@/lib/types';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
+import React from 'react';
+import { MarkdownToolbar } from './markdown-toolbar';
 
 const formSchema = z.object({
   sessionId: z.string({ required_error: 'Vui lòng chọn một đợt báo cáo.' }),
@@ -49,6 +51,9 @@ interface EditTopicFormProps {
 export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const summaryRef = React.useRef<HTMLTextAreaElement>(null);
+  const objectivesRef = React.useRef<HTMLTextAreaElement>(null);
+  const expectedResultsRef = React.useRef<HTMLTextAreaElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -156,8 +161,9 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mô tả tóm tắt</FormLabel>
+                    <MarkdownToolbar textareaRef={summaryRef} />
                     <FormControl>
-                      <Textarea className="resize-y" {...field} />
+                      <Textarea ref={summaryRef} className="resize-y" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -169,8 +175,9 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
+                    <MarkdownToolbar textareaRef={objectivesRef} />
                     <FormControl>
-                      <Textarea className="resize-y" {...field} />
+                      <Textarea ref={objectivesRef} className="resize-y" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -182,8 +189,9 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
+                    <MarkdownToolbar textareaRef={expectedResultsRef} />
                     <FormControl>
-                      <Textarea className="resize-y" {...field} />
+                      <Textarea ref={expectedResultsRef} className="resize-y" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -232,5 +240,3 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
     </>
   );
 }
-
-    

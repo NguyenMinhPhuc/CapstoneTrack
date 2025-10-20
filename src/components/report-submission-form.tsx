@@ -19,6 +19,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration } from '@/lib/types';
+import React from 'react';
+import { MarkdownToolbar } from './markdown-toolbar';
 
 const formSchema = z.object({
   projectTitle: z.string().min(1, { message: 'Tên đề tài là bắt buộc.' }),
@@ -35,6 +37,9 @@ interface ReportSubmissionFormProps {
 export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const summaryRef = React.useRef<HTMLTextAreaElement>(null);
+  const objectivesRef = React.useRef<HTMLTextAreaElement>(null);
+  const expectedResultsRef = React.useRef<HTMLTextAreaElement>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -94,8 +99,10 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tóm tắt</FormLabel>
+              <MarkdownToolbar textareaRef={summaryRef} />
               <FormControl>
                 <Textarea
+                  ref={summaryRef}
                   placeholder="Mô tả ngắn gọn về nội dung, bối cảnh và vấn đề mà đề tài giải quyết."
                   className="resize-y min-h-[100px]"
                   {...field}
@@ -111,8 +118,10 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mục tiêu của đề tài</FormLabel>
+              <MarkdownToolbar textareaRef={objectivesRef} />
               <FormControl>
                 <Textarea
+                  ref={objectivesRef}
                   placeholder="Liệt kê các mục tiêu cụ thể mà đề tài cần đạt được (ví dụ: gạch đầu dòng)."
                   className="resize-y min-h-[100px]"
                   {...field}
@@ -128,8 +137,10 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Kết quả mong đợi</FormLabel>
+              <MarkdownToolbar textareaRef={expectedResultsRef} />
               <FormControl>
                 <Textarea
+                  ref={expectedResultsRef}
                   placeholder="Mô tả các sản phẩm hoặc kết quả cụ thể sẽ có sau khi hoàn thành đề tài (ví dụ: ứng dụng web, bài báo khoa học...)."
                   className="resize-y min-h-[100px]"
                   {...field}
@@ -159,5 +170,3 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
     </Form>
   );
 }
-
-    
