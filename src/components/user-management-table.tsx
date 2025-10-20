@@ -77,6 +77,7 @@ export function UserManagementTable() {
   const [selectedUser, setSelectedUser] = useState<SystemUser | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
 
   const usersCollectionRef = useMemoFirebase(
@@ -110,7 +111,8 @@ export function UserManagementTable() {
   const filteredUsers = users?.filter(user => {
     const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
     const roleMatch = roleFilter === 'all' || user.role === roleFilter;
-    return searchMatch && roleMatch;
+    const statusMatch = statusFilter === 'all' || user.status === statusFilter;
+    return searchMatch && roleMatch && statusMatch;
   });
 
   const roleVariant: Record<SystemUser['role'], 'default' | 'secondary' | 'outline'> = {
@@ -315,6 +317,32 @@ export function UserManagementTable() {
                                 onCheckedChange={() => setRoleFilter('student')}
                             >
                                 Student
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'all'}
+                                onCheckedChange={() => setStatusFilter('all')}
+                            >
+                                All Statuses
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'active'}
+                                onCheckedChange={() => setStatusFilter('active')}
+                            >
+                                Active
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'pending'}
+                                onCheckedChange={() => setStatusFilter('pending')}
+                            >
+                                Pending
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'disabled'}
+                                onCheckedChange={() => setStatusFilter('disabled')}
+                            >
+                                Disabled
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
