@@ -28,9 +28,9 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
+import { collection, doc, deleteDoc, writeBatch, updateDoc, query } from 'firebase/firestore';
 import type { EarlyInternship } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -49,6 +49,10 @@ import {
   DropdownMenuPortal
 } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
+import { Input } from './ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Dialog, DialogContent } from './ui/dialog';
+import { RejectionReasonDialog } from './rejection-reason-dialog';
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
   pending_approval: 'Chờ duyệt',
@@ -73,6 +77,13 @@ export function EarlyInternshipTable() {
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [internshipToDelete, setInternshipToDelete] = useState<EarlyInternship | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
+  
+  // Search and Filter states
+  const [searchTerm, setSearchTerm] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('all');
+  const [supervisorFilter, setSupervisorFilter] = useState('all');
 
 
   const earlyInternshipsCollectionRef = useMemoFirebase(
@@ -85,6 +96,37 @@ export function EarlyInternshipTable() {
   useEffect(() => {
     setSelectedRowIds([]);
   }, [internships]);
+  
+  const { uniqueCompanies, uniqueSupervisors } = useMemo(() => {
+    if (!internships) return { uniqueCompanies: [], uniqueSupervisors: [] };
+    const companies = new Set<string>();
+    const supervisors = new Set<string>();
+    internships.forEach(internship => {
+      if (internship.companyName) companies.add(internship.companyName);
+      if (internship.supervisorName) supervisors.add(internship.supervisorName);
+    });
+    return {
+      uniqueCompanies: Array.from(companies).sort(),
+      uniqueSupervisors: Array.from(supervisors).sort(),
+    };
+  }, [internships]);
+
+  const filteredInternships = useMemo(() => {
+    if (!internships) return [];
+    return internships.filter(internship => {
+      const term = searchTerm.toLowerCase();
+      const searchMatch =
+        internship.studentName.toLowerCase().includes(term) ||
+        internship.studentIdentifier.toLowerCase().includes(term) ||
+        internship.companyName.toLowerCase().includes(term) ||
+        internship.supervisorName.toLowerCase().includes(term);
+
+      const companyMatch = companyFilter === 'all' || internship.companyName === companyFilter;
+      const supervisorMatch = supervisorFilter === 'all' || internship.supervisorName === supervisorFilter;
+
+      return searchMatch && companyMatch && supervisorMatch;
+    });
+  }, [internships, searchTerm, companyFilter, supervisorFilter]);
 
 
   const toDate = (timestamp: any): Date | undefined => {
@@ -96,7 +138,7 @@ export function EarlyInternshipTable() {
   };
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
-    setSelectedRowIds(checked ? (internships || []).map(i => i.id) : []);
+    setSelectedRowIds(checked ? (filteredInternships || []).map(i => i.id) : []);
   };
 
   const handleRowSelect = (id: string, checked: boolean) => {
@@ -109,10 +151,15 @@ export function EarlyInternshipTable() {
     setInternshipToDelete(internship);
     setIsDeleteDialogOpen(true);
   };
+
+  const handleRejectClick = (internship: EarlyInternship) => {
+    setSelectedInternship(internship);
+    setIsRejectDialogOpen(true);
+  };
   
-  const handleStatusChange = async (internshipId: string, status: EarlyInternship['status']) => {
+  const handleStatusChange = async (internshipId: string, status: EarlyInternship['status'], note?: string) => {
     const docRef = doc(firestore, 'earlyInternships', internshipId);
-    const dataToUpdate: Partial<EarlyInternship> = { status };
+    const dataToUpdate: Partial<EarlyInternship> = { status, statusNote: note || '' };
     
     updateDoc(docRef, dataToUpdate)
       .then(() => {
@@ -177,24 +224,58 @@ export function EarlyInternshipTable() {
     )
   }
 
-  const isAllSelected = internships && selectedRowIds.length === internships.length;
-  const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (internships?.length ?? 0);
+  const isAllSelected = filteredInternships && selectedRowIds.length > 0 && selectedRowIds.length === filteredInternships.length;
+  const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredInternships?.length ?? 0);
 
   return (
     <>
         <Card>
         <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div>
                 <CardTitle>Danh sách Sinh viên</CardTitle>
                 <CardDescription>Các sinh viên đang hoặc đã hoàn thành thực tập sớm.</CardDescription>
             </div>
-             {selectedRowIds.length > 0 && (
-                  <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Xóa ({selectedRowIds.length})
-                  </Button>
-              )}
+             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                {selectedRowIds.length > 0 && (
+                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Xóa ({selectedRowIds.length})
+                    </Button>
+                )}
+                 <div className="relative w-full sm:w-auto">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Tìm kiếm..."
+                    className="w-full rounded-lg bg-background pl-8 sm:w-64"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
+                 <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Lọc theo công ty" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả công ty</SelectItem>
+                    {uniqueCompanies.map((company) => (
+                      <SelectItem key={company} value={company}>{company}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={supervisorFilter} onValueChange={setSupervisorFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Lọc theo GVHD" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả GVHD</SelectItem>
+                    {uniqueSupervisors.map((supervisor) => (
+                      <SelectItem key={supervisor} value={supervisor}>{supervisor}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+            </div>
             </div>
         </CardHeader>
         <CardContent>
@@ -217,7 +298,7 @@ export function EarlyInternshipTable() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {internships?.map((internship, index) => (
+                {filteredInternships?.map((internship, index) => (
                 <TableRow key={internship.id} data-state={selectedRowIds.includes(internship.id) && "selected"}>
                     <TableCell>
                         <Checkbox
@@ -295,6 +376,24 @@ export function EarlyInternshipTable() {
                 </AlertDialogFooter>
             </AlertDialogContent>
         </AlertDialog>
+        <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
+            <DialogContent>
+                {selectedInternship && (
+                    <RejectionReasonDialog
+                        registration={selectedInternship as any} // Cast as any because the dialog expects DefenseRegistration
+                        onConfirm={(reason) => {
+                            handleStatusChange(selectedInternship.id, 'rejected', reason);
+                            setIsRejectDialogOpen(false);
+                            setSelectedInternship(null);
+                        }}
+                        onCancel={() => {
+                            setIsRejectDialogOpen(false);
+                            setSelectedInternship(null);
+                        }}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
     </>
   );
 }
