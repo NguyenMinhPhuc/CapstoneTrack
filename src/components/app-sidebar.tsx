@@ -113,41 +113,75 @@ export function AppSidebar() {
 
             {userData?.role === 'student' && (
               <>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/topic-registration")} tooltip="Đăng ký Đề tài">
-                        <Link href="/topic-registration"><BookMarked /><span>Đăng ký Đề tài</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/proposal-submission")} tooltip="Nộp thuyết minh">
-                        <Link href="/proposal-submission"><FileSignature /><span>Nộp Thuyết minh</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/progress-report")} tooltip="Báo cáo Tiến độ">
-                        <Link href="/progress-report"><Activity /><span>Báo cáo Tiến độ</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
-                        <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/internship-registration")} tooltip="Đăng ký Thực tập">
-                        <Link href="/internship-registration"><ClipboardList /><span>Đăng ký Thực tập</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/early-internship-registration")} tooltip="Đăng ký Thực tập sớm">
-                        <Link href="/early-internship-registration"><Clock /><span>ĐK Thực tập sớm</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/internship-submission")} tooltip="Nộp hồ sơ thực tập">
-                        <Link href="/internship-submission"><Briefcase /><span>Nộp hồ sơ thực tập</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
+                <div className="px-2 py-2"><SidebarSeparator /></div>
+                <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Tốt nghiệp</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/topic-registration")} tooltip="Đăng ký Đề tài">
+                                        <Link href="/topic-registration"><BookMarked /><span>Đăng ký Đề tài</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/proposal-submission")} tooltip="Nộp thuyết minh">
+                                        <Link href="/proposal-submission"><FileSignature /><span>Nộp Thuyết minh</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/progress-report")} tooltip="Báo cáo Tiến độ">
+                                        <Link href="/progress-report"><Activity /><span>Báo cáo Tiến độ</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
+                                        <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
+
+                <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Thực tập</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/internship-registration")} tooltip="Đăng ký Thực tập">
+                                        <Link href="/internship-registration"><ClipboardList /><span>Đăng ký Thực tập</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/early-internship-registration")} tooltip="Đăng ký Thực tập sớm">
+                                        <Link href="/early-internship-registration"><Clock /><span>ĐK Thực tập sớm</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/internship-submission")} tooltip="Nộp hồ sơ thực tập">
+                                        <Link href="/internship-submission"><Briefcase /><span>Nộp hồ sơ thực tập</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
               </>
             )}
             
@@ -288,3 +322,5 @@ export function AppSidebar() {
     </Sidebar>
   );
 }
+
+    
