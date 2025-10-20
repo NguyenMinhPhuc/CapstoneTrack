@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, InternshipCompany } from '@/lib/types';
+import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import {
@@ -73,6 +73,8 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
   const firestore = useFirestore();
   const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
 
+  const isFormDisabled = registration.internshipRegistrationStatus === 'approved';
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -104,7 +106,8 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
     const registrationDocRef = doc(firestore, 'defenseRegistrations', registration.id);
 
     let dataToUpdate: Partial<DefenseRegistration> = {
-        internshipStatus: 'reporting', // Set status to reporting on successful registration
+        internshipStatus: 'reporting',
+        internshipRegistrationStatus: 'pending' as InternshipRegistrationStatus,
         internship_registrationFormLink: values.internship_registrationFormLink,
         internship_acceptanceLetterLink: values.internship_acceptanceLetterLink,
         internship_commitmentFormLink: values.internship_commitmentFormLink,
@@ -130,7 +133,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
         .then(() => {
             toast({
                 title: 'Thành công',
-                description: 'Thông tin đăng ký thực tập của bạn đã được lưu.',
+                description: 'Đơn đăng ký thực tập của bạn đã được gửi đi chờ duyệt.',
             });
             onSuccess(); // Refetch data in parent component
         })
@@ -158,6 +161,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                     onValueChange={field.onChange}
                     defaultValue={field.value}
                     className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6"
+                    disabled={isFormDisabled}
                     >
                     <FormItem className="flex items-center space-x-2 space-y-0">
                         <FormControl><RadioGroupItem value="from_list" /></FormControl>
@@ -184,7 +188,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                     render={({ field }) => (
                         <FormItem>
                         <FormLabel>Chọn Doanh nghiệp</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isFormDisabled}>
                             <FormControl>
                             <SelectTrigger>
                                 <SelectValue placeholder="Chọn một doanh nghiệp từ danh sách..." />
@@ -256,7 +260,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                     <FormItem>
                     <FormLabel>Tên đơn vị thực tập</FormLabel>
                     <FormControl>
-                        <Input placeholder="Ví dụ: Công ty TNHH ABC" {...field} />
+                        <Input placeholder="Ví dụ: Công ty TNHH ABC" {...field} disabled={isFormDisabled}/>
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -269,7 +273,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                     <FormItem>
                     <FormLabel>Địa chỉ đơn vị</FormLabel>
                     <FormControl>
-                        <Input placeholder="Ví dụ: 123 Đường XYZ, Phường A, Quận B, TP.HCM" {...field} />
+                        <Input placeholder="Ví dụ: 123 Đường XYZ, Phường A, Quận B, TP.HCM" {...field} disabled={isFormDisabled}/>
                     </FormControl>
                     <FormMessage />
                     </FormItem>
@@ -283,7 +287,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                         <FormItem>
                         <FormLabel>Người hướng dẫn tại đơn vị</FormLabel>
                         <FormControl>
-                            <Input placeholder="Ví dụ: Nguyễn Văn B" {...field} />
+                            <Input placeholder="Ví dụ: Nguyễn Văn B" {...field} disabled={isFormDisabled}/>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -296,7 +300,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                         <FormItem>
                         <FormLabel>SĐT người hướng dẫn</FormLabel>
                         <FormControl>
-                            <Input placeholder="Ví dụ: 09xxxxxxxx" {...field} />
+                            <Input placeholder="Ví dụ: 09xxxxxxxx" {...field} disabled={isFormDisabled}/>
                         </FormControl>
                         <FormMessage />
                         </FormItem>
@@ -319,7 +323,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                 <FormItem>
                 <FormLabel>Đơn đăng kí thực tập</FormLabel>
                 <FormControl>
-                    <Input placeholder="https://docs.google.com/..." {...field} />
+                    <Input placeholder="https://docs.google.com/..." {...field} disabled={isFormDisabled}/>
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -332,7 +336,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                 <FormItem>
                 <FormLabel>Giấy tiếp nhận thực tập</FormLabel>
                 <FormControl>
-                    <Input placeholder="https://docs.google.com/..." {...field} />
+                    <Input placeholder="https://docs.google.com/..." {...field} disabled={isFormDisabled}/>
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -345,7 +349,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                 <FormItem>
                 <FormLabel>Đơn cam kết tự đi thực tập (nếu có)</FormLabel>
                 <FormControl>
-                    <Input placeholder="https://docs.google.com/..." {...field} />
+                    <Input placeholder="https://docs.google.com/..." {...field} disabled={isFormDisabled}/>
                 </FormControl>
                 <FormMessage />
                 </FormItem>
@@ -354,10 +358,12 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
         </div>
 
 
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu Đăng ký'}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isFormDisabled}>
+          {isFormDisabled ? 'Đã duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký')}
         </Button>
       </form>
     </Form>
   );
 }
+
+    

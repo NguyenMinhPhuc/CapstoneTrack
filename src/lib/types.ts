@@ -1,5 +1,6 @@
 
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -76,6 +77,7 @@ export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporti
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
 export type FinalReportStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
+export type InternshipRegistrationStatus = 'pending' | 'approved' | 'rejected';
 
 
 export type DefenseRegistration = {
@@ -109,6 +111,7 @@ export type DefenseRegistration = {
   graduationExemptionProofLink?: string;
 
   internshipStatus: ReportStatus;
+  internshipRegistrationStatus?: InternshipRegistrationStatus;
   internshipStatusNote?: string;
   internshipExemptionDecisionNumber?: string;
   internshipExemptionDecisionDate?: any;
@@ -269,3 +272,5 @@ export type EarlyInternship = {
   proofLink?: string;
   status: 'ongoing' | 'completed' | 'cancelled';
 };
+
+    
