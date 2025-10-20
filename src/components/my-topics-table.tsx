@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import React, { useState, useMemo } from 'react';
@@ -43,10 +44,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
-import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
+import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration, WeeklyProgressReport } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddTopicForm } from './add-topic-form';
@@ -59,10 +60,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
+import { Input } from './ui/input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Separator } from './ui/separator';
+import { ViewProgressDialog } from './view-progress-dialog';
 
 
 interface MyTopicsTableProps {
@@ -133,10 +136,10 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
-  const [selectedRegistrationForProposal, setSelectedRegistrationForProposal] = useState<DefenseRegistration | null>(null);
-  const [selectedRegistrationForReport, setSelectedRegistrationForReport] = useState<DefenseRegistration | null>(null);
+  const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
 
   const topicsQuery = useMemoFirebase(
@@ -197,13 +200,18 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   };
   
   const handleViewProposalClick = (registration: DefenseRegistration) => {
-    setSelectedRegistrationForProposal(registration);
+    setSelectedRegistration(registration);
     setIsProposalDialogOpen(true);
   }
 
   const handleViewReportClick = (registration: DefenseRegistration) => {
-    setSelectedRegistrationForReport(registration);
+    setSelectedRegistration(registration);
     setIsReportDialogOpen(true);
+  }
+  
+  const handleViewProgressClick = (registration: DefenseRegistration) => {
+    setSelectedRegistration(registration);
+    setIsProgressDialogOpen(true);
   }
 
   const confirmDelete = async () => {
@@ -454,6 +462,9 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                         )}
                                                         {reg.projectRegistrationStatus === 'approved' && (
                                                             <>
+                                                                <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProgressClick(reg)}>
+                                                                    <Activity className="mr-2 h-4 w-4"/> Xem TĐ
+                                                                </Button>
                                                                 <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted'}>
                                                                     <Eye className="mr-2 h-4 w-4"/> Xem TM
                                                                 </Button>
@@ -514,63 +525,57 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       
        <Dialog open={isProposalDialogOpen} onOpenChange={setIsProposalDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
-              {selectedRegistrationForProposal && (
+              {selectedRegistration && (
                   <>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2"><FileSignature /> Thuyết minh của sinh viên</DialogTitle>
                         <DialogDescription>
-                            Xem xét và phê duyệt thuyết minh của sinh viên: {selectedRegistrationForProposal.studentName} ({selectedRegistrationForProposal.studentId})
+                            Xem xét và phê duyệt thuyết minh của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
-                        <div>
-                            <h3 className="font-semibold text-lg">{selectedRegistrationForProposal.projectTitle}</h3>
+                     <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                        <div className="space-y-1">
+                            <h3 className="font-semibold text-lg">{selectedRegistration.projectTitle}</h3>
                         </div>
-
-                        <Separator />
-
+                        <Separator/>
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.summary || ''}</ReactMarkdown>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.summary || ''}</ReactMarkdown>
                             </div>
                         </div>
-                        
                         <div className="space-y-1">
                             <h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.objectives || ''}</ReactMarkdown>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.objectives || ''}</ReactMarkdown>
                             </div>
                         </div>
-
                         <div className="space-y-1">
                             <h4 className="font-semibold flex items-center gap-2 text-base"><FileSignature className="h-4 w-4 text-primary" /> Phương pháp & Công nghệ</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.implementationPlan || ''}</ReactMarkdown>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.implementationPlan || ''}</ReactMarkdown>
                             </div>
                         </div>
-
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistrationForProposal.expectedResults || ''}</ReactMarkdown>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.expectedResults || ''}</ReactMarkdown>
                             </div>
                         </div>
-
-                        {selectedRegistrationForProposal.proposalLink && (
+                        {selectedRegistration.proposalLink && (
                             <div className="space-y-1">
                                 <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file toàn văn</h4>
-                                <a href={selectedRegistrationForProposal.proposalLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
-                                    {selectedRegistrationForProposal.proposalLink}
+                                <a href={selectedRegistration.proposalLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                    {selectedRegistration.proposalLink}
                                 </a>
                             </div>
                         )}
                     </div>
                      <DialogFooter>
-                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistrationForProposal, 'reject')}>
+                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>
                             Yêu cầu chỉnh sửa
                         </Button>
-                        <Button onClick={() => handleProposalAction(selectedRegistrationForProposal, 'approve')}>
+                        <Button onClick={() => handleProposalAction(selectedRegistration, 'approve')}>
                             Duyệt thuyết minh
                         </Button>
                     </DialogFooter>
@@ -581,21 +586,21 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
        
         <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
-              {selectedRegistrationForReport && (
+              {selectedRegistration && (
                   <>
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2"><FileUp /> Báo cáo cuối kỳ của sinh viên</DialogTitle>
                         <DialogDescription>
-                            Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistrationForReport.studentName} ({selectedRegistrationForReport.studentId})
+                            Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
                         </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
                         <p className="text-sm text-muted-foreground">Thông tin dưới đây là bản tóm tắt cuối cùng sinh viên đã nộp.</p>
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>
-                            {selectedRegistrationForReport.reportLink ? (
-                                <a href={selectedRegistrationForReport.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
-                                    {selectedRegistrationForReport.reportLink}
+                            {selectedRegistration.reportLink ? (
+                                <a href={selectedRegistration.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                    {selectedRegistration.reportLink}
                                 </a>
                             ) : (
                                 <p className="text-sm text-muted-foreground">Sinh viên chưa nộp link báo cáo.</p>
@@ -603,16 +608,27 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         </div>
                     </div>
                      <DialogFooter>
-                        <Button variant="destructive" onClick={() => handleReportAction(selectedRegistrationForReport, 'reject')}>
+                        <Button variant="destructive" onClick={() => handleReportAction(selectedRegistration, 'reject')}>
                             Yêu cầu chỉnh sửa
                         </Button>
-                        <Button onClick={() => handleReportAction(selectedRegistrationForReport, 'approve')}>
+                        <Button onClick={() => handleReportAction(selectedRegistration, 'approve')}>
                             Duyệt Báo cáo
                         </Button>
                     </DialogFooter>
                   </>
               )}
           </DialogContent>
+       </Dialog>
+       
+      <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+           <DialogContent className="sm:max-w-2xl">
+                {selectedRegistration && (
+                   <ViewProgressDialog
+                        registration={selectedRegistration}
+                        onFinished={() => setIsProgressDialogOpen(false)}
+                   />
+                )}
+           </DialogContent>
        </Dialog>
       
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
@@ -632,3 +648,4 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     </div>
   );
 }
+
