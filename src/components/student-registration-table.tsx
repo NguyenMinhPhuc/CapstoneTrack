@@ -91,13 +91,14 @@ interface StudentRegistrationTableProps {
 type SortKey = 'studentName' | 'projectTitle' | 'supervisorName' | 'internshipSupervisorName' | 'subCommitteeName';
 type SortDirection = 'asc' | 'desc';
 
-type ReportStatusType = 'graduationStatus' | 'internshipStatus';
+type ReportStatusType = 'graduationStatus' | 'internshipStatus' | 'both';
 
 const registrationStatusLabel: Record<DefenseRegistration['graduationStatus'], string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
     withdrawn: 'Bỏ báo cáo',
     not_reporting: 'Không BC',
+    completed: 'Hoàn thành',
 };
 
 const registrationStatusVariant: Record<DefenseRegistration['graduationStatus'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -105,6 +106,7 @@ const registrationStatusVariant: Record<DefenseRegistration['graduationStatus'],
     exempted: 'secondary',
     withdrawn: 'destructive',
     not_reporting: 'outline',
+    completed: 'default',
 };
 
 
@@ -255,7 +257,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
     setIsEditDialogOpen(true);
   };
 
-  const handleRevertToReporting = async (registrationIds: string[], type: 'graduation' | 'internship' | 'both') => {
+  const handleRevertToReporting = async (registrationIds: string[], type: ReportStatusType) => {
     if (registrationIds.length === 0) {
       toast({
         variant: "destructive",
@@ -866,6 +868,20 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
             <AssignSubcommitteeManualDialog
                 registrationsToAssign={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
                 subCommittees={subCommittees || []}
+                onFinished={handleGroupActionFinished}
+            />
+        </Dialog>
+        
+        <Dialog open={isWithdrawDialogOpen} onOpenChange={setIsWithdrawDialogOpen}>
+            <WithdrawRegistrationForm
+                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
+                onFinished={handleGroupActionFinished}
+            />
+        </Dialog>
+        
+        <Dialog open={isExemptionDialogOpen} onOpenChange={setIsExemptionDialogOpen}>
+            <SpecialExemptionForm
+                registrations={initialData?.filter(reg => selectedRowIds.includes(reg.id)) || []}
                 onFinished={handleGroupActionFinished}
             />
         </Dialog>

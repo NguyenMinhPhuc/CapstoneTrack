@@ -55,7 +55,7 @@ export function WithdrawnStudentsDialog({ students, onFinished }: WithdrawnStude
                     <TableCell>{student.studentId}</TableCell>
                     <TableCell>{student.studentName}</TableCell>
                     <TableCell>{student.className || 'N/A'}</TableCell>
-                    <TableCell>{student.statusNote || 'Không có'}</TableCell>
+                    <TableCell>{student.graduationStatusNote || student.internshipStatusNote || 'Không có'}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

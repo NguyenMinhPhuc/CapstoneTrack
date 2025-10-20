@@ -144,6 +144,10 @@ export type DefenseSessionRegistration = {
 export type StudentWithRegistrationDetails = DefenseRegistration & {
   status: Student['status'];
   className?: string;
+  statusNote?: string;
+  exemptionDecisionNumber?: string;
+  exemptionDecisionDate?: any;
+  exemptionProofLink?: string;
 };
 
 export type SubmissionReport = DefenseRegistration & {
