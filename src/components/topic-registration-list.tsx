@@ -36,9 +36,10 @@ import { cn } from '@/lib/utils';
 interface TopicRegistrationListProps {
   session: GraduationDefenseSession;
   registration: DefenseRegistration;
+  onRegistrationSuccess: () => void;
 }
 
-export function TopicRegistrationList({ session, registration }: TopicRegistrationListProps) {
+export function TopicRegistrationList({ session, registration, onRegistrationSuccess }: TopicRegistrationListProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -128,7 +129,7 @@ export function TopicRegistrationList({ session, registration }: TopicRegistrati
         title: 'Đăng ký thành công!',
         description: `Bạn đã đăng ký đề tài "${topic.title}". Vui lòng chờ GVHD xác nhận.`,
       });
-      // The parent component will refetch and update the view
+      onRegistrationSuccess(); // Notify parent to refetch
     } catch (error: any) {
       console.error("Error registering for topic: ", error);
       toast({

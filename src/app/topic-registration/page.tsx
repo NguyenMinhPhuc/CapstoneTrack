@@ -267,7 +267,11 @@ export default function TopicRegistrationPage() {
                     )}
                 </div>
             ) : (
-                <TopicRegistrationList session={activeSession} registration={activeRegistration} />
+                <TopicRegistrationList 
+                    session={activeSession} 
+                    registration={activeRegistration}
+                    onRegistrationSuccess={fetchActiveRegistration}
+                />
             )
         )}
       </div>
