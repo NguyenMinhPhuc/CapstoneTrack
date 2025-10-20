@@ -135,19 +135,23 @@ export function SubmissionReportTable() {
       exportToExcel([studentData], `HoSo_${studentData.studentId}_${studentData.studentName.replace(/\s+/g, '_')}.xlsx`);
   }
 
-  const renderLinkCell = (url: string | undefined) => {
-    if (!url) return <span className="text-muted-foreground">-</span>;
+  const renderLinkCell = (url: string | undefined, tooltip: string) => {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              <LinkIcon className="h-4 w-4" />
-            </a>
+             <span className={!url ? 'text-muted-foreground/30' : 'text-primary'}>
+                <LinkIcon className="h-4 w-4" />
+             </span>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="max-w-sm">{url}</p>
-          </TooltipContent>
+           {url && (
+            <TooltipContent side="top">
+              <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
+                 {tooltip}
+                <span className="text-xs text-muted-foreground max-w-xs truncate">{url}</span>
+              </a>
+            </TooltipContent>
+          )}
         </Tooltip>
       </TooltipProvider>
     );
@@ -215,12 +219,7 @@ export function SubmissionReportTable() {
                 <TableHead>Sinh viên</TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
                 <TableHead>Đề tài/Công ty</TableHead>
-                <TableHead className="text-center">BC Tốt nghiệp</TableHead>
-                <TableHead className="text-center">BC Thực tập</TableHead>
-                <TableHead className="text-center">Giấy tiếp nhận</TableHead>
-                <TableHead className="text-center">Đơn ĐK</TableHead>
-                <TableHead className="text-center">Đơn cam kết</TableHead>
-                <TableHead className="text-center">Giấy nhận xét</TableHead>
+                <TableHead className="text-center">Minh chứng</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
@@ -247,12 +246,16 @@ export function SubmissionReportTable() {
                            </div>
                         ) : '-'}
                     </TableCell>
-                    <TableCell className="text-center">{renderLinkCell(item.reportLink)}</TableCell>
-                    <TableCell className="text-center">{renderLinkCell(item.internship_reportLink)}</TableCell>
-                    <TableCell className="text-center">{renderLinkCell(item.internship_acceptanceLetterLink)}</TableCell>
-                    <TableCell className="text-center">{renderLinkCell(item.internship_registrationFormLink)}</TableCell>
-                    <TableCell className="text-center">{renderLinkCell(item.internship_commitmentFormLink)}</TableCell>
-                    <TableCell className="text-center">{renderLinkCell(item.internship_feedbackFormLink)}</TableCell>
+                    <TableCell>
+                        <div className="flex justify-center items-center gap-4">
+                            {renderLinkCell(item.reportLink, "Báo cáo Tốt nghiệp")}
+                            {renderLinkCell(item.internship_reportLink, "Báo cáo Thực tập")}
+                            {renderLinkCell(item.internship_acceptanceLetterLink, "Giấy tiếp nhận")}
+                            {renderLinkCell(item.internship_registrationFormLink, "Đơn đăng ký")}
+                            {renderLinkCell(item.internship_commitmentFormLink, "Đơn cam kết")}
+                            {renderLinkCell(item.internship_feedbackFormLink, "Giấy nhận xét")}
+                        </div>
+                    </TableCell>
                     <TableCell className="text-right">
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -272,7 +275,7 @@ export function SubmissionReportTable() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={11} className="text-center h-24">
+                  <TableCell colSpan={6} className="text-center h-24">
                     Không tìm thấy hồ sơ nào.
                   </TableCell>
                 </TableRow>

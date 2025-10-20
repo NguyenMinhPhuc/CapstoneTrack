@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -229,19 +230,23 @@ export function InternshipApprovalTable() {
     );
   }
   
-  const renderLinkCell = (url: string | undefined) => {
-    if (!url) return <span className="text-muted-foreground">-</span>;
+  const renderLinkCell = (url: string | undefined, tooltip: string) => {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-            <a href={url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-              <LinkIcon className="h-4 w-4" />
-            </a>
+             <span className={!url ? 'text-muted-foreground/30' : 'text-primary'}>
+                <LinkIcon className="h-4 w-4" />
+             </span>
           </TooltipTrigger>
-          <TooltipContent>
-            <p className="max-w-sm">{url}</p>
-          </TooltipContent>
+           {url && (
+            <TooltipContent side="top">
+              <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
+                 {tooltip}
+                <span className="text-xs text-muted-foreground max-w-xs truncate">{url}</span>
+              </a>
+            </TooltipContent>
+          )}
         </Tooltip>
       </TooltipProvider>
     );
@@ -341,10 +346,11 @@ export function InternshipApprovalTable() {
                             </Badge>
                         </TableCell>
                         <TableCell>
-                            <div className="flex justify-center items-center gap-4">
-                                {renderLinkCell(reg.internship_registrationFormLink)}
-                                {renderLinkCell(reg.internship_acceptanceLetterLink)}
-                                {renderLinkCell(reg.internship_commitmentFormLink)}
+                             <div className="flex justify-center items-center gap-4">
+                                {renderLinkCell(reg.internship_registrationFormLink, "Đơn đăng ký")}
+                                {renderLinkCell(reg.internship_acceptanceLetterLink, "Giấy tiếp nhận")}
+                                {renderLinkCell(reg.internship_commitmentFormLink, "Đơn cam kết")}
+                                {renderLinkCell(reg.internship_reportLink, "Báo cáo thực tập")}
                             </div>
                         </TableCell>
                         <TableCell className="text-right">
@@ -401,4 +407,3 @@ export function InternshipApprovalTable() {
     </>
   );
 }
-
