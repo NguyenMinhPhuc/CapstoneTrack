@@ -1,7 +1,6 @@
-
 'use client';
 
-import type { ProjectTopic, DefenseRegistration, SystemSettings } from '@/lib/types';
+import type { ProjectTopic, DefenseRegistration, SystemSettings, GraduationDefenseSession } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -11,7 +10,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Book, CheckCircle, Target, User, Users, Tag, Clock, CircleAlert, CircleCheck, CircleX, FileSignature } from 'lucide-react';
+import { Book, CheckCircle, Target, User, Users, Tag, Clock, CircleAlert, CircleCheck, CircleX, FileSignature, FileUp, Calendar } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -20,11 +19,13 @@ import { Button } from './ui/button';
 import Link from 'next/link';
 import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import { sub, add, format, isWithinInterval } from 'date-fns';
 
 
 interface RegisteredTopicDetailsProps {
   topic: ProjectTopic;
   registration: DefenseRegistration;
+  session: GraduationDefenseSession;
 }
 
 const registrationStatusConfig = {
@@ -66,7 +67,7 @@ const proposalStatusConfig = {
 };
 
 
-export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicDetailsProps) {
+export function RegisteredTopicDetails({ topic, registration, session }: RegisteredTopicDetailsProps) {
   const firestore = useFirestore();
   const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
   const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
@@ -78,8 +79,22 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
   const propConfig = proposalStatusConfig[propStatus];
   
   const canEditApprovedProposal = settings?.allowEditingApprovedProposal ?? false;
-  const showSubmitButton = regStatus === 'approved' && (propStatus !== 'approved' || canEditApprovedProposal);
+  const showSubmitProposalButton = regStatus === 'approved' && (propStatus !== 'approved' || canEditApprovedProposal);
 
+  const reportSubmission = useMemo(() => {
+    if (!session.expectedReportDate) return null;
+    
+    const reportDate = session.expectedReportDate.toDate();
+    const startDate = sub(reportDate, { weeks: 2 });
+    const endDate = sub(reportDate, { weeks: 1 });
+    const now = new Date();
+
+    return {
+        startDate,
+        endDate,
+        isWindowOpen: isWithinInterval(now, { start: startDate, end: endDate }),
+    }
+  }, [session.expectedReportDate]);
 
   return (
     <div>
@@ -90,6 +105,19 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
                 {regConfig.alertDesc}
             </AlertDescription>
         </Alert>
+        {propStatus === 'approved' && reportSubmission && (
+            <Alert className="mt-4 border-blue-500 text-blue-800 dark:border-blue-400 dark:text-blue-300">
+                <Calendar className="h-4 w-4" />
+                <AlertTitle>Giai đoạn nộp báo cáo</AlertTitle>
+                <AlertDescription>
+                   Thời gian nộp báo cáo toàn văn: Từ ngày <strong>{format(reportSubmission.startDate, 'dd/MM/yyyy')}</strong> đến ngày <strong>{format(reportSubmission.endDate, 'dd/MM/yyyy')}</strong>.
+                   {reportSubmission.isWindowOpen 
+                        ? " Hiện đang trong thời gian nộp báo cáo." 
+                        : " Vui lòng quay lại vào đúng thời gian quy định."
+                   }
+                </AlertDescription>
+            </Alert>
+        )}
         <Card className="mt-6 border-primary">
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -145,16 +173,24 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
                   )}
               </div>
             </CardContent>
-             {showSubmitButton && (
-                <CardFooter>
+            <CardFooter className="flex flex-col items-stretch gap-2">
+                 {showSubmitProposalButton && (
                     <Button asChild className="w-full">
                         <Link href="/proposal-submission">
                             <FileSignature className="mr-2 h-4 w-4" />
                             {registration.proposalStatus === 'not_submitted' || registration.proposalStatus === 'rejected' ? 'Nộp Thuyết minh' : 'Cập nhật Thuyết minh'}
                         </Link>
                     </Button>
-                </CardFooter>
-            )}
+                )}
+                 {propStatus === 'approved' && reportSubmission && (
+                    <Button asChild className="w-full" disabled={!reportSubmission.isWindowOpen}>
+                         <Link href="/report-submission">
+                            <FileUp className="mr-2 h-4 w-4" />
+                            Nộp Báo cáo
+                        </Link>
+                    </Button>
+                )}
+            </CardFooter>
         </Card>
     </div>
   );

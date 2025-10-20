@@ -76,8 +76,8 @@ export default function TopicRegistrationPage() {
         const sessionsData = sessionsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as GraduationDefenseSession));
 
         const sessionToSearch = 
-            sessionsData.find(s => s.status === 'upcoming') || 
-            sessionsData.find(s => s.status === 'ongoing') ||
+            sessionsData.find(s => s.status === 'ongoing') || 
+            sessionsData.find(s => s.status === 'upcoming') ||
             null;
 
         if (!sessionToSearch) {
@@ -243,7 +243,7 @@ export default function TopicRegistrationPage() {
         {activeSession && activeRegistration && (
             activeRegistration.projectTitle && registeredTopic ? (
                 <div>
-                    <RegisteredTopicDetails topic={registeredTopic} registration={activeRegistration} />
+                    <RegisteredTopicDetails topic={registeredTopic} registration={activeRegistration} session={activeSession} />
                     {canStudentCancel && (
                         <AlertDialog>
                             <AlertDialogTrigger asChild>
