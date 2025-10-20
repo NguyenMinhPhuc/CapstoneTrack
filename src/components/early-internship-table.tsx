@@ -428,6 +428,7 @@ export function EarlyInternshipTable() {
                         onCheckedChange={handleSelectAll}
                     />
                 </TableHead>
+                <TableHead>STT</TableHead>
                 <TableHead>
                      <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
                         Sinh viên {getSortIcon('studentName')}
@@ -463,7 +464,7 @@ export function EarlyInternshipTable() {
                 </TableRow>
             </TableHeader>
             <TableBody>
-                {filteredInternships?.map((internship) => {
+                {filteredInternships?.map((internship, index) => {
                   const progress = progressData.get(internship.id);
                   return (
                 <TableRow key={internship.id} data-state={selectedRowIds.includes(internship.studentId) && "selected"}>
@@ -473,6 +474,7 @@ export function EarlyInternshipTable() {
                             onCheckedChange={(checked) => handleRowSelect(internship.studentId, !!checked)}
                         />
                     </TableCell>
+                    <TableCell>{index + 1}</TableCell>
                     <TableCell>
                     <div className="font-medium">{internship.studentName}</div>
                     <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
@@ -521,9 +523,9 @@ export function EarlyInternshipTable() {
                                                 <CheckCircle className="mr-2 h-4 w-4" />
                                                 <span>{statusLabel.completed}</span>
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-500" onClick={() => handleStatusChange(internship.id, 'cancelled')} disabled={internship.status === 'cancelled'}>
+                                            <DropdownMenuItem className="text-red-500" onClick={() => handleRejectClick(internship)} disabled={internship.status === 'rejected'}>
                                                 <X className="mr-2 h-4 w-4" />
-                                                <span>{statusLabel.cancelled}</span>
+                                                <span>{statusLabel.rejected}</span>
                                             </DropdownMenuItem>
                                         </DropdownMenuSubContent>
                                     </DropdownMenuPortal>
@@ -557,7 +559,7 @@ export function EarlyInternshipTable() {
             <DialogContent>
                 {selectedInternship && (
                     <RejectionReasonDialog
-                        registration={selectedInternship as any} // Cast as any because the dialog expects DefenseRegistration
+                        registration={selectedInternship}
                         onConfirm={(reason) => {
                             handleStatusChange(selectedInternship.id, 'rejected', reason);
                             setIsRejectDialogOpen(false);
