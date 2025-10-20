@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import * as React from 'react';
@@ -24,11 +25,12 @@ import type { Supervisor } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 
 interface SupervisorComboboxProps {
-  value: string; // The ID of the supervisor
+  value: string | null;
   onChange: (supervisor: Supervisor | null) => void;
+  disabled?: boolean;
 }
 
-export function SupervisorCombobox({ value, onChange }: SupervisorComboboxProps) {
+export function SupervisorCombobox({ value, onChange, disabled = false }: SupervisorComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -76,7 +78,7 @@ export function SupervisorCombobox({ value, onChange }: SupervisorComboboxProps)
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
-          disabled={isLoading}
+          disabled={isLoading || disabled}
         >
           {isLoading ? "Đang tải..." : selectedSupervisorLabel}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />

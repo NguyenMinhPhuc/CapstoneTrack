@@ -663,6 +663,7 @@
         "address": { "type": "string", "description": "The physical address of the company." },
         "description": { "type": "string", "description": "A brief description of the company, its industry, and what it does." },
         "website": { "type": "string", "format": "uri", "description": "The company's official website." },
+        "supervisorId": { "type": "string", "description": "Reference to the supervisor who is the contact for this LHU department." },
         "contactName": { "type": "string", "description": "Name of the primary contact person (e.g., HR manager)." },
         "contactEmail": { "type": "string", "format": "email", "description": "Email address of the contact person." },
         "contactPhone": { "type": "string", "description": "Phone number of the contact person." },
@@ -682,17 +683,22 @@
         "studentIdentifier": { "type": "string", "description": "The official student ID number (e.g. 122001306)." },
         "companyName": { "type": "string", "description": "Name of the internship company." },
         "companyAddress": { "type": "string", "description": "Address of the internship company." },
-        "supervisorName": { "type": "string", "description": "Name of the supervisor at the company." },
+        "supervisorId": { "type": "string", "description": "The ID of the supervisor who is managing this early internship." },
+        "supervisorName": { "type": "string", "description": "Name of the supervisor." },
         "startDate": { "type": "string", "format": "date", "description": "The start date of the internship." },
         "endDate": { "type": "string", "format": "date", "description": "The end date of the internship." },
         "proofLink": { "type": "string", "format": "uri", "description": "URL to a proof document (e.g., acceptance letter)." },
         "status": {
           "type": "string",
           "description": "The current status of the early internship.",
-          "enum": ["ongoing", "completed", "cancelled"]
+          "enum": ["pending_approval", "ongoing", "completed", "rejected", "cancelled"]
+        },
+        "statusNote": {
+          "type": "string",
+          "description": "A note explaining the reason for rejection or completion."
         }
       },
-      "required": ["id", "studentId", "studentName", "studentIdentifier", "companyName", "startDate", "status"]
+      "required": ["id", "studentId", "studentName", "studentIdentifier", "companyName", "supervisorId", "startDate", "status"]
     }
   },
   "auth": {
@@ -789,4 +795,3 @@
     }
   }
 }
-

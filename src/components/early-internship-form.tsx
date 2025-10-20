@@ -55,7 +55,6 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
   const { toast } = useToast();
   const firestore = useFirestore();
   const [selectedDepartment, setSelectedDepartment] = useState<InternshipCompany | null>(null);
-  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
 
   const lhuDepartmentsQuery = useMemoFirebase(
@@ -77,10 +76,16 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
     if (companyId && lhuDepartments) {
       const department = lhuDepartments.find(d => d.id === companyId);
       setSelectedDepartment(department || null);
+      if (department?.supervisorId) {
+        form.setValue('supervisorId', department.supervisorId);
+      } else {
+        form.setValue('supervisorId', '');
+      }
     } else {
       setSelectedDepartment(null);
+      form.setValue('supervisorId', '');
     }
-  }, [companyId, lhuDepartments]);
+  }, [companyId, lhuDepartments, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const department = lhuDepartments?.find(d => d.id === values.companyId);
@@ -88,8 +93,9 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       toast({ variant: 'destructive', title: 'Lỗi', description: 'Không tìm thấy thông tin phòng ban.' });
       return;
     }
-    if (!selectedSupervisor) {
-        toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng chọn giáo viên hướng dẫn.' });
+    
+    if (!values.supervisorId) {
+        toast({ variant: 'destructive', title: 'Lỗi', description: 'Phòng ban này chưa có người hướng dẫn được gán.' });
         return;
     }
 
@@ -99,8 +105,8 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       studentIdentifier: student.studentId,
       companyName: department.name,
       companyAddress: department.address || '',
-      supervisorId: selectedSupervisor.id,
-      supervisorName: `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}`,
+      supervisorId: values.supervisorId,
+      supervisorName: department.contactName || '',
       startDate: values.startDate,
       endDate: values.endDate,
       proofLink: values.proofLink,
@@ -179,8 +185,8 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
                     value={field.value}
                     onChange={(supervisor) => {
                         field.onChange(supervisor?.id || '');
-                        setSelectedSupervisor(supervisor);
                     }}
+                    disabled={true} // Lock this field
                 />
               </FormControl>
               <FormMessage />

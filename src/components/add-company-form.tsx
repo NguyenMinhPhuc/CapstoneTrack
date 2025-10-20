@@ -3,7 +3,7 @@
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import {
@@ -22,6 +22,9 @@ import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { Switch } from './ui/switch';
+import { SupervisorCombobox } from './supervisor-combobox';
+import type { Supervisor } from '@/lib/types';
+import { useState } from 'react';
 
 const formSchema = z.object({
   name: z.string().min(1, { message: 'Tên doanh nghiệp là bắt buộc.' }),
@@ -32,6 +35,7 @@ const formSchema = z.object({
   contactEmail: z.string().email({ message: 'Email không hợp lệ.' }).optional().or(z.literal('')),
   contactPhone: z.string().optional(),
   isLHU: z.boolean().default(false),
+  supervisorId: z.string().optional(), // To store the ID of the selected supervisor for LHU departments
 });
 
 interface AddCompanyFormProps {
@@ -41,6 +45,7 @@ interface AddCompanyFormProps {
 export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -56,14 +61,41 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
     },
   });
 
+  const isLHU = useWatch({ control: form.control, name: 'isLHU' });
+
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const companiesCollectionRef = collection(firestore, 'internshipCompanies');
-    const newCompanyData = {
-      ...values,
-      createdAt: serverTimestamp(),
-    };
     
-    addDoc(companiesCollectionRef, newCompanyData)
+    let companyData: any = {
+        name: values.name,
+        address: values.address || '',
+        website: values.website || '',
+        description: values.description || '',
+        isLHU: values.isLHU,
+        createdAt: serverTimestamp(),
+    };
+
+    if (values.isLHU) {
+        if (!selectedSupervisor) {
+            toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng chọn một giáo viên hướng dẫn cho phòng ban LHU.' });
+            return;
+        }
+        companyData = {
+            ...companyData,
+            contactName: `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}`,
+            contactEmail: selectedSupervisor.email,
+            supervisorId: selectedSupervisor.id, // Store supervisor ID
+        };
+    } else {
+        companyData = {
+            ...companyData,
+            contactName: values.contactName || '',
+            contactEmail: values.contactEmail || '',
+            contactPhone: values.contactPhone || '',
+        };
+    }
+
+    addDoc(companiesCollectionRef, companyData)
       .then(() => {
         toast({
           title: 'Thành công',
@@ -75,7 +107,7 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
         const contextualError = new FirestorePermissionError({
           path: companiesCollectionRef.path,
           operation: 'create',
-          requestResourceData: newCompanyData,
+          requestResourceData: companyData,
         });
         errorEmitter.emit('permission-error', contextualError);
       });
@@ -167,47 +199,71 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
                   </FormItem>
                 )}
               />
-               <FormField
-                control={form.control}
-                name="contactName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tên người liên hệ</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Nguyễn Văn A" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {isLHU ? (
                  <FormField
                     control={form.control}
-                    name="contactEmail"
+                    name="supervisorId"
                     render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Email liên hệ</FormLabel>
+                      <FormItem>
+                        <FormLabel>Người phụ trách (GVHD)</FormLabel>
                         <FormControl>
-                        <Input placeholder="contact@example.com" {...field} />
+                           <SupervisorCombobox
+                                value={field.value || null}
+                                onChange={(supervisor) => {
+                                    field.onChange(supervisor?.id || '');
+                                    setSelectedSupervisor(supervisor);
+                                }}
+                            />
                         </FormControl>
                         <FormMessage />
-                    </FormItem>
+                      </FormItem>
                     )}
-                />
-                 <FormField
+                  />
+              ) : (
+                <>
+                  <FormField
                     control={form.control}
-                    name="contactPhone"
+                    name="contactName"
                     render={({ field }) => (
-                    <FormItem>
-                        <FormLabel>Số điện thoại liên hệ</FormLabel>
+                      <FormItem>
+                        <FormLabel>Tên người liên hệ</FormLabel>
                         <FormControl>
-                        <Input placeholder="090 xxx xxxx" {...field} />
+                          <Input placeholder="Nguyễn Văn A" {...field} />
                         </FormControl>
                         <FormMessage />
-                    </FormItem>
+                      </FormItem>
                     )}
-                />
-              </div>
+                  />
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="contactEmail"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Email liên hệ</FormLabel>
+                            <FormControl>
+                            <Input placeholder="contact@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="contactPhone"
+                        render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Số điện thoại liên hệ</FormLabel>
+                            <FormControl>
+                            <Input placeholder="090 xxx xxxx" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                        )}
+                    />
+                  </div>
+                </>
+              )}
             </div>
           </ScrollArea>
           <DialogFooter className="pt-4 border-t">
