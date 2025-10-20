@@ -305,6 +305,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead>STT</TableHead>
               <TableHead>
                  <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
                     Sinh viên {getSortIcon('studentName')}
@@ -330,8 +331,9 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedAndFilteredInternships?.map((internship) => (
+            {sortedAndFilteredInternships?.map((internship, index) => (
               <TableRow key={internship.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell>
                   <div className="font-medium">{internship.studentName}</div>
                   <div className="text-sm text-muted-foreground">{internship.studentIdentifier}</div>
