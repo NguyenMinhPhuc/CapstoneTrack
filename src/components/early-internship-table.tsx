@@ -29,10 +29,10 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2 } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { EarlyInternship } from '@/lib/types';
+import type { EarlyInternship, Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
@@ -54,6 +54,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Dialog, DialogContent } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
+import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
   pending_approval: 'Chờ duyệt',
@@ -82,6 +83,7 @@ export function EarlyInternshipTable() {
   const [internshipToDelete, setInternshipToDelete] = useState<EarlyInternship | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isAddToSessionDialogOpen, setIsAddToSessionDialogOpen] = useState(false);
   const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
   
   // Search and Filter states
@@ -96,9 +98,16 @@ export function EarlyInternshipTable() {
     () => collection(firestore, 'earlyInternships'),
     [firestore]
   );
+  const { data: internships, isLoading: isLoadingInternships } = useCollection<EarlyInternship>(earlyInternshipsCollectionRef);
   
-  const { data: internships, isLoading } = useCollection<EarlyInternship>(earlyInternshipsCollectionRef);
+  const studentsCollectionRef = useMemoFirebase(
+    () => collection(firestore, 'students'),
+    [firestore]
+  );
+  const { data: allStudents, isLoading: isLoadingStudents } = useCollection<Student>(studentsCollectionRef);
   
+  const isLoading = isLoadingInternships || isLoadingStudents;
+
   useEffect(() => {
     setSelectedRowIds([]);
   }, [internships]);
@@ -203,7 +212,7 @@ export function EarlyInternshipTable() {
 
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
-    setSelectedRowIds(checked ? (filteredInternships || []).map(i => i.id) : []);
+    setSelectedRowIds(checked ? (filteredInternships || []).map(i => i.studentId) : []);
   };
 
   const handleRowSelect = (id: string, checked: boolean) => {
@@ -244,17 +253,16 @@ export function EarlyInternshipTable() {
     const batch = writeBatch(firestore);
     let count = 0;
 
-    if (selectedRowIds.length > 0) {
-        selectedRowIds.forEach(id => {
-            batch.delete(doc(firestore, 'earlyInternships', id));
-        });
-        count = selectedRowIds.length;
-    } else if (internshipToDelete) {
-        batch.delete(doc(firestore, 'earlyInternships', internshipToDelete.id));
-        count = 1;
-    }
+    const internshipIdsToDelete = selectedRowIds.length > 0
+      ? internships?.filter(i => selectedRowIds.includes(i.studentId)).map(i => i.id) || []
+      : (internshipToDelete ? [internshipToDelete.id] : []);
 
-    if (count === 0) return;
+    if (internshipIdsToDelete.length === 0) return;
+
+    internshipIdsToDelete.forEach(id => {
+        batch.delete(doc(firestore, 'earlyInternships', id));
+    });
+    count = internshipIdsToDelete.length;
 
     try {
       await batch.commit();
@@ -303,10 +311,28 @@ export function EarlyInternshipTable() {
             </div>
              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 {selectedRowIds.length > 0 && (
+                  <>
+                    <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
+                        <DialogTrigger asChild>
+                           <Button variant="outline" size="sm">
+                                <FilePlus2 className="mr-2 h-4 w-4" />
+                                Thêm vào đợt ({selectedRowIds.length})
+                            </Button>
+                        </DialogTrigger>
+                        <AddStudentsToSessionDialog
+                            studentIds={selectedRowIds}
+                            allStudents={allStudents || []}
+                            onFinished={() => {
+                                setIsAddToSessionDialogOpen(false);
+                                setSelectedRowIds([]);
+                            }}
+                          />
+                    </Dialog>
                     <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
                         <Trash2 className="mr-2 h-4 w-4" />
                         Xóa ({selectedRowIds.length})
                     </Button>
+                  </>
                 )}
                  <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -395,11 +421,11 @@ export function EarlyInternshipTable() {
             </TableHeader>
             <TableBody>
                 {filteredInternships?.map((internship, index) => (
-                <TableRow key={internship.id} data-state={selectedRowIds.includes(internship.id) && "selected"}>
+                <TableRow key={internship.id} data-state={selectedRowIds.includes(internship.studentId) && "selected"}>
                     <TableCell>
                         <Checkbox
-                            checked={selectedRowIds.includes(internship.id)}
-                            onCheckedChange={(checked) => handleRowSelect(internship.id, !!checked)}
+                            checked={selectedRowIds.includes(internship.studentId)}
+                            onCheckedChange={(checked) => handleRowSelect(internship.studentId, !!checked)}
                         />
                     </TableCell>
                     <TableCell>
