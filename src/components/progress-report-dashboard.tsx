@@ -74,6 +74,10 @@ export function ProgressReportDashboard({ user }: { user: User }) {
             weeks.push(i);
         }
     }
+    // If all weeks up to the current one are submitted, add the next week as an option
+    if (weeks.length === 0) {
+      weeks.push(currentWeek + 1);
+    }
     return weeks;
   }, [currentWeek, pastReports]);
 
@@ -252,9 +256,9 @@ export function ProgressReportDashboard({ user }: { user: User }) {
             ) : (
               <Alert>
                 <Info className="h-4 w-4" />
-                <AlertTitle>Đã hoàn thành báo cáo</AlertTitle>
+                <AlertTitle>Chưa có tuần nào để báo cáo</AlertTitle>
                 <AlertDescription>
-                  Bạn đã nộp báo cáo cho tất cả các tuần.
+                  Vui lòng quay lại sau khi đợt báo cáo bắt đầu.
                 </AlertDescription>
               </Alert>
             )}
@@ -318,5 +322,3 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     </div>
   );
 }
-
-    
