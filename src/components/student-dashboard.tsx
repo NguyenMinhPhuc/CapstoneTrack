@@ -4,16 +4,16 @@ import { useEffect, useState, useMemo } from 'react';
 import { useFirestore, useDoc, useCollection, useMemoFirebase } from '@/firebase';
 import { doc, collection, query, where, getDocs } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
-import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
+import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity } from 'lucide-react';
+import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
-import { differenceInWeeks, startOfWeek } from 'date-fns';
+import { differenceInWeeks, startOfWeek, format } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 
 interface StudentDashboardProps {
@@ -25,6 +25,22 @@ const registrationStatusConfig = {
     approved: { label: "Đã được xác nhận", variant: "default" as const },
     rejected: { label: "Bị từ chối", variant: "destructive" as const },
     default: { label: "Chưa đăng ký", variant: "outline" as const },
+};
+
+const earlyInternshipStatusLabel: Record<EarlyInternship['status'], string> = {
+  pending_approval: 'Chờ duyệt',
+  ongoing: 'Đang thực tập',
+  completed: 'Hoàn thành',
+  rejected: 'Bị từ chối',
+  cancelled: 'Đã hủy',
+};
+
+const earlyInternshipStatusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
+  pending_approval: 'secondary',
+  ongoing: 'default',
+  completed: 'outline',
+  rejected: 'destructive',
+  cancelled: 'destructive',
 };
 
 export function StudentDashboard({ user }: StudentDashboardProps) {
@@ -41,6 +57,18 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     [firestore, activeRegistration]
   );
   const { data: pastReports } = useCollection<WeeklyProgressReport>(reportsQuery);
+  
+  const earlyInternshipQuery = useMemoFirebase(
+    () => query(collection(firestore, 'earlyInternships'), where('studentId', '==', user.uid)),
+    [firestore, user.uid]
+  );
+  const { data: earlyInternships, isLoading: isLoadingEarlyInternships } = useCollection<EarlyInternship>(earlyInternshipQuery);
+
+  const activeEarlyInternship = useMemo(() => {
+    if (!earlyInternships || earlyInternships.length === 0) return null;
+    // Sort to get the most recent one based on creation or start date
+    return [...earlyInternships].sort((a, b) => (b.startDate?.toDate() || 0) - (a.startDate?.toDate() || 0))[0];
+  }, [earlyInternships]);
 
   const weeklyProgress = useMemo(() => {
     const totalWeeksInSemester = 15; // Set a fixed 15-week duration
@@ -97,14 +125,24 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
     findActiveRegistration();
   }, [user, firestore]);
+  
+  const toDate = (timestamp: any): Date | undefined => {
+    if (!timestamp) return undefined;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
 
-  if (isLoading || isLoadingStudent) {
+
+  if (isLoading || isLoadingStudent || isLoadingEarlyInternships) {
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 <div className="lg:col-span-1 space-y-8">
                     <Skeleton className="h-48 w-full" />
                     <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-40 w-full" />
                 </div>
                 <div className="lg:col-span-2 space-y-8">
                     <Skeleton className="h-80 w-full" />
@@ -165,6 +203,41 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                         </div>
                    </CardContent>
               </Card>
+          )}
+
+          {activeEarlyInternship && (
+             <Card>
+                <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                    <Clock /> Thông tin Thực tập sớm
+                </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4 text-sm">
+                    <div className="space-y-1">
+                        <p className="text-muted-foreground flex items-center gap-1.5"><Building /> Công ty</p>
+                        <p className="font-medium">{activeEarlyInternship.companyName}</p>
+                    </div>
+                     <div className="space-y-1">
+                        <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> GVHD</p>
+                        <p className="font-medium">{activeEarlyInternship.supervisorName}</p>
+                    </div>
+                     <div className="space-y-1">
+                        <p className="text-muted-foreground flex items-center gap-1.5"><Calendar /> Ngày bắt đầu</p>
+                        <p className="font-medium">{toDate(activeEarlyInternship.startDate) ? format(toDate(activeEarlyInternship.startDate)!, 'dd/MM/yyyy') : 'N/A'}</p>
+                    </div>
+                     <div className="space-y-1">
+                        <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái</p>
+                         <Badge variant={earlyInternshipStatusVariant[activeEarlyInternship.status]}>
+                            {earlyInternshipStatusLabel[activeEarlyInternship.status]}
+                        </Badge>
+                    </div>
+                </CardContent>
+                <CardFooter>
+                    <Button asChild variant="outline" className="w-full">
+                        <Link href="/early-internship-registration"><Clock className="mr-2 h-4 w-4"/> Quản lý Thực tập sớm</Link>
+                    </Button>
+                </CardFooter>
+            </Card>
           )}
 
         </div>
