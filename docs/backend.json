@@ -268,6 +268,11 @@
           "description": "The status of the project proposal (thuyết minh) submitted by the student.",
           "enum": ["not_submitted", "pending_approval", "approved", "rejected"]
         },
+        "proposalLink": {
+            "type": "string",
+            "format": "uri",
+            "description": "A URL link to the full graduation project proposal document."
+        },
         "summary": {
           "type": "string",
           "description": "A brief summary of the graduation project."

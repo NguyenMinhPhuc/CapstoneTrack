@@ -1,14 +1,4 @@
 
-
-
-
-
-
-
-
-
-
-
 export type Application = {
   id: string;
   studentName: string;
@@ -99,6 +89,7 @@ export type DefenseRegistration = {
   reportLink?: string;
   projectRegistrationStatus?: ProjectRegistrationStatus;
   proposalStatus?: ProposalStatus;
+  proposalLink?: string;
   // General fields
   supervisorId?: string; // Graduation project supervisor
   supervisorName?: string; // Graduation project supervisor name
