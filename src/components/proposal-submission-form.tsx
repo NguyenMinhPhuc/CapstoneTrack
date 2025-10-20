@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -32,9 +33,10 @@ const formSchema = z.object({
 
 interface ProposalSubmissionFormProps {
   registration: DefenseRegistration;
+  allowEditingApproved: boolean;
 }
 
-export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormProps) {
+export function ProposalSubmissionForm({ registration, allowEditingApproved }: ProposalSubmissionFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   
@@ -44,6 +46,7 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
   const expectedResultsRef = React.useRef<HTMLTextAreaElement>(null);
 
   const isApproved = registration.proposalStatus === 'approved';
+  const isFormDisabled = isApproved && !allowEditingApproved;
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -97,7 +100,7 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
             <FormItem>
               <FormLabel>Tên đề tài</FormLabel>
               <FormControl>
-                <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý đề tài tốt nghiệp..." {...field} disabled={isApproved} />
+                <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý đề tài tốt nghiệp..." {...field} disabled={isFormDisabled} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -116,7 +119,7 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
                   placeholder="Mô tả ngắn gọn về nội dung, bối cảnh và vấn đề mà đề tài giải quyết."
                   className="resize-y min-h-[100px]"
                   {...field}
-                  disabled={isApproved}
+                  disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -136,7 +139,7 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
                   placeholder="Liệt kê các mục tiêu cụ thể mà đề tài cần đạt được (ví dụ: gạch đầu dòng)."
                   className="resize-y min-h-[100px]"
                   {...field}
-                  disabled={isApproved}
+                  disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -156,7 +159,7 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
                   placeholder="Mô tả các phương pháp, công nghệ, framework sẽ sử dụng..."
                   className="resize-y min-h-[100px]"
                   {...field}
-                  disabled={isApproved}
+                  disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -176,7 +179,7 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
                   placeholder="Mô tả các sản phẩm hoặc kết quả cụ thể sẽ có sau khi hoàn thành đề tài (ví dụ: ứng dụng web, bài báo khoa học...)."
                   className="resize-y min-h-[100px]"
                   {...field}
-                  disabled={isApproved}
+                  disabled={isFormDisabled}
                 />
               </FormControl>
               <FormMessage />
@@ -190,16 +193,18 @@ export function ProposalSubmissionForm({ registration }: ProposalSubmissionFormP
             <FormItem>
               <FormLabel>Link file thuyết minh toàn văn (tùy chọn)</FormLabel>
               <FormControl>
-                <Input placeholder="https://docs.google.com/document/d/..." {...field} disabled={isApproved}/>
+                <Input placeholder="https://docs.google.com/document/d/..." {...field} disabled={isFormDisabled}/>
               </FormControl>
                <FormMessage />
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isApproved}>
-          {isApproved ? 'Thuyết minh đã được duyệt' : (form.formState.isSubmitting ? 'Đang nộp...' : 'Nộp Thuyết minh')}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isFormDisabled}>
+          {isFormDisabled ? 'Thuyết minh đã được duyệt' : (form.formState.isSubmitting ? 'Đang nộp...' : 'Nộp Thuyết minh')}
         </Button>
       </form>
     </Form>
   );
 }
+
+    

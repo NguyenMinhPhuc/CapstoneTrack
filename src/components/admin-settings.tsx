@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -92,10 +93,28 @@ export function AdminSettings() {
                             onCheckedChange={(checked) => handleFeatureToggle('enableOverallGrading', checked)}
                         />
                     </div>
+                     <Separator />
+                     <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="edit-proposal-switch" className="text-base">
+                                Cho phép sửa thuyết minh đã duyệt
+                            </Label>
+                             <p className="text-sm text-muted-foreground">
+                                Nếu bật, sinh viên có thể chỉnh sửa lại bản thuyết minh đã được GVHD duyệt trước đó.
+                            </p>
+                        </div>
+                        <Switch
+                            id="edit-proposal-switch"
+                            checked={settings?.allowEditingApprovedProposal ?? false}
+                            onCheckedChange={(checked) => handleFeatureToggle('allowEditingApprovedProposal', checked)}
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </div>
     );
 }
+
+    
 
     

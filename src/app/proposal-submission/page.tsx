@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -10,7 +11,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, FileSignature } from 'lucide-react';
 import { ProposalSubmissionForm } from '@/components/proposal-submission-form';
-import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type DefenseSubCommittee } from '@/lib/types';
+import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type DefenseSubCommittee, type SystemSettings } from '@/lib/types';
 
 
 export default function ProposalSubmissionPage() {
@@ -27,6 +28,10 @@ export default function ProposalSubmissionPage() {
     [user, firestore]
   );
   const { data: userData, isLoading: isUserDataLoading } = useDoc<SystemUser>(userDocRef);
+
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings, isLoading: isLoadingSettings } = useDoc<SystemSettings>(settingsDocRef);
+
 
   useEffect(() => {
     const isLoading = isUserLoading || isUserDataLoading;
@@ -99,7 +104,7 @@ export default function ProposalSubmissionPage() {
     findActiveRegistration();
   }, [user, firestore]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistration;
+  const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistration || isLoadingSettings;
 
   if (isLoading || !user || !userData) {
     return (
@@ -165,6 +170,7 @@ export default function ProposalSubmissionPage() {
                 <AlertTitle>Thuyết minh đã được duyệt</AlertTitle>
                 <AlertDescription>
                     Chúc mừng! Thuyết minh của bạn đã được giáo viên hướng dẫn duyệt.
+                    {settings?.allowEditingApprovedProposal && ' Tuy nhiên, admin đang cho phép chỉnh sửa lại, bạn có thể cập nhật nếu cần.'}
                 </AlertDescription>
             </Alert>
         )
@@ -186,7 +192,10 @@ export default function ProposalSubmissionPage() {
                 <div className="space-y-6">
                     {getAlert()}
                     {activeRegistration && (
-                        <ProposalSubmissionForm registration={activeRegistration} />
+                        <ProposalSubmissionForm 
+                            registration={activeRegistration} 
+                            allowEditingApproved={settings?.allowEditingApprovedProposal ?? false}
+                        />
                     )}
                 </div>
             </CardContent>
@@ -196,3 +205,6 @@ export default function ProposalSubmissionPage() {
   );
 }
 
+
+
+    

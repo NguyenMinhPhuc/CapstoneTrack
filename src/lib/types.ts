@@ -1,4 +1,5 @@
 
+
 export type Application = {
   id: string;
   studentName: string;
@@ -203,6 +204,7 @@ export type SystemSettings = {
     id: string;
     enableOverallGrading?: boolean;
     allowStudentRegistration?: boolean;
+    allowEditingApprovedProposal?: boolean;
 }
 
 export type ProjectTopic = {
@@ -219,3 +221,5 @@ export type ProjectTopic = {
     status: 'pending' | 'approved' | 'rejected' | 'taken';
     createdAt: any;
 }
+
+    

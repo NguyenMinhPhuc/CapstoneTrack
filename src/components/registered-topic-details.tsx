@@ -1,6 +1,7 @@
+
 'use client';
 
-import type { ProjectTopic, DefenseRegistration } from '@/lib/types';
+import type { ProjectTopic, DefenseRegistration, SystemSettings } from '@/lib/types';
 import {
   Card,
   CardContent,
@@ -17,6 +18,9 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Button } from './ui/button';
 import Link from 'next/link';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+
 
 interface RegisteredTopicDetailsProps {
   topic: ProjectTopic;
@@ -63,11 +67,19 @@ const proposalStatusConfig = {
 
 
 export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicDetailsProps) {
+  const firestore = useFirestore();
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+  
   const regStatus = registration.projectRegistrationStatus || 'pending';
   const regConfig = registrationStatusConfig[regStatus] || registrationStatusConfig.default;
   
   const propStatus = registration.proposalStatus || 'not_submitted';
   const propConfig = proposalStatusConfig[propStatus];
+  
+  const canEditApprovedProposal = settings?.allowEditingApprovedProposal ?? false;
+  const showSubmitButton = regStatus === 'approved' && (propStatus !== 'approved' || canEditApprovedProposal);
+
 
   return (
     <div>
@@ -133,7 +145,7 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
                   )}
               </div>
             </CardContent>
-             {regStatus === 'approved' && propStatus !== 'approved' && (
+             {showSubmitButton && (
                 <CardFooter>
                     <Button asChild className="w-full">
                         <Link href="/proposal-submission">
@@ -147,3 +159,5 @@ export function RegisteredTopicDetails({ topic, registration }: RegisteredTopicD
     </div>
   );
 }
+
+    

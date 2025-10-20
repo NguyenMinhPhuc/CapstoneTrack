@@ -584,6 +584,10 @@
         "allowStudentRegistration": {
           "type": "boolean",
           "description": "If true, allows new students to register for an account."
+        },
+        "allowEditingApprovedProposal": {
+          "type": "boolean",
+          "description": "If true, allows students to edit their proposals even after they have been approved by the supervisor."
         }
       }
     }
@@ -664,3 +668,5 @@
     }
   }
 }
+
+    
