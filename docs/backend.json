@@ -703,6 +703,23 @@
         }
       },
       "required": ["id", "studentId", "studentName", "studentIdentifier", "companyName", "supervisorId", "startDate", "status", "batch"]
+    },
+    "EarlyInternshipWeeklyReport": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "EarlyInternshipWeeklyReport",
+      "type": "object",
+      "description": "Stores a weekly progress report for an early internship.",
+      "properties": {
+        "id": { "type": "string" },
+        "earlyInternshipId": { "type": "string", "description": "Reference to the EarlyInternship record." },
+        "studentId": { "type": "string" },
+        "supervisorId": { "type": "string" },
+        "weekNumber": { "type": "number" },
+        "hours": { "type": "number", "description": "Number of hours completed for the week." },
+        "supervisorComments": { "type": "string", "description": "Comments from the supervisor." },
+        "reviewDate": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "earlyInternshipId", "studentId", "supervisorId", "weekNumber", "hours", "reviewDate"]
     }
   },
   "auth": {
@@ -796,6 +813,14 @@
         "$ref": "#/entities/EarlyInternship"
       },
       "description": "Stores records of students undertaking internships before an official session."
+    },
+     "/earlyInternshipWeeklyReports/{reportId}": {
+      "schema": {
+        "$ref": "#/entities/EarlyInternshipWeeklyReport"
+      },
+      "description": "Stores weekly progress for early internships."
     }
   }
 }
+
+    

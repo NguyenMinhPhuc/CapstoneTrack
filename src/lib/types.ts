@@ -276,3 +276,16 @@ export type EarlyInternship = {
   statusNote?: string;
   batch: string;
 };
+
+export type EarlyInternshipWeeklyReport = {
+    id: string;
+    earlyInternshipId: string;
+    studentId: string;
+    supervisorId: string;
+    weekNumber: number;
+    hours: number;
+    supervisorComments?: string;
+    reviewDate: any;
+};
+
+    
