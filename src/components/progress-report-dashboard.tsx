@@ -24,6 +24,13 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
 import { Badge } from './ui/badge';
 import { format } from 'date-fns';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 
 const formSchema = z.object({
@@ -45,6 +52,7 @@ export function ProgressReportDashboard({ user }: { user: User }) {
   const [activeSession, setActiveSession] = useState<GraduationDefenseSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [currentWeek, setCurrentWeek] = useState(0);
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
 
   const reportsQuery = useMemoFirebase(
     () => activeRegistration ? query(collection(firestore, 'weeklyProgressReports'), where('registrationId', '==', activeRegistration.id)) : null,
@@ -56,6 +64,28 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     if (!pastReports) return [];
     return [...pastReports].sort((a, b) => b.weekNumber - a.weekNumber);
   }, [pastReports]);
+
+  const availableWeeksForSubmission = useMemo(() => {
+    if (currentWeek <= 0) return [];
+    const submittedWeeks = new Set(pastReports?.map(r => r.weekNumber) || []);
+    const weeks = [];
+    for (let i = 1; i <= currentWeek; i++) {
+        if (!submittedWeeks.has(i)) {
+            weeks.push(i);
+        }
+    }
+    return weeks;
+  }, [currentWeek, pastReports]);
+
+  useEffect(() => {
+      // Auto-select the smallest available week if not already selected
+      if (availableWeeksForSubmission.length > 0 && selectedWeek === null) {
+          setSelectedWeek(availableWeeksForSubmission[0]);
+      }
+      if (availableWeeksForSubmission.length === 0) {
+          setSelectedWeek(null);
+      }
+  }, [availableWeeksForSubmission, selectedWeek])
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -98,7 +128,7 @@ export function ProgressReportDashboard({ user }: { user: User }) {
           const sessionStartDate = sessionData.startDate.toDate();
           const today = new Date();
           const weekNum = differenceInWeeks(today, startOfWeek(sessionStartDate, { weekStartsOn: 1 })) + 1;
-          setCurrentWeek(weekNum);
+          setCurrentWeek(weekNum > 0 ? weekNum : 1);
         }
 
       } catch (error) {
@@ -111,13 +141,8 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     findActiveRegistration();
   }, [user, firestore]);
 
-  const canSubmitForCurrentWeek = useMemo(() => {
-    if (!pastReports || currentWeek <= 0) return false;
-    return !pastReports.some(report => report.weekNumber === currentWeek);
-  }, [pastReports, currentWeek]);
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!activeRegistration || !activeSession) return;
+    if (!activeRegistration || !activeSession || selectedWeek === null) return;
 
     const reportData = {
         ...values,
@@ -125,15 +150,16 @@ export function ProgressReportDashboard({ user }: { user: User }) {
         studentId: user.uid,
         supervisorId: activeRegistration.supervisorId || '',
         sessionId: activeSession.id,
-        weekNumber: currentWeek,
+        weekNumber: selectedWeek,
         submissionDate: serverTimestamp(),
         status: 'pending_review' as const,
     };
     
     addDoc(collection(firestore, 'weeklyProgressReports'), reportData)
         .then(() => {
-            toast({ title: "Thành công", description: `Đã nộp báo cáo cho tuần ${currentWeek}.` });
+            toast({ title: "Thành công", description: `Đã nộp báo cáo cho tuần ${selectedWeek}.` });
             form.reset();
+            setSelectedWeek(null);
         })
         .catch(error => {
             const contextualError = new FirestorePermissionError({
@@ -171,13 +197,26 @@ export function ProgressReportDashboard({ user }: { user: User }) {
       <div className="lg:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Báo cáo tuần {currentWeek}</CardTitle>
-            <CardDescription>Nộp báo cáo công việc đã làm và kế hoạch cho tuần tới.</CardDescription>
+            <CardTitle>Nộp Báo cáo Tuần</CardTitle>
+            <CardDescription>Chọn tuần và điền thông tin công việc đã làm.</CardDescription>
           </CardHeader>
           <CardContent>
-            {canSubmitForCurrentWeek ? (
+            {availableWeeksForSubmission.length > 0 ? (
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                  <FormItem>
+                    <FormLabel>Chọn tuần báo cáo</FormLabel>
+                    <Select onValueChange={(value) => setSelectedWeek(Number(value))} value={selectedWeek?.toString()}>
+                       <SelectTrigger>
+                          <SelectValue placeholder="Chọn một tuần để nộp" />
+                        </SelectTrigger>
+                      <SelectContent>
+                        {availableWeeksForSubmission.map(week => (
+                            <SelectItem key={week} value={week.toString()}>Tuần {week}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </FormItem>
                   <FormField
                     control={form.control}
                     name="workDone"
@@ -204,18 +243,18 @@ export function ProgressReportDashboard({ user }: { user: User }) {
                       </FormItem>
                     )}
                   />
-                  <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
+                  <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || selectedWeek === null}>
                     <Send className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Đang nộp...' : `Nộp Báo cáo Tuần ${currentWeek}`}
+                    {form.formState.isSubmitting ? 'Đang nộp...' : `Nộp Báo cáo Tuần ${selectedWeek || ''}`}
                   </Button>
                 </form>
               </Form>
             ) : (
               <Alert>
                 <Info className="h-4 w-4" />
-                <AlertTitle>Đã nộp báo cáo cho tuần này</AlertTitle>
+                <AlertTitle>Đã hoàn thành báo cáo</AlertTitle>
                 <AlertDescription>
-                  Bạn đã nộp báo cáo cho tuần {currentWeek}. Vui lòng quay lại vào tuần sau.
+                  Bạn đã nộp báo cáo cho tất cả các tuần.
                 </AlertDescription>
               </Alert>
             )}
@@ -279,3 +318,5 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     </div>
   );
 }
+
+    
