@@ -208,6 +208,7 @@ export function InternshipApprovalTable() {
             <Table>
                 <TableHeader className="sticky top-0 bg-background">
                 <TableRow>
+                    <TableHead>STT</TableHead>
                     <TableHead>Sinh viên</TableHead>
                     <TableHead>Công ty</TableHead>
                     <TableHead>Đợt báo cáo</TableHead>
@@ -218,8 +219,9 @@ export function InternshipApprovalTable() {
                 </TableHeader>
                 <TableBody>
                 {filteredRegistrations.length > 0 ? (
-                    filteredRegistrations.map((reg) => (
+                    filteredRegistrations.map((reg, index) => (
                     <TableRow key={reg.id}>
+                        <TableCell>{index + 1}</TableCell>
                         <TableCell>
                         <div>{reg.studentName}</div>
                         <div className="text-xs text-muted-foreground">{reg.studentId}</div>
@@ -261,7 +263,7 @@ export function InternshipApprovalTable() {
                     ))
                 ) : (
                     <TableRow>
-                    <TableCell colSpan={6} className="h-24 text-center">
+                    <TableCell colSpan={7} className="h-24 text-center">
                         Không có đơn đăng ký thực tập nào cần duyệt.
                     </TableCell>
                     </TableRow>
