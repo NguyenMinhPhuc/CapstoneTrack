@@ -43,17 +43,15 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const { data: pastReports } = useCollection<WeeklyProgressReport>(reportsQuery);
 
   const weeklyProgress = useMemo(() => {
+    const totalWeeksInSemester = 15; // Set a fixed 15-week duration
     if (!activeSession || !pastReports) {
-      return { totalWeeks: 0, reportedWeeks: 0 };
+      return { totalWeeks: totalWeeksInSemester, reportedWeeks: 0 };
     }
-    const sessionStartDate = activeSession.startDate?.toDate();
-    if (!sessionStartDate) return { totalWeeks: 0, reportedWeeks: 0 };
-
-    const totalWeeks = differenceInWeeks(new Date(), startOfWeek(sessionStartDate, { weekStartsOn: 1 })) + 1;
+    
     const reportedWeeks = pastReports.length;
 
     return {
-      totalWeeks: totalWeeks > 0 ? totalWeeks : 0,
+      totalWeeks: totalWeeksInSemester,
       reportedWeeks,
     };
   }, [activeSession, pastReports]);
@@ -205,7 +203,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                         <p className="font-medium">Tiến độ báo cáo hàng tuần</p>
                         <p className="text-sm text-muted-foreground">{weeklyProgress.reportedWeeks}/{weeklyProgress.totalWeeks} tuần</p>
                     </div>
-                    <Progress value={(weeklyProgress.reportedWeeks / (weeklyProgress.totalWeeks || 1)) * 100} />
+                    <Progress value={(weeklyProgress.reportedWeeks / weeklyProgress.totalWeeks) * 100} />
                 </div>
               </CardContent>
                <CardFooter className="flex flex-col sm:flex-row gap-2">
