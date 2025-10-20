@@ -45,6 +45,7 @@ import remarkGfm from 'remark-gfm';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { RejectTopicDialog } from './reject-topic-dialog';
 import { Dialog } from './ui/dialog';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 const statusLabel: Record<ProjectTopic['status'], string> = {
   pending: 'Chờ duyệt',
@@ -203,13 +204,13 @@ export function TopicManagementTable() {
                     <div className="col-span-2">Đợt báo cáo</div>
                     <div className="col-span-1 text-center">SL SV</div>
                     <div className="col-span-1">Trạng thái</div>
-                    <div className="col-span-1 text-right">Hành động</div>
+                    <div className="col-span-1 text-right pr-8">Hành động</div>
                 </div>
                 <Accordion type="multiple" className="space-y-2">
                     {filteredTopics?.map((topic, index) => (
                         <AccordionItem value={topic.id} key={topic.id} className="border-b">
                              <div className="flex items-center px-4 hover:bg-muted/50">
-                                <AccordionTrigger className="w-full py-0 hover:no-underline">
+                                <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
                                     <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
                                         <div className="col-span-1 text-center">{index + 1}</div>
                                         <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
