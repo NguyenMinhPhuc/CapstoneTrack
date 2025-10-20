@@ -18,52 +18,59 @@ export function MarkdownToolbar({ textareaRef }: MarkdownToolbarProps) {
     const end = textarea.selectionEnd;
     const selectedText = textarea.value.substring(start, end);
     let newText = '';
+    let newCursorPos = start;
 
     switch (style) {
       case 'bold':
         newText = `**${selectedText || 'in đậm'}**`;
+        newCursorPos = selectedText ? start + newText.length : start + 2;
         break;
       case 'italic':
         newText = `*${selectedText || 'in nghiêng'}*`;
+        newCursorPos = selectedText ? start + newText.length : start + 1;
         break;
       case 'bullet': {
         const lines = selectedText.split('\n');
         if (lines.length > 1) {
-          newText = lines.map(line => `- ${line}`).join('\n');
+          newText = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
         } else {
           newText = `- ${selectedText || 'danh sách'}`;
         }
+        newCursorPos = start + newText.length;
         break;
       }
       case 'number': {
         const lines = selectedText.split('\n');
          if (lines.length > 1) {
-          newText = lines.map((line, index) => `${index + 1}. ${line}`).join('\n');
+          newText = lines.filter(line => line.trim()).map((line, index) => `${index + 1}. ${line}`).join('\n');
         } else {
           newText = `1. ${selectedText || 'danh sách'}`;
         }
+        newCursorPos = start + newText.length;
         break;
       }
       default:
         newText = selectedText;
+        newCursorPos = end;
     }
 
     const value = textarea.value;
-    textarea.value = value.substring(0, start) + newText + value.substring(end);
+    const before = value.substring(0, start);
+    const after = value.substring(end);
 
-    // Trigger input event for react-hook-form to update its state
-    const event = new Event('input', { bubbles: true });
+    // This is the key part: update the value programmatically
+    textarea.value = before + newText + after;
+
+    // Then, create and dispatch an 'input' event
+    // This makes React and react-hook-form aware of the change
+    const event = new Event('input', { bubbles: true, cancelable: true });
     textarea.dispatchEvent(event);
 
+    // Set focus and cursor position after the state update
     textarea.focus();
-    if (selectedText) {
-        textarea.setSelectionRange(start + newText.length, start + newText.length);
-    } else {
-        const newCursorPos = style === 'bold' || style === 'italic' 
-            ? start + newText.length - (style === 'bold' ? 2 : 1) 
-            : start + newText.length;
+    setTimeout(() => {
         textarea.setSelectionRange(newCursorPos, newCursorPos);
-    }
+    }, 0);
   };
 
   return (
