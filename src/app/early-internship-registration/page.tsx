@@ -1,7 +1,5 @@
-
 'use client';
 
-import { Suspense } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { useRouter } from 'next/navigation';
@@ -40,7 +38,7 @@ export default function EarlyInternshipRegistrationPage() {
     if (!user) return null;
     return doc(firestore, 'students', user.uid);
   }, [user, firestore]);
-  const { data: studentData } = useDoc(studentDocRef);
+  const { data: studentData, isLoading: isLoadingStudentData } = useDoc(studentDocRef);
 
 
   const earlyInternshipsQuery = useMemoFirebase(() => {
@@ -59,7 +57,7 @@ export default function EarlyInternshipRegistrationPage() {
     }
   }, [user, userData, isUserLoading, isUserDataLoading, router]);
 
-  const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistrations;
+  const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistrations || isLoadingStudentData;
 
   if (isLoading || !userData || !user) {
     return (
@@ -92,7 +90,7 @@ export default function EarlyInternshipRegistrationPage() {
               </div>
                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
-                        <Button>
+                        <Button disabled={!studentData}>
                             <PlusCircle className="mr-2 h-4 w-4" />
                             Tạo Đơn đăng ký mới
                         </Button>
@@ -101,12 +99,17 @@ export default function EarlyInternshipRegistrationPage() {
                         <DialogHeader>
                             <DialogTitle>Đơn đăng ký Thực tập sớm</DialogTitle>
                         </DialogHeader>
-                        {user && studentData && (
+                        {user && studentData ? (
                             <EarlyInternshipForm
                                 user={user}
                                 student={studentData}
                                 onFinished={handleFormSuccess}
                             />
+                        ) : (
+                          <Alert variant="destructive">
+                              <AlertTitle>Lỗi</AlertTitle>
+                              <AlertDescription>Không thể tải hồ sơ sinh viên của bạn. Vui lòng thử lại.</AlertDescription>
+                          </Alert>
                         )}
                     </DialogContent>
                 </Dialog>
