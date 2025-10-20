@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -41,7 +42,6 @@ import { Input } from './ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { cn } from '@/lib/utils';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { RejectTopicDialog } from './reject-topic-dialog';
 import { Dialog } from './ui/dialog';
@@ -195,87 +195,100 @@ export function TopicManagementTable() {
           </div>
         </CardHeader>
         <CardContent>
-          <Accordion type="multiple" className="space-y-2">
-            {filteredTopics?.map((topic, index) => (
-                <AccordionItem value={topic.id} key={topic.id} className="border rounded-md px-4 bg-background hover:bg-muted/50">
-                    <AccordionTrigger className="hover:no-underline">
-                        <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
-                            <div className="col-span-1 text-center">{index + 1}</div>
-                            <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
-                            <div className="col-span-2 truncate">{topic.supervisorName}</div>
-                            <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
-                            <div className="col-span-1 text-center">{topic.maxStudents}</div>
-                            <div className="col-span-1">
-                                <Badge variant={statusVariant[topic.status]}>
-                                    {statusLabel[topic.status]}
-                                </Badge>
+            <div className="border rounded-md">
+                <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
+                    <div className="col-span-1 text-center">STT</div>
+                    <div className="col-span-4">Tên đề tài</div>
+                    <div className="col-span-2">Giáo viên hướng dẫn</div>
+                    <div className="col-span-2">Đợt báo cáo</div>
+                    <div className="col-span-1 text-center">SL SV</div>
+                    <div className="col-span-1">Trạng thái</div>
+                    <div className="col-span-1 text-right">Hành động</div>
+                </div>
+                <Accordion type="multiple" className="space-y-2">
+                    {filteredTopics?.map((topic, index) => (
+                        <AccordionItem value={topic.id} key={topic.id} className="border-b">
+                             <div className="flex items-center px-4 hover:bg-muted/50">
+                                <AccordionTrigger className="w-full py-0 hover:no-underline">
+                                    <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
+                                        <div className="col-span-1 text-center">{index + 1}</div>
+                                        <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
+                                        <div className="col-span-2 truncate">{topic.supervisorName}</div>
+                                        <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
+                                        <div className="col-span-1 text-center">{topic.maxStudents}</div>
+                                        <div className="col-span-1">
+                                            <Badge variant={statusVariant[topic.status]}>
+                                                {statusLabel[topic.status]}
+                                            </Badge>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                                 <div className="col-span-1 flex justify-end">
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger asChild>
+                                            <Button variant="ghost" size="icon">
+                                            <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent align="end">
+                                            <DropdownMenuSub>
+                                                <DropdownMenuSubTrigger>
+                                                    <span>Thay đổi trạng thái</span>
+                                                </DropdownMenuSubTrigger>
+                                                <DropdownMenuPortal>
+                                                    <DropdownMenuSubContent>
+                                                        {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map(status => (
+                                                            <DropdownMenuItem
+                                                                key={status}
+                                                                onSelect={(e) => {
+                                                                    e.preventDefault(); 
+                                                                    handleStatusChange(topic.id, status)
+                                                                }}
+                                                                disabled={topic.status === status}
+                                                            >
+                                                                {statusLabel[status]}
+                                                            </DropdownMenuItem>
+                                                        ))}
+                                                    </DropdownMenuSubContent>
+                                                </DropdownMenuPortal>
+                                            </DropdownMenuSub>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
+                                 </div>
                             </div>
-                             <div className="col-span-1 flex justify-end">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                        <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuSub>
-                                            <DropdownMenuSubTrigger>
-                                                <span>Thay đổi trạng thái</span>
-                                            </DropdownMenuSubTrigger>
-                                            <DropdownMenuPortal>
-                                                <DropdownMenuSubContent>
-                                                    {(Object.keys(statusLabel) as Array<keyof typeof statusLabel>).map(status => (
-                                                        <DropdownMenuItem
-                                                            key={status}
-                                                            onSelect={(e) => {
-                                                                e.preventDefault(); // Prevent closing
-                                                                handleStatusChange(topic.id, status)
-                                                            }}
-                                                            disabled={topic.status === status}
-                                                        >
-                                                            {statusLabel[status]}
-                                                        </DropdownMenuItem>
-                                                    ))}
-                                                </DropdownMenuSubContent>
-                                            </DropdownMenuPortal>
-                                        </DropdownMenuSub>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                             </div>
-                        </div>
-                    </AccordionTrigger>
-                    <AccordionContent className="pt-4 border-t">
-                        <div className="space-y-6">
-                            {topic.status === 'rejected' && topic.rejectionReason && (
-                                <Alert variant="destructive">
-                                    <AlertTriangle className="h-4 w-4" />
-                                    <AlertTitle>Lý do từ chối</AlertTitle>
-                                    <AlertDescription>{topic.rejectionReason}</AlertDescription>
-                                </Alert>
-                            )}
-                            <div className="space-y-1">
-                                <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
-                                <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.summary || ''}</ReactMarkdown>
+                            <AccordionContent className="pt-4 pb-4 px-4 border-t">
+                                <div className="space-y-6">
+                                    {topic.status === 'rejected' && topic.rejectionReason && (
+                                        <Alert variant="destructive">
+                                            <AlertTriangle className="h-4 w-4" />
+                                            <AlertTitle>Lý do từ chối</AlertTitle>
+                                            <AlertDescription>{topic.rejectionReason}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                    <div className="space-y-1">
+                                        <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
+                                        <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.summary || ''}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4>
+                                        <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.objectives || ''}</ReactMarkdown>
+                                        </div>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4>
+                                        <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults || ''}</ReactMarkdown>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div className="space-y-1">
-                                <h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4>
-                                <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.objectives || ''}</ReactMarkdown>
-                                </div>
-                            </div>
-                            <div className="space-y-1">
-                                <h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4>
-                                <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
-                                    <ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults || ''}</ReactMarkdown>
-                                </div>
-                            </div>
-                        </div>
-                    </AccordionContent>
-                </AccordionItem>
-            ))}
-          </Accordion>
+                            </AccordionContent>
+                        </AccordionItem>
+                    ))}
+                </Accordion>
+            </div>
            {filteredTopics.length === 0 && (
                 <div className="text-center py-10 text-muted-foreground">
                     Không tìm thấy đề tài nào phù hợp.
@@ -303,5 +316,3 @@ export function TopicManagementTable() {
     </div>
   );
 }
-
-    
