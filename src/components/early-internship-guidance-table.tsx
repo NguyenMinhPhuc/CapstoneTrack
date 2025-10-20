@@ -20,7 +20,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Check, X, CheckCircle, Clock, Activity } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, doc, updateDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { collection, query, where, doc, updateDoc, getDocs, writeBatch, serverTimestamp } from 'firebase/firestore';
 import type { EarlyInternship, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
@@ -88,7 +88,6 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     const batch = writeBatch(firestore);
     batch.update(docRef, dataToUpdate);
 
-    // If marking as completed, find ongoing session and add student
     if (status === 'completed') {
         try {
             const sessionsQuery = query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing'));
@@ -99,12 +98,11 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     title: 'Không tìm thấy đợt báo cáo',
                     description: 'Không có đợt báo cáo nào đang diễn ra để thêm sinh viên vào.',
                 });
-                return; // Stop if no ongoing session
+                return;
             }
-            const ongoingSession = sessionsSnapshot.docs[0]; // Use the first ongoing session found
+            const ongoingSession = sessionsSnapshot.docs[0];
             const ongoingSessionId = ongoingSession.id;
 
-            // Check if student is already in this session
             const registrationQuery = query(
                 collection(firestore, 'defenseRegistrations'),
                 where('sessionId', '==', ongoingSessionId),
@@ -115,27 +113,25 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
             const registrationData: Partial<DefenseRegistration> = {
                 internshipStatus: 'reporting',
                 internship_companyName: internship.companyName,
-                internship_companyAddress: internship.companyAddress,
-                internship_companySupervisorName: internship.supervisorName, // This is the early internship supervisor
-                internshipSupervisorId: internship.supervisorId, // This is the early internship supervisor
+                internship_companyAddress: internship.companyAddress || '',
+                internship_companySupervisorName: internship.supervisorName,
+                internshipSupervisorId: internship.supervisorId,
                 internshipSupervisorName: internship.supervisorName,
             };
 
             if (registrationSnapshot.empty) {
-                // Create new registration
                 const newRegistrationRef = doc(collection(firestore, 'defenseRegistrations'));
                 const newRegistrationData: Partial<DefenseRegistration> = {
-                     ...registrationData,
+                    ...registrationData,
                     sessionId: ongoingSessionId,
                     studentDocId: internship.studentId,
                     studentId: internship.studentIdentifier,
                     studentName: internship.studentName,
                     graduationStatus: 'not_reporting',
-                    registrationDate: new Date(),
+                    registrationDate: serverTimestamp(),
                 };
-                 batch.set(newRegistrationRef, newRegistrationData, { merge: true });
+                batch.set(newRegistrationRef, newRegistrationData);
             } else {
-                // Update existing registration
                 const existingRegistrationRef = registrationSnapshot.docs[0].ref;
                 batch.update(existingRegistrationRef, registrationData);
             }
