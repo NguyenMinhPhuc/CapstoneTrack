@@ -241,7 +241,7 @@ export function ProgressReportDashboard({ user }: { user: User }) {
                                         <div className="flex items-center justify-between w-full pr-4">
                                             <div className="text-left">
                                                 <p className="font-semibold">Tuần {report.weekNumber}</p>
-                                                <p className="text-xs text-muted-foreground">Nộp ngày: {format(report.submissionDate.toDate(), 'dd/MM/yyyy')}</p>
+                                                <p className="text-xs text-muted-foreground">Nộp ngày: {report.submissionDate?.toDate ? format(report.submissionDate.toDate(), 'dd/MM/yyyy') : 'Đang cập nhật...'}</p>
                                             </div>
                                             <Badge variant={config.variant}>{config.label}</Badge>
                                         </div>
@@ -279,5 +279,3 @@ export function ProgressReportDashboard({ user }: { user: User }) {
     </div>
   );
 }
-
-    
