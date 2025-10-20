@@ -68,6 +68,7 @@ import {
   Table,
   TableBody,
   TableCell,
+  TableHead,
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
@@ -690,3 +691,5 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     </div>
   );
 }
+
+    
