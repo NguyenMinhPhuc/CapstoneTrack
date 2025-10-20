@@ -93,7 +93,8 @@ export function SupervisorCombobox({ value, onChange }: SupervisorComboboxProps)
                   key={option.value}
                   value={option.label}
                   onSelect={() => {
-                    onChange(option.value === value ? null : option);
+                    const selected = supervisorOptions.find(s => s.value === option.value);
+                    onChange(value === option.value ? null : selected || null);
                     setOpen(false);
                   }}
                 >
