@@ -271,7 +271,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                     </Dialog>
                     {earlyInternshipProgress.totalHours >= earlyInternshipProgress.goalHours && (
                         <Button asChild className="w-full">
-                            <Link href="/internship-submission"><FileUp className="mr-2 h-4 w-4"/> Đăng ký Báo cáo Thực tập</Link>
+                            <Link href="/internship-registration"><FileUp className="mr-2 h-4 w-4"/> Đăng ký Báo cáo Thực tập</Link>
                         </Button>
                     )}
                     <Button asChild variant="outline" className="w-full">

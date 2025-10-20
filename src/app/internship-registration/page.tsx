@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, ClipboardList } from 'lucide-react';
 import { InternshipRegistrationForm } from '@/components/internship-registration-form';
-import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type InternshipCompany } from '@/lib/types';
+import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type InternshipCompany, EarlyInternship } from '@/lib/types';
 
 
 export default function InternshipRegistrationPage() {
@@ -34,6 +34,14 @@ export default function InternshipRegistrationPage() {
     [firestore]
   );
   const { data: allCompanies, isLoading: isLoadingAllCompanies } = useCollection<InternshipCompany>(allCompaniesCollectionRef);
+
+  const earlyInternshipQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'earlyInternships'), where('studentId', '==', user.uid), where('status', '==', 'completed')) : null,
+    [user, firestore]
+  );
+  const { data: completedEarlyInternships, isLoading: isLoadingEarlyInternships } = useCollection<EarlyInternship>(earlyInternshipQuery);
+  const hasCompletedEarlyInternship = completedEarlyInternships && completedEarlyInternships.length > 0;
+  const earlyInternshipData = hasCompletedEarlyInternship ? completedEarlyInternships[0] : null;
 
 
   useEffect(() => {
@@ -103,7 +111,7 @@ export default function InternshipRegistrationPage() {
     findActiveRegistration();
   }, [user, firestore, allCompanies, isLoadingAllCompanies]);
 
-  if (isLoading || isUserDataLoading || isLoadingAllCompanies) {
+  if (isLoading || isUserDataLoading || isLoadingAllCompanies || isLoadingEarlyInternships) {
     return (
       <main className="p-4 sm:p-6 lg:p-8">
         <Card>
@@ -168,6 +176,8 @@ export default function InternshipRegistrationPage() {
                         <InternshipRegistrationForm
                             registration={activeRegistration}
                             sessionCompanies={sessionCompanies}
+                            hasCompletedEarlyInternship={hasCompletedEarlyInternship}
+                            earlyInternshipData={earlyInternshipData}
                             onSuccess={() => {
                                 // A simple way to re-trigger the effect to get fresh data
                                  if (user && firestore && !isLoadingAllCompanies) {

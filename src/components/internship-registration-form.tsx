@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus } from '@/lib/types';
+import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import {
@@ -34,7 +34,7 @@ import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
 const formSchema = z.object({
-  registrationType: z.enum(['from_list', 'self_arranged']),
+  registrationType: z.enum(['from_list', 'self_arranged', 'early_internship']),
   
   // From list
   selectedCompanyId: z.string().optional(),
@@ -56,6 +56,10 @@ const formSchema = z.object({
     if (data.registrationType === 'self_arranged') {
         return !!data.internship_companyName;
     }
+    // early_internship is always valid if selected, as data is pre-filled
+    if (data.registrationType === 'early_internship') {
+        return true;
+    }
     return false;
 }, {
     message: 'Vui lòng chọn doanh nghiệp hoặc nhập tên doanh nghiệp.',
@@ -66,10 +70,12 @@ const formSchema = z.object({
 interface InternshipRegistrationFormProps {
   registration: DefenseRegistration;
   sessionCompanies: InternshipCompany[];
+  hasCompletedEarlyInternship: boolean;
+  earlyInternshipData: EarlyInternship | null;
   onSuccess: () => void;
 }
 
-export function InternshipRegistrationForm({ registration, sessionCompanies, onSuccess }: InternshipRegistrationFormProps) {
+export function InternshipRegistrationForm({ registration, sessionCompanies, hasCompletedEarlyInternship, earlyInternshipData, onSuccess }: InternshipRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
@@ -108,6 +114,15 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
       setSelectedCompany(null);
     }
   }, [selectedCompanyId, registrationType, sessionCompanies]);
+  
+  useEffect(() => {
+      if (registrationType === 'early_internship' && earlyInternshipData) {
+          form.setValue('internship_companyName', earlyInternshipData.companyName);
+          form.setValue('internship_companyAddress', earlyInternshipData.companyAddress || '');
+          form.setValue('internship_companySupervisorName', earlyInternshipData.supervisorName);
+          form.setValue('internship_companySupervisorPhone', ''); // Not stored in early internship
+      }
+  }, [registrationType, earlyInternshipData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, 'defenseRegistrations', registration.id);
@@ -137,6 +152,12 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
             dataToUpdate.internship_companyAddress = values.internship_companyAddress;
             dataToUpdate.internship_companySupervisorName = values.internship_companySupervisorName;
             dataToUpdate.internship_companySupervisorPhone = values.internship_companySupervisorPhone;
+        } else if (values.registrationType === 'early_internship' && earlyInternshipData) {
+             dataToUpdate.internship_companyName = earlyInternshipData.companyName;
+             dataToUpdate.internship_companyAddress = earlyInternshipData.companyAddress;
+             dataToUpdate.internship_companySupervisorName = earlyInternshipData.supervisorName;
+             dataToUpdate.internshipSupervisorId = earlyInternshipData.supervisorId;
+             dataToUpdate.internshipSupervisorName = earlyInternshipData.supervisorName;
         }
     }
 
@@ -193,6 +214,12 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                         <FormControl><RadioGroupItem value="self_arranged" /></FormControl>
                         <FormLabel className="font-normal">Tự tìm nơi thực tập</FormLabel>
                     </FormItem>
+                    {hasCompletedEarlyInternship && (
+                        <FormItem className="flex items-center space-x-2 space-y-0">
+                            <FormControl><RadioGroupItem value="early_internship" /></FormControl>
+                            <FormLabel className="font-normal">Đăng ký từ Thực tập sớm</FormLabel>
+                        </FormItem>
+                    )}
                     </RadioGroup>
                 </FormControl>
                 <FormMessage />
@@ -330,6 +357,35 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, onS
                     />
                 </div>
             </div>
+        )}
+        
+        {registrationType === 'early_internship' && earlyInternshipData && (
+             <div className="space-y-6">
+                <div>
+                    <h3 className="text-lg font-medium">Thông tin từ Thực tập sớm</h3>
+                    <p className="text-sm text-muted-foreground">Thông tin này được lấy từ quá trình thực tập sớm của bạn và không thể thay đổi.</p>
+                </div>
+                 <FormField
+                    control={form.control}
+                    name="internship_companyName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Tên đơn vị thực tập</FormLabel>
+                            <FormControl><Input {...field} disabled /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="internship_companySupervisorName"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Người hướng dẫn</FormLabel>
+                            <FormControl><Input {...field} disabled /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+             </div>
         )}
 
         <div className="space-y-6 pt-4">
