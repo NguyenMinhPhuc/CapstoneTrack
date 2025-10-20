@@ -28,7 +28,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc, query } from 'firebase/firestore';
 import type { EarlyInternship } from '@/lib/types';
@@ -70,6 +70,9 @@ const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' |
   cancelled: 'destructive',
 };
 
+type SortKey = 'studentName' | 'companyName' | 'supervisorName' | 'startDate';
+type SortDirection = 'asc' | 'desc';
+
 
 export function EarlyInternshipTable() {
   const firestore = useFirestore();
@@ -84,6 +87,7 @@ export function EarlyInternshipTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [companyFilter, setCompanyFilter] = useState('all');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
   const earlyInternshipsCollectionRef = useMemoFirebase(
@@ -110,10 +114,43 @@ export function EarlyInternshipTable() {
       uniqueSupervisors: Array.from(supervisors).sort(),
     };
   }, [internships]);
+  
+  const toDate = (timestamp: any): Date | undefined => {
+    if (!timestamp) return undefined;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
 
   const filteredInternships = useMemo(() => {
     if (!internships) return [];
-    return internships.filter(internship => {
+    let sortableInternships = [...internships];
+
+     if (sortConfig !== null) {
+      sortableInternships.sort((a, b) => {
+        const aValue = a[sortConfig.key];
+        const bValue = b[sortConfig.key];
+
+        if (aValue === undefined || aValue === null) return 1;
+        if (bValue === undefined || bValue === null) return -1;
+        
+        // Specific handling for date fields
+        if (sortConfig.key === 'startDate') {
+          const dateA = toDate(aValue)?.getTime() || 0;
+          const dateB = toDate(bValue)?.getTime() || 0;
+           if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+           if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+           return 0;
+        }
+
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    return sortableInternships.filter(internship => {
       const term = searchTerm.toLowerCase();
       const searchMatch =
         internship.studentName.toLowerCase().includes(term) ||
@@ -126,16 +163,23 @@ export function EarlyInternshipTable() {
 
       return searchMatch && companyMatch && supervisorMatch;
     });
-  }, [internships, searchTerm, companyFilter, supervisorFilter]);
+  }, [internships, searchTerm, companyFilter, supervisorFilter, sortConfig]);
 
-
-  const toDate = (timestamp: any): Date | undefined => {
-    if (!timestamp) return undefined;
-    if (timestamp && typeof timestamp.toDate === 'function') {
-        return timestamp.toDate();
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
     }
-    return timestamp;
+    setSortConfig({ key, direction });
   };
+
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
+  };
+
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     setSelectedRowIds(checked ? (filteredInternships || []).map(i => i.id) : []);
@@ -289,10 +333,26 @@ export function EarlyInternshipTable() {
                     />
                 </TableHead>
                 <TableHead className="w-[50px]">STT</TableHead>
-                <TableHead>Sinh viên</TableHead>
-                <TableHead>Công ty</TableHead>
-                <TableHead>GVHD</TableHead>
-                <TableHead>Ngày bắt đầu</TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
+                        Sinh viên {getSortIcon('studentName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('companyName')} className="px-0 hover:bg-transparent">
+                        Công ty {getSortIcon('companyName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('supervisorName')} className="px-0 hover:bg-transparent">
+                        GVHD {getSortIcon('supervisorName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('startDate')} className="px-0 hover:bg-transparent">
+                        Ngày bắt đầu {getSortIcon('startDate')}
+                    </Button>
+                </TableHead>
                 <TableHead>Trạng thái</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
