@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import type { ProjectTopic, DefenseRegistration, SystemSettings, GraduationDefenseSession } from '@/lib/types';
@@ -108,6 +109,9 @@ export function RegisteredTopicDetails({ topic, registration, session }: Registe
         isWindowOpen: isWithinInterval(now, { start: startDate, end: endDate }),
     }
   }, [session.expectedReportDate]);
+  
+  const canSubmitReport = (reportSubmission?.isWindowOpen || settings?.forceOpenReportSubmission);
+
 
   return (
     <div>
@@ -124,9 +128,9 @@ export function RegisteredTopicDetails({ topic, registration, session }: Registe
                 <AlertTitle>Giai đoạn nộp báo cáo</AlertTitle>
                 <AlertDescription>
                    Thời gian nộp báo cáo toàn văn: Từ ngày <strong>{format(reportSubmission.startDate, 'dd/MM/yyyy')}</strong> đến ngày <strong>{format(reportSubmission.endDate, 'dd/MM/yyyy')}</strong>.
-                   {reportSubmission.isWindowOpen 
+                   {canSubmitReport
                         ? " Hiện đang trong thời gian nộp báo cáo." 
-                        : " Vui lòng quay lại vào đúng thời gian quy định."
+                        : " Hiện đã hết thời gian nộp báo cáo."
                    }
                 </AlertDescription>
             </Alert>
@@ -196,7 +200,7 @@ export function RegisteredTopicDetails({ topic, registration, session }: Registe
                     </Button>
                 )}
                  {propStatus === 'approved' && reportSubmission && (
-                    <Button asChild className="w-full" disabled={!reportSubmission.isWindowOpen}>
+                    <Button asChild className="w-full" disabled={!canSubmitReport}>
                          <Link href="/report-submission">
                             <FileUp className="mr-2 h-4 w-4" />
                             Nộp Báo cáo

@@ -205,6 +205,7 @@ export type SystemSettings = {
     enableOverallGrading?: boolean;
     allowStudentRegistration?: boolean;
     allowEditingApprovedProposal?: boolean;
+    forceOpenReportSubmission?: boolean;
 }
 
 export type ProjectTopic = {
@@ -221,5 +222,3 @@ export type ProjectTopic = {
     status: 'pending' | 'approved' | 'rejected' | 'taken';
     createdAt: any;
 }
-
-    

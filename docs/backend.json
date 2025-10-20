@@ -588,6 +588,10 @@
         "allowEditingApprovedProposal": {
           "type": "boolean",
           "description": "If true, allows students to edit their proposals even after they have been approved by the supervisor."
+        },
+        "forceOpenReportSubmission": {
+          "type": "boolean",
+          "description": "If true, allows students to submit their final reports at any time, overriding the default submission window."
         }
       }
     }
@@ -668,5 +672,3 @@
     }
   }
 }
-
-    

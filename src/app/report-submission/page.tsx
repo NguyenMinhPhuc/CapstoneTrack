@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -9,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Info, Users } from 'lucide-react';
 import { ReportSubmissionForm } from '@/components/report-submission-form';
-import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type DefenseSubCommittee } from '@/lib/types';
+import { type DefenseRegistration, type GraduationDefenseSession, type SystemUser, type DefenseSubCommittee, type SystemSettings } from '@/lib/types';
+import { sub, isWithinInterval } from 'date-fns';
 
 
 export default function ReportSubmissionPage() {
@@ -18,33 +20,32 @@ export default function ReportSubmissionPage() {
   const firestore = useFirestore();
 
   const [activeRegistration, setActiveRegistration] = useState<DefenseRegistration | null>(null);
-  const [sessionName, setSessionName] = useState('');
+  const [activeSession, setActiveSession] = useState<GraduationDefenseSession | null>(null);
   const [subCommittee, setSubCommittee] = useState<DefenseSubCommittee | null>(null);
-  const [isLoadingRegistration, setIsLoadingRegistration] = useState(true);
-
+  const [isLoading, setIsLoading] = useState(true);
+  
   const userDocRef = useMemoFirebase(
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [user, firestore]
   );
-  const { data: userData, isLoading: isUserDataLoading } = useDoc<SystemUser>(userDocRef);
+  const { data: userData } = useDoc<SystemUser>(userDocRef);
+
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
+
 
   useEffect(() => {
-    const isLoading = isUserLoading || isUserDataLoading;
-    if (isLoading) return;
-
-    if (!user) {
-      router.push('/login');
-    } else if (userData && userData.role !== 'student') {
-      router.push('/');
-    }
-  }, [user, userData, isUserLoading, isUserDataLoading, router]);
+    if (isUserLoading || !user) return;
+    if (!isUserLoading && !user) router.push('/login');
+    if (userData && userData.role !== 'student') router.push('/');
+  }, [user, userData, isUserLoading, router]);
 
   useEffect(() => {
-    if (!user || !firestore) return;
+    if (!user || !firestore || !settings) return;
 
     const findActiveRegistration = async () => {
-        setIsLoadingRegistration(true);
-        setSubCommittee(null); // Reset on each fetch
+        setIsLoading(true);
+        setSubCommittee(null);
         try {
             const ongoingSessionsQuery = query(
                 collection(firestore, 'graduationDefenseSessions'),
@@ -54,17 +55,18 @@ export default function ReportSubmissionPage() {
 
             if (ongoingSessionsSnapshot.empty) {
                 setActiveRegistration(null);
-                setSessionName('');
-                setIsLoadingRegistration(false);
+                setActiveSession(null);
+                setIsLoading(false);
                 return;
             }
 
-            const ongoingSessionIds = ongoingSessionsSnapshot.docs.map(doc => doc.id);
-            const ongoingSessionsMap = new Map(ongoingSessionsSnapshot.docs.map(doc => [doc.id, doc.data() as GraduationDefenseSession]));
+            const sessionDoc = ongoingSessionsSnapshot.docs[0];
+            const sessionData = { id: sessionDoc.id, ...sessionDoc.data() } as GraduationDefenseSession;
+            setActiveSession(sessionData);
 
             const registrationQuery = query(
                 collection(firestore, 'defenseRegistrations'),
-                where('sessionId', 'in', ongoingSessionIds),
+                where('sessionId', '==', sessionData.id),
                 where('studentDocId', '==', user.uid)
             );
             const registrationSnapshot = await getDocs(registrationQuery);
@@ -72,42 +74,44 @@ export default function ReportSubmissionPage() {
             if (!registrationSnapshot.empty) {
                 const regDoc = registrationSnapshot.docs[0];
                 const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
-                
-                setActiveRegistration(registrationData);
 
-                const sessionData = ongoingSessionsMap.get(registrationData.sessionId);
-                if (sessionData) {
-                    setSessionName(sessionData.name);
+                 // Check if submission is allowed
+                const toDate = (timestamp: any): Date | undefined => timestamp?.toDate();
+                const reportDate = toDate(sessionData.expectedReportDate);
+                let isWindowOpen = false;
+                if (reportDate) {
+                    const startDate = sub(reportDate, { weeks: 2 });
+                    const endDate = sub(reportDate, { weeks: 1 });
+                    isWindowOpen = isWithinInterval(new Date(), { start: startDate, end: endDate });
                 }
 
-                // Fetch subcommittee if it exists
-                if (registrationData.subCommitteeId) {
-                    const subCommitteeDocRef = doc(firestore, `graduationDefenseSessions/${registrationData.sessionId}/subCommittees`, registrationData.subCommitteeId);
-                    const subCommitteeDoc = await getDoc(subCommitteeDocRef);
-                    if (subCommitteeDoc.exists()) {
-                        setSubCommittee({ id: subCommitteeDoc.id, ...subCommitteeDoc.data() } as DefenseSubCommittee);
+                if (registrationData.proposalStatus === 'approved' && (isWindowOpen || settings.forceOpenReportSubmission)) {
+                    setActiveRegistration(registrationData);
+                    if (registrationData.subCommitteeId) {
+                        const subCommitteeDocRef = doc(firestore, `graduationDefenseSessions/${registrationData.sessionId}/subCommittees`, registrationData.subCommitteeId);
+                        const subCommitteeDoc = await getDoc(subCommitteeDocRef);
+                        if (subCommitteeDoc.exists()) {
+                            setSubCommittee({ id: subCommitteeDoc.id, ...subCommitteeDoc.data() } as DefenseSubCommittee);
+                        }
                     }
+                } else {
+                    setActiveRegistration(null);
                 }
-
             } else {
                 setActiveRegistration(null);
-                setSessionName('');
             }
         } catch (error) {
             console.error("Error finding active registration:", error);
             setActiveRegistration(null);
-            setSessionName('');
         } finally {
-            setIsLoadingRegistration(false);
+            setIsLoading(false);
         }
     };
 
     findActiveRegistration();
-  }, [user, firestore]);
-
-  const isLoading = isUserLoading || isUserDataLoading || isLoadingRegistration;
-
-  if (isLoading || !user || !userData) {
+  }, [user, firestore, settings]);
+  
+  if (isLoading || isUserLoading || !userData) {
     return (
       <main className="p-4 sm:p-6 lg:p-8">
         <Card>
@@ -135,7 +139,7 @@ export default function ReportSubmissionPage() {
             <CardHeader>
                 <CardTitle>Nộp Báo cáo Đồ án Tốt nghiệp</CardTitle>
                 <CardDescription>
-                    Cập nhật thông tin chi tiết về đề tài của bạn cho đợt báo cáo: <strong>{sessionName || '...'}</strong>
+                    Cập nhật thông tin chi tiết về đề tài của bạn cho đợt báo cáo: <strong>{activeSession?.name || '...'}</strong>
                 </CardDescription>
             </CardHeader>
             <CardContent>
@@ -156,7 +160,7 @@ export default function ReportSubmissionPage() {
                         <Info className="h-4 w-4" />
                         <AlertTitle>Chưa đến thời gian nộp báo cáo</AlertTitle>
                         <AlertDescription>
-                            Bạn hiện chưa được đăng ký vào một đợt báo cáo nào đang diễn ra. Vui lòng quay lại sau khi có thông báo từ khoa.
+                            Bạn hiện chưa thể nộp báo cáo. Vui lòng kiểm tra lại thời gian nộp bài hoặc đợi thông báo từ khoa.
                         </AlertDescription>
                     </Alert>
                 )}

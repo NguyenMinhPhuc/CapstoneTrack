@@ -109,12 +109,24 @@ export function AdminSettings() {
                             onCheckedChange={(checked) => handleFeatureToggle('allowEditingApprovedProposal', checked)}
                         />
                     </div>
+                     <Separator />
+                     <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                            <Label htmlFor="report-submission-switch" className="text-base">
+                                Mở cổng nộp báo cáo
+                            </Label>
+                             <p className="text-sm text-muted-foreground">
+                                Nếu bật, sinh viên có thể nộp báo cáo cuối kỳ bất cứ lúc nào, bỏ qua giới hạn thời gian mặc định.
+                            </p>
+                        </div>
+                        <Switch
+                            id="report-submission-switch"
+                            checked={settings?.forceOpenReportSubmission ?? false}
+                            onCheckedChange={(checked) => handleFeatureToggle('forceOpenReportSubmission', checked)}
+                        />
+                    </div>
                 </CardContent>
             </Card>
         </div>
     );
 }
-
-    
-
-    
