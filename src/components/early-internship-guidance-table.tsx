@@ -71,6 +71,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   const [selectedInternship, setSelectedInternship] = useState<EarlyInternship | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [batchFilter, setBatchFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
   const internshipsQuery = useMemoFirebase(
@@ -147,10 +148,11 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
         internship.studentIdentifier.toLowerCase().includes(term);
       
       const batchMatch = batchFilter === 'all' || internship.batch === batchFilter;
+      const statusMatch = statusFilter === 'all' || internship.status === statusFilter;
 
-      return searchMatch && batchMatch;
+      return searchMatch && batchMatch && statusMatch;
     });
-  }, [internships, searchTerm, batchFilter, sortConfig]);
+  }, [internships, searchTerm, batchFilter, statusFilter, sortConfig]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -282,7 +284,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                   <Input
                     type="search"
                     placeholder="Tìm theo MSSV, tên..."
-                    className="w-full rounded-lg bg-background pl-8 sm:w-64"
+                    className="w-full rounded-lg bg-background pl-8 sm:w-48"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
@@ -295,6 +297,17 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     <SelectItem value="all">Tất cả các đợt</SelectItem>
                     {uniqueBatches.map((batch) => (
                       <SelectItem key={batch} value={batch}>Đợt {batch}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Lọc theo trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    {Object.entries(statusLabel).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
