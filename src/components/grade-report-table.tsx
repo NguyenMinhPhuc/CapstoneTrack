@@ -29,6 +29,7 @@ import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from './ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 
 
 interface CouncilScore {
@@ -42,6 +43,7 @@ interface ProcessedGraduationData {
   studentName: string;
   projectTitle?: string;
   subCommitteeName: string;
+  subCommitteeId?: string;
   supervisorGradScore: number | null;
   councilScores: CouncilScore[];
   councilGradAvg: number | null;
@@ -55,6 +57,7 @@ interface ProcessedInternshipData {
     studentName: string;
     companyName?: string;
     subCommitteeName: string;
+    subCommitteeId?: string;
     companySupervisorScore: number | null;
     councilScores: CouncilScore[];
     councilInternAvg: number | null;
@@ -81,6 +84,7 @@ const roleDisplayNames: Record<SubCommitteeMember['role'], string> = {
 
 export function GradeReportTable({ reportType, session, registrations, evaluations, subCommittees }: GradeReportTableProps) {
   const [searchTerm, setSearchTerm] = useState('');
+  const [subcommitteeFilter, setSubcommitteeFilter] = useState('all');
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
@@ -133,7 +137,9 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             if (reg.graduationStatus === 'withdrawn') {
                  return {
                     id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
-                    projectTitle: reg.projectTitle, subCommitteeName: 'N/A',
+                    projectTitle: reg.projectTitle, 
+                    subCommitteeId: reg.subCommitteeId,
+                    subCommitteeName: 'N/A',
                     supervisorGradScore: 0, councilScores: COUNCIL_ROLES.map(role => ({ role, score: 0 })),
                     councilGradAvg: 0, finalGradScore: 0, currentStatus: 'withdrawn',
                 };
@@ -176,6 +182,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 studentId: reg.studentId,
                 studentName: reg.studentName,
                 projectTitle: reg.projectTitle,
+                subCommitteeId: reg.subCommitteeId,
                 subCommitteeName: subCommitteeDetails?.name || 'Chưa phân công',
                 supervisorGradScore: supervisorGradScore,
                 councilScores: councilScores,
@@ -194,7 +201,9 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             if (reg.internshipStatus === 'withdrawn') {
                 return {
                     id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
-                    companyName: reg.internship_companyName, subCommitteeName: 'N/A',
+                    companyName: reg.internship_companyName, 
+                    subCommitteeId: reg.subCommitteeId,
+                    subCommitteeName: 'N/A',
                     companySupervisorScore: 0, councilScores: COUNCIL_ROLES.map(role => ({ role, score: 0 })),
                     councilInternAvg: 0, finalInternScore: 0, currentStatus: 'withdrawn',
                 }
@@ -236,6 +245,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 studentId: reg.studentId,
                 studentName: reg.studentName,
                 companyName: reg.internship_companyName,
+                subCommitteeId: reg.subCommitteeId,
                 subCommitteeName: subCommitteeDetails?.name || 'Chưa phân công',
                 companySupervisorScore: companySupervisorScore,
                 councilScores: councilScores,
@@ -250,13 +260,19 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
   const filteredData = useMemo(() => {
       if (!processedData) return [];
       const term = searchTerm.toLowerCase();
-      return processedData.filter(item => 
-        item.studentName.toLowerCase().includes(term) ||
-        item.studentId.toLowerCase().includes(term) ||
-        (reportType === 'graduation' && (item as ProcessedGraduationData).projectTitle?.toLowerCase().includes(term)) ||
-        (reportType === 'internship' && (item as ProcessedInternshipData).companyName?.toLowerCase().includes(term))
-      );
-  }, [processedData, searchTerm, reportType]);
+      
+      return processedData.filter(item => {
+        const searchMatch = item.studentName.toLowerCase().includes(term) ||
+          item.studentId.toLowerCase().includes(term) ||
+          (reportType === 'graduation' && (item as ProcessedGraduationData).projectTitle?.toLowerCase().includes(term)) ||
+          (reportType === 'internship' && (item as ProcessedInternshipData).companyName?.toLowerCase().includes(term));
+
+        const subcommitteeMatch = subcommitteeFilter === 'all' || item.subCommitteeId === subcommitteeFilter;
+
+        return searchMatch && subcommitteeMatch;
+      });
+
+  }, [processedData, searchTerm, reportType, subcommitteeFilter]);
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
@@ -505,11 +521,22 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 <Input
                     type="search"
                     placeholder="Tìm kiếm..."
-                    className="pl-8 w-full sm:w-64"
+                    className="pl-8 w-full sm:w-48"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 </div>
+                <Select value={subcommitteeFilter} onValueChange={setSubcommitteeFilter}>
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Lọc theo tiểu ban" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả tiểu ban</SelectItem>
+                    {subCommittees.map(sc => (
+                      <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
                 <FileDown className="mr-2 h-4 w-4" />
                 Xuất Excel
