@@ -21,9 +21,9 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Search, FileDown, Copy, MoreHorizontal, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
-import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember, ReportStatus } from '@/lib/types';
+import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
-import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
+import { Dialog, DialogContent } from './ui/dialog';
 import { CopyEvaluationDialog } from './copy-evaluation-dialog';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -48,7 +48,7 @@ interface ProcessedGraduationData {
   councilScores: CouncilScore[];
   councilGradAvg: number | null;
   finalGradScore: number | null;
-  currentStatus: ReportStatus;
+  notes: string;
 }
 
 interface ProcessedInternshipData {
@@ -62,7 +62,7 @@ interface ProcessedInternshipData {
     councilScores: CouncilScore[];
     councilInternAvg: number | null;
     finalInternScore: number | null;
-    currentStatus: ReportStatus;
+    notes: string;
 }
 
 
@@ -131,9 +131,17 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         const gradSupervisorWeight = 1 - gradCouncilWeight;
         
         return registrations
-            .filter(reg => reg.graduationStatus === 'reporting' || reg.graduationStatus === 'completed' || reg.graduationStatus === 'withdrawn')
             .map((reg): ProcessedGraduationData => {
             
+            const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
+            const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
+            const subCommitteeMembers = subCommitteeDetails?.members || [];
+            
+            let notes: string[] = [];
+            if(reg.graduationStatus === 'withdrawn' && reg.graduationStatusNote) {
+                notes.push(`Bỏ báo cáo: ${reg.graduationStatusNote}`);
+            }
+
             if (reg.graduationStatus === 'withdrawn') {
                  return {
                     id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
@@ -141,21 +149,16 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     subCommitteeId: reg.subCommitteeId,
                     subCommitteeName: 'N/A',
                     supervisorGradScore: 0, councilScores: COUNCIL_ROLES.map(role => ({ role, score: 0 })),
-                    councilGradAvg: 0, finalGradScore: 0, currentStatus: 'withdrawn',
+                    councilGradAvg: 0, finalGradScore: 0, notes: notes.join('; '),
                 };
             }
 
-            const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
-            
             const supervisorGradEval = studentEvals.find(e => 
                 e.evaluatorId === reg.supervisorId && 
                 e.evaluationType === 'graduation' &&
                 e.rubricId === session.supervisorGraduationRubricId
             );
             const supervisorGradScore = supervisorGradEval ? supervisorGradEval.totalScore : null;
-
-            const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
-            const subCommitteeMembers = subCommitteeDetails?.members || [];
             
             const councilScores: CouncilScore[] = COUNCIL_ROLES.map(role => {
                 const member = subCommitteeMembers.find(m => m.role === role);
@@ -166,6 +169,12 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     e.evaluationType === 'graduation' &&
                     e.rubricId === session.councilGraduationRubricId
                 );
+
+                if (evalRecord?.attendance === 'absent') {
+                    notes.push(`Vắng (HĐ - ${member.name})`);
+                    return { role, score: 0 };
+                }
+
                 return { role, score: evalRecord ? evalRecord.totalScore : null };
             });
             
@@ -188,16 +197,23 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 councilScores: councilScores,
                 councilGradAvg: councilGradAvg,
                 finalGradScore: finalGradScore,
-                currentStatus: reg.graduationStatus,
+                notes: notes.join('; '),
             };
         });
     } else { // internship report
         const internCouncilWeight = (session.internshipCouncilWeight ?? 50) / 100;
         const internCompanyWeight = 1 - internCouncilWeight;
         return registrations
-        .filter(reg => reg.internshipStatus === 'reporting' || reg.internshipStatus === 'completed' || reg.internshipStatus === 'withdrawn')
         .map((reg): ProcessedInternshipData => {
+            const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
+            const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
+            const subCommitteeMembers = subCommitteeDetails?.members || [];
             
+            let notes: string[] = [];
+            if(reg.internshipStatus === 'withdrawn' && reg.internshipStatusNote) {
+                notes.push(`Bỏ báo cáo: ${reg.internshipStatusNote}`);
+            }
+
             if (reg.internshipStatus === 'withdrawn') {
                 return {
                     id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
@@ -205,13 +221,9 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     subCommitteeId: reg.subCommitteeId,
                     subCommitteeName: 'N/A',
                     companySupervisorScore: 0, councilScores: COUNCIL_ROLES.map(role => ({ role, score: 0 })),
-                    councilInternAvg: 0, finalInternScore: 0, currentStatus: 'withdrawn',
+                    councilInternAvg: 0, finalInternScore: 0, notes: notes.join('; '),
                 }
             }
-
-            const studentEvals = evaluations.filter(e => e.registrationId === reg.id);
-            const subCommitteeDetails = reg.subCommitteeId ? subCommitteeMap.get(reg.subCommitteeId) : undefined;
-            const subCommitteeMembers = subCommitteeDetails?.members || [];
 
             const companySupervisorEval = studentEvals.find(e =>
                 e.evaluatorId === reg.internshipSupervisorId &&
@@ -229,6 +241,12 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     e.evaluationType === 'internship' &&
                     e.rubricId === session.councilInternshipRubricId
                 );
+
+                 if (evalRecord?.attendance === 'absent') {
+                    notes.push(`Vắng (HĐ - ${member.name})`);
+                    return { role, score: 0 };
+                }
+
                 return { role, score: evalRecord ? evalRecord.totalScore : null };
             });
 
@@ -251,7 +269,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 councilScores: councilScores,
                 councilInternAvg: councilInternAvg,
                 finalInternScore: finalInternScore,
-                currentStatus: reg.internshipStatus,
+                notes: notes.join('; '),
             };
         });
     }
@@ -314,6 +332,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             });
             row['Điểm TB Hội đồng'] = item.councilGradAvg?.toFixed(2) ?? 'N/A';
             row['Điểm Tổng kết'] = item.finalGradScore?.toFixed(1) ?? 'N/A';
+            row['Ghi chú'] = item.notes;
             return row;
         });
     } else {
@@ -332,6 +351,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             });
             row['Điểm TB Hội đồng'] = item.councilInternAvg?.toFixed(2) ?? 'N/A';
             row['Điểm Tổng kết TT'] = item.finalInternScore?.toFixed(1) ?? 'N/A';
+            row['Ghi chú'] = item.notes;
             return row;
         });
     }
@@ -380,6 +400,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             ))}
             <TableHead className="text-center">Điểm TB HĐ</TableHead>
             <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
+            <TableHead>Ghi chú</TableHead>
             <TableHead className="text-center">Hành động</TableHead>
         </TableRow>
         </TableHeader>
@@ -413,6 +434,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                 <TableCell className="text-center font-bold text-primary">
                 {item.finalGradScore !== null ? item.finalGradScore.toFixed(1) : '-'}
                 </TableCell>
+                <TableCell className="text-xs text-muted-foreground">{item.notes}</TableCell>
                 <TableCell className="text-center">
                      <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
                         <Copy className="h-4 w-4" />
@@ -422,7 +444,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             ))
         ) : (
             <TableRow>
-            <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
+            <TableCell colSpan={9 + COUNCIL_ROLES.length} className="text-center h-24">
                 Không có dữ liệu để hiển thị.
             </TableCell>
             </TableRow>
@@ -451,6 +473,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   ))}
                   <TableHead className="text-center">Điểm TB HĐ</TableHead>
                   <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
+                   <TableHead>Ghi chú</TableHead>
                    <TableHead className="text-center">Hành động</TableHead>
               </TableRow>
           </TableHeader>
@@ -485,6 +508,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                           <TableCell className="text-center font-bold text-primary">
                               {item.finalInternScore !== null ? item.finalInternScore.toFixed(1) : '-'}
                           </TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{item.notes}</TableCell>
                           <TableCell className="text-center">
                              <Button variant="ghost" size="icon" onClick={() => openCopyDialog(item.id)}>
                                 <Copy className="h-4 w-4" />
@@ -494,7 +518,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                   ))
               ) : (
                   <TableRow>
-                      <TableCell colSpan={8 + COUNCIL_ROLES.length} className="text-center h-24">
+                      <TableCell colSpan={9 + COUNCIL_ROLES.length} className="text-center h-24">
                           Không có dữ liệu để hiển thị.
                       </TableCell>
                   </TableRow>
@@ -526,17 +550,17 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     onChange={(e) => setSearchTerm(e.target.value)}
                 />
                 </div>
-                <Select value={subcommitteeFilter} onValueChange={setSubcommitteeFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
-                    <SelectValue placeholder="Lọc theo tiểu ban" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Tất cả tiểu ban</SelectItem>
-                    {subCommittees.map(sc => (
-                      <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                 <Select value={subcommitteeFilter} onValueChange={setSubcommitteeFilter}>
+                    <SelectTrigger className="w-full sm:w-[200px]">
+                        <SelectValue placeholder="Lọc theo tiểu ban" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả tiểu ban</SelectItem>
+                        {subCommittees?.map(sc => (
+                            <SelectItem key={sc.id} value={sc.id}>{sc.name}</SelectItem>
+                        ))}
+                    </SelectContent>
+                 </Select>
                 <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
                 <FileDown className="mr-2 h-4 w-4" />
                 Xuất Excel
@@ -544,7 +568,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             </div>
             </div>
             {selectedRowIds.length > 0 && (
-                <div className="flex items-center gap-2 mt-4">
+                <div className="flex flex-wrap items-center gap-2 mt-4">
                     <span className="text-sm text-muted-foreground">Đã chọn {selectedRowIds.length} sinh viên:</span>
                     <Button size="sm" onClick={() => handleBatchStatusUpdate(selectedRowIds, 'completed')}>
                         <CheckCircle className="mr-2 h-4 w-4" />
