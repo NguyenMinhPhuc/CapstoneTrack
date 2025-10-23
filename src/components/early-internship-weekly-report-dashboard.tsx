@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -33,8 +32,9 @@ import {
 import { Input } from './ui/input';
 
 const formSchema = z.object({
-  hours: z.coerce.number().min(1, { message: 'Vui lòng nhập số giờ.' }).max(100, 'Số giờ không hợp lệ.'),
-  supervisorComments: z.string().optional(), // This field is for supervisor, student won't fill it
+  workDone: z.string().min(10, { message: 'Vui lòng mô tả công việc đã làm.' }),
+  nextWeekPlan: z.string().min(10, { message: 'Vui lòng mô tả kế hoạch tuần tới.' }),
+  proofLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
 });
 
 const statusConfig = {
@@ -62,32 +62,64 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
     return [...pastReports].sort((a, b) => b.weekNumber - a.weekNumber);
   }, [pastReports]);
 
-  const availableWeeksForSubmission = useMemo(() => {
+ const availableWeeksForSubmission = useMemo(() => {
     const totalWeeks = 52; // Max weeks in a year
-    const submittedWeeks = new Set(pastReports?.map(r => r.weekNumber) || []);
-    const weeks = [];
+    if (!pastReports) {
+        // If reports are still loading, return an empty array
+        return [];
+    }
+
+    // Weeks that have a 'pending' or 'approved' report
+    const finalizedWeeks = new Set(
+        pastReports
+            .filter(r => r.status === 'pending_review' || r.status === 'approved')
+            .map(r => r.weekNumber)
+    );
+
+    const availableWeeks = [];
     for (let i = 1; i <= totalWeeks; i++) {
-        if (!submittedWeeks.has(i)) {
-            weeks.push(i);
+        if (!finalizedWeeks.has(i)) {
+            availableWeeks.push(i);
         }
     }
-    return weeks;
+    return availableWeeks;
   }, [pastReports]);
 
   useEffect(() => {
-      if (availableWeeksForSubmission.length > 0 && selectedWeek === null) {
-          setSelectedWeek(availableWeeksForSubmission[0]);
-      }
-      if (availableWeeksForSubmission.length === 0) {
-          setSelectedWeek(null);
-      }
-  }, [availableWeeksForSubmission, selectedWeek])
+    if (availableWeeksForSubmission.length > 0 && selectedWeek === null) {
+        setSelectedWeek(availableWeeksForSubmission[0]);
+    }
+    if (availableWeeksForSubmission.length === 0 && selectedWeek !== null) {
+        setSelectedWeek(null);
+    }
+  }, [availableWeeksForSubmission, selectedWeek]);
+  
+   useEffect(() => {
+    if (selectedWeek !== null) {
+        const rejectedReport = pastReports?.find(r => r.weekNumber === selectedWeek && r.status === 'rejected');
+        if (rejectedReport) {
+            form.reset({
+                workDone: rejectedReport.workDone || '',
+                nextWeekPlan: rejectedReport.nextWeekPlan || '',
+                proofLink: rejectedReport.proofLink || '',
+            });
+        } else {
+            form.reset({
+                workDone: '',
+                nextWeekPlan: '',
+                proofLink: '',
+            });
+        }
+    }
+  }, [selectedWeek, pastReports, form]);
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      hours: 40,
-      supervisorComments: '',
+      workDone: '',
+      nextWeekPlan: '',
+      proofLink: '',
     },
   });
 
@@ -122,9 +154,12 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     if (!activeInternship || selectedWeek === null) return;
 
+    // A student can submit a new report for a rejected week.
+    // We will create a new document, not update the old one.
     const reportData = {
-        hours: values.hours,
-        supervisorComments: values.supervisorComments || '', // Student's own comment/note
+        workDone: values.workDone,
+        nextWeekPlan: values.nextWeekPlan,
+        proofLink: values.proofLink,
         earlyInternshipId: activeInternship.id,
         studentId: user.uid,
         supervisorId: activeInternship.supervisorId || '',
@@ -175,8 +210,8 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
       <div className="lg:col-span-1">
         <Card>
           <CardHeader>
-            <CardTitle>Ghi nhận Giờ Thực tập</CardTitle>
-            <CardDescription>Chọn tuần và điền thông tin công việc đã làm để GVHD ghi nhận.</CardDescription>
+            <CardTitle>Nộp Báo cáo Tuần</CardTitle>
+            <CardDescription>Chọn tuần và điền thông tin công việc đã làm.</CardDescription>
           </CardHeader>
           <CardContent>
             {availableWeeksForSubmission.length > 0 ? (
@@ -184,25 +219,28 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                   <FormItem>
                     <FormLabel>Chọn tuần báo cáo</FormLabel>
-                    <Select onValueChange={(value) => setSelectedWeek(Number(value))} value={selectedWeek?.toString()}>
+                    <Select onValueChange={(value) => setSelectedWeek(Number(value))} value={selectedWeek?.toString() ?? ''}>
                        <SelectTrigger>
                           <SelectValue placeholder="Chọn một tuần để nộp" />
                         </SelectTrigger>
                       <SelectContent>
                         {availableWeeksForSubmission.map(week => (
-                            <SelectItem key={week} value={week.toString()}>Tuần {week}</SelectItem>
+                            <SelectItem key={week} value={week.toString()}>
+                                {`Tuần ${week}`}
+                                {pastReports?.some(r => r.weekNumber === week && r.status === 'rejected') && ' (Nộp lại)'}
+                            </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </FormItem>
                   <FormField
                     control={form.control}
-                    name="hours"
+                    name="workDone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Số giờ làm việc trong tuần</FormLabel>
+                        <FormLabel>Công việc đã làm trong tuần</FormLabel>
                         <FormControl>
-                          <Input type="number" placeholder="40" {...field} />
+                          <Textarea placeholder="Mô tả chi tiết các công việc đã hoàn thành..." {...field} className="min-h-[120px]" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -210,12 +248,25 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                   />
                   <FormField
                     control={form.control}
-                    name="supervisorComments"
+                    name="nextWeekPlan"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ghi chú công việc (tùy chọn)</FormLabel>
+                        <FormLabel>Kế hoạch tuần tiếp theo</FormLabel>
                         <FormControl>
-                          <Textarea placeholder="Mô tả ngắn gọn công việc đã làm..." {...field} className="min-h-[120px]" />
+                          <Textarea placeholder="Liệt kê các mục tiêu và công việc cho tuần tới..." {...field} className="min-h-[120px]" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                   <FormField
+                    control={form.control}
+                    name="proofLink"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Link minh chứng (tùy chọn)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="https://example.com/image.png" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -223,7 +274,7 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                   />
                   <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || selectedWeek === null}>
                     <Send className="mr-2 h-4 w-4" />
-                    {form.formState.isSubmitting ? 'Đang gửi...' : `Gửi Báo cáo Tuần ${selectedWeek || ''}`}
+                    {form.formState.isSubmitting ? 'Đang nộp...' : `Nộp Báo cáo Tuần ${selectedWeek || ''}`}
                   </Button>
                 </form>
               </Form>
@@ -232,7 +283,7 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                 <Info className="h-4 w-4" />
                 <AlertTitle>Đã hoàn thành báo cáo</AlertTitle>
                 <AlertDescription>
-                  Bạn đã nộp báo cáo cho tất cả các tuần.
+                  Bạn đã nộp báo cáo cho tất cả các tuần hoặc các tuần còn lại đang chờ duyệt.
                 </AlertDescription>
               </Alert>
             )}
@@ -242,7 +293,7 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
       <div className="lg:col-span-2">
         <Card>
             <CardHeader>
-                <CardTitle>Lịch sử ghi nhận</CardTitle>
+                <CardTitle>Lịch sử báo cáo</CardTitle>
                 <CardDescription>Xem lại các báo cáo đã nộp và phản hồi từ giáo viên.</CardDescription>
             </CardHeader>
             <CardContent>
@@ -251,31 +302,55 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                 ) : sortedReports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full space-y-2">
                         {sortedReports.map(report => {
-                            const status = report.status || 'pending_review';
-                            const config = statusConfig[status];
+                            const config = statusConfig[report.status];
                             return (
-                                <AccordionItem value={`week-${report.weekNumber}`} key={report.id} className="border rounded-md px-4">
+                                <AccordionItem value={`week-${report.id}`} key={report.id} className={cn("border rounded-md px-4", report.status === 'rejected' && 'border-destructive/50')}>
                                     <AccordionTrigger>
                                         <div className="flex items-center justify-between w-full pr-4">
                                             <div className="text-left">
                                                 <p className="font-semibold">Tuần {report.weekNumber}</p>
-                                                <p className="text-xs text-muted-foreground">GVHD chấm ngày: {report.reviewDate?.toDate ? format(report.reviewDate.toDate(), 'dd/MM/yyyy') : 'Đang cập nhật...'}</p>
+                                                <p className="text-xs text-muted-foreground">Nộp ngày: {report.submissionDate?.toDate ? format(report.submissionDate.toDate(), 'dd/MM/yyyy') : '...'}</p>
                                             </div>
-                                            <Badge>{report.hours} giờ</Badge>
+                                            <Badge variant={config.variant}>{config.label}</Badge>
                                         </div>
                                     </AccordionTrigger>
                                     <AccordionContent className="space-y-4 pt-2">
-                                        <div>
-                                            <h4 className="font-semibold mb-2">Nhận xét của GVHD</h4>
-                                            <p className="text-sm text-muted-foreground italic">"{report.supervisorComments || 'Không có nhận xét.'}"</p>
+                                        <div className="space-y-2">
+                                          <h4 className="font-semibold text-sm">Công việc đã làm</h4>
+                                           <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
+                                              <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.workDone || "Không có"}</ReactMarkdown>
+                                          </div>
                                         </div>
+                                         <div className="space-y-2">
+                                            <h4 className="font-semibold text-sm">Kế hoạch tuần tới</h4>
+                                            <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.nextWeekPlan || "Không có"}</ReactMarkdown>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <h4 className="font-semibold text-sm">Số giờ đã báo cáo: <span className="font-normal">{report.hours} giờ</span></h4>
+                                        </div>
+                                        {report.proofLink && (
+                                            <div>
+                                                <h4 className="font-semibold text-sm mb-1">Minh chứng</h4>
+                                                <a href={report.proofLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all flex items-center gap-1">
+                                                   <Link className="h-3 w-3" /> {report.proofLink}
+                                                </a>
+                                            </div>
+                                        )}
+                                        {report.supervisorComments && (
+                                             <div>
+                                                <h4 className="font-semibold text-sm mb-1">Nhận xét của GVHD</h4>
+                                                <p className="text-sm text-muted-foreground italic">"{report.supervisorComments}"</p>
+                                             </div>
+                                        )}
                                     </AccordionContent>
                                 </AccordionItem>
                             )
                         })}
                     </Accordion>
                 ) : (
-                    <p className="text-sm text-center text-muted-foreground py-8">Chưa có báo cáo nào được ghi nhận.</p>
+                    <p className="text-sm text-center text-muted-foreground py-8">Chưa có báo cáo nào được nộp.</p>
                 )}
             </CardContent>
         </Card>
