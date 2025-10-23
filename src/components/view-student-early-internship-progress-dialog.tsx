@@ -48,7 +48,7 @@ export function ViewStudentEarlyInternshipProgressDialog({ internship, reports, 
   }, [reports, goalHours]);
 
   return (
-    <DialogContent className="sm:max-w-2xl">
+    <>
       <DialogHeader>
         <DialogTitle>Chi tiết Tiến độ Thực tập sớm</DialogTitle>
         <DialogDescription>
@@ -100,6 +100,6 @@ export function ViewStudentEarlyInternshipProgressDialog({ internship, reports, 
           Đóng
         </Button>
       </DialogFooter>
-    </DialogContent>
+    </>
   );
 }
