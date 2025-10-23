@@ -124,13 +124,13 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
 
     const reportData = {
         hours: values.hours,
-        supervisorComments: values.supervisorComments || '',
+        supervisorComments: values.supervisorComments || '', // Student's own comment/note
         earlyInternshipId: activeInternship.id,
         studentId: user.uid,
         supervisorId: activeInternship.supervisorId || '',
         weekNumber: selectedWeek,
-        reviewDate: serverTimestamp(),
-        status: 'pending_review' as const, // Ensure default status is set
+        submissionDate: serverTimestamp(),
+        status: 'pending_review' as const,
     };
     
     addDoc(collection(firestore, 'earlyInternshipWeeklyReports'), reportData)
@@ -243,7 +243,7 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
         <Card>
             <CardHeader>
                 <CardTitle>Lịch sử ghi nhận</CardTitle>
-                <CardDescription>Xem lại các báo cáo đã nộp và số giờ được ghi nhận từ giáo viên.</CardDescription>
+                <CardDescription>Xem lại các báo cáo đã nộp và phản hồi từ giáo viên.</CardDescription>
             </CardHeader>
             <CardContent>
                 {isLoadingReports ? (
@@ -251,7 +251,8 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                 ) : sortedReports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full space-y-2">
                         {sortedReports.map(report => {
-                            const config = statusConfig[report.status];
+                            const status = report.status || 'pending_review';
+                            const config = statusConfig[status];
                             return (
                                 <AccordionItem value={`week-${report.weekNumber}`} key={report.id} className="border rounded-md px-4">
                                     <AccordionTrigger>
