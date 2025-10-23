@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -57,6 +58,15 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
   );
   const { data: pastReports, isLoading: isLoadingReports } = useCollection<EarlyInternshipWeeklyReport>(reportsQuery);
 
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      workDone: '',
+      nextWeekPlan: '',
+      proofLink: '',
+    },
+  });
+
   const sortedReports = useMemo(() => {
     if (!pastReports) return [];
     return [...pastReports].sort((a, b) => b.weekNumber - a.weekNumber);
@@ -113,15 +123,6 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
     }
   }, [selectedWeek, pastReports, form]);
 
-
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      workDone: '',
-      nextWeekPlan: '',
-      proofLink: '',
-    },
-  });
 
   useEffect(() => {
     if (!user || !firestore) return;
@@ -302,7 +303,7 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                 ) : sortedReports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full space-y-2">
                         {sortedReports.map(report => {
-                            const config = statusConfig[report.status];
+                            const config = statusConfig[report.status] || statusConfig.pending_review;
                             return (
                                 <AccordionItem value={`week-${report.id}`} key={report.id} className={cn("border rounded-md px-4", report.status === 'rejected' && 'border-destructive/50')}>
                                     <AccordionTrigger>
@@ -326,9 +327,6 @@ export function EarlyInternshipWeeklyReportDashboard({ user }: { user: User }) {
                                             <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
                                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.nextWeekPlan || "Không có"}</ReactMarkdown>
                                             </div>
-                                        </div>
-                                        <div>
-                                            <h4 className="font-semibold text-sm">Số giờ đã báo cáo: <span className="font-normal">{report.hours} giờ</span></h4>
                                         </div>
                                         {report.proofLink && (
                                             <div>
