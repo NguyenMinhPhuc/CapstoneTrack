@@ -13,8 +13,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlusCircle, Trash2, Lock } from 'lucide-react';
+import { PlusCircle, Trash2, Lock, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import {
   Dialog,
   DialogContent,
@@ -141,6 +142,13 @@ export default function EarlyInternshipRegistrationPage() {
                 <CardTitle>Đăng ký Thực tập sớm</CardTitle>
                 <CardDescription>Nộp và quản lý các đơn đăng ký thực tập sớm của bạn.</CardDescription>
               </div>
+              <div className="flex gap-2">
+                 <Button asChild variant="outline">
+                    <Link href="/early-internship-weekly-report">
+                        <Activity className="mr-2 h-4 w-4" />
+                        Báo cáo hàng tuần
+                    </Link>
+                </Button>
                <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
                     <DialogTrigger asChild>
                         <Button disabled={!studentData || !canRegisterNew}>
@@ -166,6 +174,7 @@ export default function EarlyInternshipRegistrationPage() {
                         )}
                     </DialogContent>
                 </Dialog>
+              </div>
           </CardHeader>
           <CardContent className="space-y-4">
               {!canRegisterNew && (
