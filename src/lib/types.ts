@@ -292,7 +292,10 @@ export type EarlyInternshipWeeklyReport = {
     hours: number;
     supervisorComments?: string;
     reviewDate: any;
+    status: 'pending_review' | 'approved' | 'rejected';
 };
+
+    
 
     
 
