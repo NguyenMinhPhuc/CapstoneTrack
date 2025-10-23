@@ -24,6 +24,7 @@ import { Badge } from './ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Clock, CheckCircle, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Separator } from './ui/separator';
 
 interface ViewEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
