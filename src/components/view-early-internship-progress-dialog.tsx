@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, query, where, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
 import {
@@ -27,6 +27,7 @@ import { Separator } from './ui/separator';
 
 interface ViewEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
+  reports: EarlyInternshipWeeklyReport[];
   onFinished: () => void;
   forceRefresh: () => void;
 }
@@ -38,7 +39,7 @@ const statusConfig = {
 };
 
 
-export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forceRefresh }: ViewEarlyInternshipProgressDialogProps) {
+export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinished, forceRefresh }: ViewEarlyInternshipProgressDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [newHours, setNewHours] = useState('');
@@ -51,12 +52,6 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
   const [editingComment, setEditingComment] = useState('');
   const [editingHours, setEditingHours] = useState<string>('');
 
-
-  const reportsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'earlyInternshipWeeklyReports'), where('earlyInternshipId', '==', internship.id)),
-    [firestore, internship]
-  );
-  const { data: reports, isLoading } = useCollection<EarlyInternshipWeeklyReport>(reportsQuery);
 
   const sortedReports = useMemo(() => {
     if (!reports) return [];
@@ -92,6 +87,7 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
         supervisorComments: newComment,
         reviewDate: serverTimestamp(),
         status: 'approved' as const, // Reports created by supervisor are auto-approved
+        submissionDate: serverTimestamp(), // Add submission date for consistency
     };
 
     try {
@@ -100,6 +96,7 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
         setNewHours('');
         setNewComment('');
         setNewWeekNumber(null);
+        forceRefresh();
     } catch(error) {
         console.error("Error adding weekly report: ", error);
         const contextualError = new FirestorePermissionError({
@@ -196,12 +193,10 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
          <div className="space-y-4">
              <h3 className="text-sm font-medium">Lịch sử Báo cáo</h3>
             <ScrollArea className="h-72 rounded-md border">
-                {isLoading ? (
-                    <p className="p-4 text-center">Đang tải lịch sử...</p>
-                ) : sortedReports.length > 0 ? (
+                {reports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full">
                         {sortedReports.map(report => {
-                             const status = report.status || 'pending_review';
+                            const status = report.status || 'pending_review';
                              const config = statusConfig[status];
                             return (
                             <AccordionItem key={report.id} value={`week-${report.weekNumber}`} className="px-4">
@@ -215,40 +210,35 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="space-y-4">
-                                    <p className="text-sm"><b>Số giờ SV báo cáo:</b> {report.hours}</p>
-                                    <Separator/>
-                                     {status === 'pending_review' ? (
-                                        <div className="space-y-2">
-                                            <div className="space-y-1">
-                                                <Label htmlFor={`approved-hours-${report.id}`}>Số giờ được duyệt</Label>
-                                                <Input
-                                                    id={`approved-hours-${report.id}`}
-                                                    type="number"
-                                                    value={editingHours}
-                                                    onChange={(e) => setEditingHours(e.target.value)}
-                                                    placeholder="Nhập số giờ chính thức"
-                                                />
-                                            </div>
-                                            <div className="space-y-1">
-                                                <Label htmlFor={`comment-${report.id}`}>Nhận xét của bạn</Label>
-                                                <Textarea 
-                                                    id={`comment-${report.id}`}
-                                                    placeholder="Nhập nhận xét (bắt buộc khi từ chối)"
-                                                    value={editingComment}
-                                                    onChange={(e) => setEditingComment(e.target.value)}
-                                                />
-                                            </div>
-                                            <div className="flex justify-end gap-2">
-                                                <Button variant="destructive" size="sm" onClick={() => handleAction(report.id, 'rejected')}>Yêu cầu sửa</Button>
-                                                <Button size="sm" onClick={() => handleAction(report.id, 'approved')}>Duyệt</Button>
-                                            </div>
+                                     <div className="space-y-2">
+                                        <p className="text-sm"><b>Số giờ SV báo cáo:</b> {report.hours}</p>
+                                        <Separator/>
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`approved-hours-${report.id}`}>Số giờ được duyệt</Label>
+                                            <Input
+                                                id={`approved-hours-${report.id}`}
+                                                type="number"
+                                                value={editingReportId === report.id ? editingHours : String(report.hours)}
+                                                onChange={(e) => setEditingHours(e.target.value)}
+                                                placeholder="Nhập số giờ chính thức"
+                                                disabled={editingReportId !== report.id}
+                                            />
                                         </div>
-                                     ) : (
-                                         <div>
-                                            <h4 className="font-semibold text-sm mb-1">Nhận xét của GVHD:</h4>
-                                            <p className="text-sm text-muted-foreground italic">"{report.supervisorComments || 'Không có nhận xét.'}"</p>
-                                         </div>
-                                     )}
+                                        <div className="space-y-1">
+                                            <Label htmlFor={`comment-${report.id}`}>Nhận xét của bạn</Label>
+                                            <Textarea 
+                                                id={`comment-${report.id}`}
+                                                placeholder="Nhập nhận xét (bắt buộc khi từ chối)"
+                                                value={editingReportId === report.id ? editingComment : (report.supervisorComments || '')}
+                                                onChange={(e) => setEditingComment(e.target.value)}
+                                                disabled={editingReportId !== report.id}
+                                            />
+                                        </div>
+                                        <div className="flex justify-end gap-2">
+                                            <Button variant="destructive" size="sm" onClick={() => handleAction(report.id, 'rejected')} disabled={editingReportId !== report.id}>Yêu cầu sửa</Button>
+                                            <Button size="sm" onClick={() => handleAction(report.id, 'approved')} disabled={editingReportId !== report.id}>Duyệt</Button>
+                                        </div>
+                                    </div>
                                 </AccordionContent>
                             </AccordionItem>
                         )})}
