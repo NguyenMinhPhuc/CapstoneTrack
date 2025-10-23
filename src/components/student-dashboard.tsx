@@ -91,11 +91,12 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const { data: earlyInternshipReports } = useCollection<EarlyInternshipWeeklyReport>(earlyInternshipReportsQuery);
 
   const earlyInternshipProgress = useMemo(() => {
-    const totalHours = earlyInternshipReports?.reduce((sum, report) => sum + report.hours, 0) || 0;
+    const approvedReports = earlyInternshipReports?.filter(report => report.status === 'approved') || [];
+    const totalHours = approvedReports.reduce((sum, report) => sum + report.hours, 0);
     return {
       totalHours,
       goalHours,
-      percentage: (totalHours / goalHours) * 100,
+      percentage: goalHours > 0 ? (totalHours / goalHours) * 100 : 0,
     };
   }, [earlyInternshipReports, goalHours]);
 
