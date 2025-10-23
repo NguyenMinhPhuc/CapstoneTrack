@@ -1,8 +1,6 @@
-
-
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, query, where, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship, EarlyInternshipWeeklyReport } from '@/lib/types';
@@ -47,7 +45,11 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
   const [newComment, setNewComment] = useState('');
   const [newWeekNumber, setNewWeekNumber] = useState<number | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // State for editing a specific report
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState('');
+  const [editingHours, setEditingHours] = useState<string>('');
 
 
   const reportsQuery = useMemoFirebase(
@@ -66,6 +68,13 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
     const submittedWeeks = new Set(sortedReports.map(r => r.weekNumber));
     return Array.from({ length: maxWeeks }, (_, i) => i + 1).filter(week => !submittedWeeks.has(week));
   }, [sortedReports]);
+
+  const handleEditClick = (report: EarlyInternshipWeeklyReport) => {
+    setEditingReportId(report.id);
+    setEditingComment(report.supervisorComments || '');
+    setEditingHours(String(report.hours));
+  };
+
 
   const handleSubmit = async () => {
     if (newWeekNumber === null || !newHours) {
@@ -113,6 +122,14 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
       });
       return;
     }
+     if (status === 'approved' && (editingHours === '' || isNaN(Number(editingHours)))) {
+      toast({
+        variant: 'destructive',
+        title: 'Số giờ không hợp lệ',
+        description: 'Vui lòng nhập một số hợp lệ cho giờ được duyệt.',
+      });
+      return;
+    }
     
     const reportDocRef = doc(firestore, 'earlyInternshipWeeklyReports', reportId);
     
@@ -120,10 +137,13 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
         await updateDoc(reportDocRef, {
             status,
             supervisorComments: editingComment,
+            hours: status === 'approved' ? Number(editingHours) : 0, // Only update hours on approval
             reviewDate: new Date(),
         });
         toast({ title: 'Thành công', description: 'Đã cập nhật trạng thái báo cáo.' });
         setEditingComment('');
+        setEditingHours('');
+        setEditingReportId(null);
         forceRefresh();
     } catch (error: any) {
         console.error("Error updating progress report:", error);
@@ -181,30 +201,43 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forc
                 ) : sortedReports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full">
                         {sortedReports.map(report => {
-                            const status = report.status || 'pending_review';
-                            const config = statusConfig[status];
+                             const status = report.status || 'pending_review';
+                             const config = statusConfig[status];
                             return (
                             <AccordionItem key={report.id} value={`week-${report.weekNumber}`} className="px-4">
-                                <AccordionTrigger>
+                                <AccordionTrigger onClick={() => handleEditClick(report)}>
                                      <div className="flex items-center justify-between w-full pr-4">
                                         <div className="text-left">
                                             <p className="font-semibold">Tuần {report.weekNumber}</p>
-                                            <p className="text-xs text-muted-foreground">SV nộp: {report.reviewDate?.toDate ? format(report.reviewDate.toDate(), 'dd/MM/yyyy') : '...'}</p>
+                                            <p className="text-xs text-muted-foreground">SV nộp: {report.submissionDate?.toDate ? format(report.submissionDate.toDate(), 'dd/MM/yyyy') : '...'}</p>
                                         </div>
                                          <Badge variant={config.variant}>{config.label}</Badge>
                                     </div>
                                 </AccordionTrigger>
                                 <AccordionContent className="space-y-4">
                                     <p className="text-sm"><b>Số giờ SV báo cáo:</b> {report.hours}</p>
-                                    <p className="text-sm"><b>Ghi chú của SV:</b> {report.supervisorComments || 'Không có'}</p>
                                     <Separator/>
                                      {status === 'pending_review' ? (
                                         <div className="space-y-2">
-                                            <Label>Nhận xét của bạn</Label>
-                                            <Textarea 
-                                                placeholder="Nhập nhận xét (bắt buộc khi từ chối)"
-                                                onChange={(e) => setEditingComment(e.target.value)}
-                                            />
+                                            <div className="space-y-1">
+                                                <Label htmlFor={`approved-hours-${report.id}`}>Số giờ được duyệt</Label>
+                                                <Input
+                                                    id={`approved-hours-${report.id}`}
+                                                    type="number"
+                                                    value={editingHours}
+                                                    onChange={(e) => setEditingHours(e.target.value)}
+                                                    placeholder="Nhập số giờ chính thức"
+                                                />
+                                            </div>
+                                            <div className="space-y-1">
+                                                <Label htmlFor={`comment-${report.id}`}>Nhận xét của bạn</Label>
+                                                <Textarea 
+                                                    id={`comment-${report.id}`}
+                                                    placeholder="Nhập nhận xét (bắt buộc khi từ chối)"
+                                                    value={editingComment}
+                                                    onChange={(e) => setEditingComment(e.target.value)}
+                                                />
+                                            </div>
                                             <div className="flex justify-end gap-2">
                                                 <Button variant="destructive" size="sm" onClick={() => handleAction(report.id, 'rejected')}>Yêu cầu sửa</Button>
                                                 <Button size="sm" onClick={() => handleAction(report.id, 'approved')}>Duyệt</Button>
