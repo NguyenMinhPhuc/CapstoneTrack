@@ -178,7 +178,8 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished }: Vi
                 ) : sortedReports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full">
                         {sortedReports.map(report => {
-                            const config = statusConfig[report.status];
+                            const status = report.status || 'pending_review';
+                            const config = statusConfig[status];
                             return (
                             <AccordionItem key={report.id} value={`week-${report.weekNumber}`} className="px-4">
                                 <AccordionTrigger>
@@ -194,7 +195,7 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished }: Vi
                                     <p className="text-sm"><b>Số giờ SV báo cáo:</b> {report.hours}</p>
                                     <p className="text-sm"><b>Ghi chú của SV:</b> {report.supervisorComments || 'Không có'}</p>
                                     <Separator/>
-                                     {report.status === 'pending_review' ? (
+                                     {status === 'pending_review' ? (
                                         <div className="space-y-2">
                                             <Label>Nhận xét của bạn</Label>
                                             <Textarea 
@@ -233,5 +234,3 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished }: Vi
     </>
   );
 }
-
-    
