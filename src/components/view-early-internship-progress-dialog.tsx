@@ -88,6 +88,8 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
         reviewDate: serverTimestamp(),
         status: 'approved' as const, // Reports created by supervisor are auto-approved
         submissionDate: serverTimestamp(), // Add submission date for consistency
+        workDone: 'Báo cáo do GVHD tạo.', // Default text
+        nextWeekPlan: 'Báo cáo do GVHD tạo.', // Default text
     };
 
     try {
@@ -193,7 +195,7 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
          <div className="space-y-4">
              <h3 className="text-sm font-medium">Lịch sử Báo cáo</h3>
             <ScrollArea className="h-72 rounded-md border">
-                {reports.length > 0 ? (
+                {reports && reports.length > 0 ? (
                     <Accordion type="single" collapsible className="w-full">
                         {sortedReports.map(report => {
                             const status = report.status || 'pending_review';
@@ -211,7 +213,6 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
                                 </AccordionTrigger>
                                 <AccordionContent className="space-y-4">
                                      <div className="space-y-2">
-                                        <p className="text-sm"><b>Số giờ SV báo cáo:</b> {report.hours}</p>
                                         <Separator/>
                                         <div className="space-y-1">
                                             <Label htmlFor={`approved-hours-${report.id}`}>Số giờ được duyệt</Label>
@@ -221,7 +222,6 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
                                                 value={editingReportId === report.id ? editingHours : String(report.hours)}
                                                 onChange={(e) => setEditingHours(e.target.value)}
                                                 placeholder="Nhập số giờ chính thức"
-                                                disabled={editingReportId !== report.id}
                                             />
                                         </div>
                                         <div className="space-y-1">
@@ -231,12 +231,11 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
                                                 placeholder="Nhập nhận xét (bắt buộc khi từ chối)"
                                                 value={editingReportId === report.id ? editingComment : (report.supervisorComments || '')}
                                                 onChange={(e) => setEditingComment(e.target.value)}
-                                                disabled={editingReportId !== report.id}
                                             />
                                         </div>
                                         <div className="flex justify-end gap-2">
-                                            <Button variant="destructive" size="sm" onClick={() => handleAction(report.id, 'rejected')} disabled={editingReportId !== report.id}>Yêu cầu sửa</Button>
-                                            <Button size="sm" onClick={() => handleAction(report.id, 'approved')} disabled={editingReportId !== report.id}>Duyệt</Button>
+                                            <Button variant="destructive" size="sm" onClick={() => handleAction(report.id, 'rejected')}>Yêu cầu sửa</Button>
+                                            <Button size="sm" onClick={() => handleAction(report.id, 'approved')}>Duyệt</Button>
                                         </div>
                                     </div>
                                 </AccordionContent>

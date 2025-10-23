@@ -313,6 +313,10 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     )
   }
 
+  const reportsForSelected = selectedInternship 
+    ? allReports?.filter(r => r.earlyInternshipId === selectedInternship.id) || []
+    : [];
+
   return (
     <>
     <Card>
@@ -395,6 +399,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
           <TableBody>
             {sortedAndFilteredInternships?.map((internship, index) => {
               const progress = progressData.get(internship.id);
+              const newReportsCount = allReports?.filter(r => r.earlyInternshipId === internship.id && r.status === 'pending_review').length || 0;
               return (
               <TableRow key={internship.id}>
                 <TableCell>{index + 1}</TableCell>
@@ -433,17 +438,26 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                             </Button>
                         </div>
                     )}
-                    {(internship.status === 'ongoing' || internship.status === 'completed') && (
+                    {(internship.status === 'ongoing' || internship.status === 'completed' || internship.status === 'rejected') && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
+                                <Button variant="ghost" size="icon" className="relative">
                                     <MoreHorizontal className="h-4 w-4" />
+                                    {newReportsCount > 0 && (
+                                        <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-2 w-2 bg-sky-500"></span>
+                                        </span>
+                                    )}
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                                 <DropdownMenuItem onClick={() => handleProgressClick(internship)}>
                                      <Activity className="mr-2 h-4 w-4" />
-                                    <span>Xem tiến độ</span>
+                                    <span>
+                                        Xem tiến độ
+                                        {newReportsCount > 0 && <Badge variant="secondary" className="ml-2">{newReportsCount} mới</Badge>}
+                                    </span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem onClick={() => handleStatusChange(internship, 'completed', 'Hoàn thành tốt')}>
                                      <CheckCircle className="mr-2 h-4 w-4" />
@@ -489,6 +503,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
             {selectedInternship && (
                 <ViewEarlyInternshipProgressDialog
                     internship={selectedInternship}
+                    reports={reportsForSelected}
                     onFinished={() => {
                         setIsProgressDialogOpen(false);
                         setSelectedInternship(null);
