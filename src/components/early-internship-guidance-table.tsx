@@ -40,6 +40,19 @@ import { ViewEarlyInternshipProgressDialog } from './view-early-internship-progr
 import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Progress } from './ui/progress';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { UserCheck as UserCheckIcon, UserX } from 'lucide-react';
+
 
 interface EarlyInternshipGuidanceTableProps {
   supervisorId: string;
@@ -516,4 +529,3 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     </>
   );
 }
-

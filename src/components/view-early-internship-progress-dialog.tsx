@@ -266,4 +266,3 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
     </>
   );
 }
-
