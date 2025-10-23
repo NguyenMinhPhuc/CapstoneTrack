@@ -212,9 +212,14 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
                                          <Badge variant={config.variant}>{config.label}</Badge>
                                     </div>
                                 </AccordionTrigger>
-                                <AccordionContent className="space-y-4">
+                                <AccordionContent className="space-y-4 pt-2">
+                                     <Separator/>
+                                     <div className="space-y-1">
+                                        <p className="text-sm"><b>Công việc SV báo cáo:</b> {report.workDone}</p>
+                                        <p className="text-sm"><b>Kế hoạch tuần tới của SV:</b> {report.nextWeekPlan}</p>
+                                     </div>
+                                     <Separator/>
                                      <div className="space-y-2">
-                                        <Separator/>
                                         <div className="space-y-1">
                                             <Label htmlFor={`approved-hours-${report.id}`}>Số giờ được duyệt</Label>
                                             <Input
