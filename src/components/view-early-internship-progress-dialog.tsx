@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -201,7 +202,7 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
                             const status = report.status || 'pending_review';
                              const config = statusConfig[status];
                             return (
-                            <AccordionItem key={report.id} value={`week-${report.weekNumber}`} className="px-4">
+                            <AccordionItem key={report.id} value={`week-${report.id}`} className="px-4">
                                 <AccordionTrigger onClick={() => handleEditClick(report)}>
                                      <div className="flex items-center justify-between w-full pr-4">
                                         <div className="text-left">
