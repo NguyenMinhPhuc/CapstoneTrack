@@ -100,7 +100,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     if (!allReports || !internships) return data;
 
     internships.forEach(internship => {
-      const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id);
+      const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id && r.status === 'approved');
       const totalHours = reportsForInternship.reduce((sum, report) => sum + report.hours, 0);
       data.set(internship.id, {
         totalHours,
@@ -493,6 +493,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                         setIsProgressDialogOpen(false);
                         setSelectedInternship(null);
                     }}
+                    forceRefresh={forceRefresh}
                 />
             )}
         </DialogContent>

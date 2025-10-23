@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -29,6 +30,7 @@ import { Separator } from './ui/separator';
 interface ViewEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
   onFinished: () => void;
+  forceRefresh: () => void;
 }
 
 const statusConfig = {
@@ -38,7 +40,7 @@ const statusConfig = {
 };
 
 
-export function ViewEarlyInternshipProgressDialog({ internship, onFinished }: ViewEarlyInternshipProgressDialogProps) {
+export function ViewEarlyInternshipProgressDialog({ internship, onFinished, forceRefresh }: ViewEarlyInternshipProgressDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [newHours, setNewHours] = useState('');
@@ -52,7 +54,7 @@ export function ViewEarlyInternshipProgressDialog({ internship, onFinished }: Vi
     () => query(collection(firestore, 'earlyInternshipWeeklyReports'), where('earlyInternshipId', '==', internship.id)),
     [firestore, internship]
   );
-  const { data: reports, isLoading, forceRefresh } = useCollection<EarlyInternshipWeeklyReport>(reportsQuery);
+  const { data: reports, isLoading } = useCollection<EarlyInternshipWeeklyReport>(reportsQuery);
 
   const sortedReports = useMemo(() => {
     if (!reports) return [];
