@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
@@ -265,3 +266,4 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
     </>
   );
 }
+
