@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList } from "lucide-react";
+import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon } from "lucide-react";
 
 export default function HelpPage() {
   return (
@@ -86,7 +86,12 @@ export default function HelpPage() {
                     <li><strong>Duyệt đăng ký của sinh viên:</strong> Trong mục <strong>Đề tài của tôi</strong>, nhấn vào số lượng sinh viên đăng ký ở mỗi đề tài để xem danh sách và nhấn "Chấp nhận" hoặc "Từ chối".</li>
                     <li><strong>Duyệt thuyết minh và báo cáo:</strong> Khi sinh viên nộp, bạn sẽ có thể truy cập từ danh sách sinh viên đã đăng ký (trong mục "Đề tài của tôi") để xem, góp ý và duyệt.</li>
                     <li><strong>Theo dõi tiến độ:</strong> Xem và duyệt các báo cáo tiến độ hàng tuần của sinh viên trong chi tiết đề tài.</li>
-                    <li><strong>Chấm điểm:</strong> Truy cập <strong>Chấm điểm Hướng dẫn</strong> để cho điểm quá trình của sinh viên bạn hướng dẫn, hoặc <strong>Chấm điểm Hội đồng</strong> nếu bạn là thành viên hội đồng.</li>
+                    <li><strong>Chấm điểm:</strong>
+                        <ul>
+                            <li><strong>Chấm điểm Hướng dẫn:</strong> Truy cập <strong>Chấm điểm Hướng dẫn</strong> để cho điểm quá trình của sinh viên bạn hướng dẫn.</li>
+                            <li><strong className="flex items-center gap-2"><ClipboardCheckIcon size={16}/>Chấm điểm Hội đồng:</strong> Khi được phân công làm thành viên hội đồng, truy cập mục <strong>Chấm điểm Hội đồng</strong>. Hệ thống sẽ hiển thị các tiểu ban bạn tham gia. Nhấn vào từng tiểu ban để xem danh sách đề tài/sinh viên và nhấn nút "Chấm điểm" để mở phiếu chấm.</li>
+                        </ul>
+                    </li>
                     <li><strong>Hướng dẫn Thực tập sớm:</strong> Quản lý và ghi nhận tiến độ cho các sinh viên bạn hướng dẫn trong chương trình thực tập sớm tại mục <strong>Hướng dẫn TT sớm</strong>.</li>
                 </ul>
             </div>
