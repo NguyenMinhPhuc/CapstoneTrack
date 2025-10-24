@@ -14,8 +14,8 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { useDoc, useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { useEffect } from 'react';
@@ -50,6 +50,39 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
       lastName: '',
     },
   });
+  
+  // This effect synchronizes the email in Firestore if it differs from the auth email.
+  useEffect(() => {
+      const syncEmail = async () => {
+        if (user?.email && userData?.email && user.email !== userData.email) {
+          
+            const batch = writeBatch(firestore);
+            const userDocRef = doc(firestore, 'users', user.uid);
+            batch.update(userDocRef, { email: user.email });
+
+            if (profileDocRef) {
+                batch.update(profileDocRef, { email: user.email });
+            }
+
+            try {
+                await batch.commit();
+                toast({
+                    title: 'Đồng bộ hóa thành công',
+                    description: 'Email của bạn đã được cập nhật trên toàn hệ thống.',
+                });
+            } catch(e) {
+                 const contextualError = new FirestorePermissionError({
+                    path: `batch update for user ${user.uid}`,
+                    operation: 'update',
+                    requestResourceData: { email: user.email },
+                });
+                errorEmitter.emit('permission-error', contextualError);
+            }
+        }
+      }
+      syncEmail();
+  }, [user, userData, firestore, profileDocRef, toast]);
+
 
   useEffect(() => {
     if (profileData) {
@@ -70,23 +103,25 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
         return;
     }
     
-    try {
-      await updateDoc(profileDocRef, {
+    const updateData = {
         firstName: values.firstName,
         lastName: values.lastName,
-      });
+    };
+    
+    updateDoc(profileDocRef, updateData)
+        .catch(error => {
+            const contextualError = new FirestorePermissionError({
+                path: profileDocRef.path,
+                operation: 'update',
+                requestResourceData: updateData,
+            });
+            errorEmitter.emit('permission-error', contextualError);
+        });
+    
       toast({
         title: 'Thành công',
         description: 'Thông tin hồ sơ của bạn đã được cập nhật.',
       });
-    } catch (error: any) {
-      console.error('Error updating profile:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Ôi! Đã xảy ra lỗi.',
-        description: error.message || 'Không thể cập nhật hồ sơ.',
-      });
-    }
   }
   
   if (isProfileLoading) {
