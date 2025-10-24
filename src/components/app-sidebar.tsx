@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarSeparator,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -38,6 +39,7 @@ import {
   ClipboardList,
   Clock,
   CheckSquare,
+  LifeBuoy,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -314,18 +316,25 @@ export function AppSidebar() {
                  <div className="px-2 py-2"><SidebarSeparator /></div>
                 </>
              )}
-            
-            <div className="flex-1" />
-
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter>
+          <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/settings")} tooltip="Settings">
-                    <Link href="#"><Settings /><span>Settings</span></Link>
+              <SidebarMenuButton asChild isActive={isActive("/help")} tooltip="Help">
+                <Link href="/help">
+                  <LifeBuoy />
+                  <span>Hướng dẫn</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/profile")} tooltip="Settings">
+                    <Link href="/profile"><Settings /><span>Settings</span></Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarContent>
+      </SidebarFooter>
     </Sidebar>
   );
 }
-
-    

@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Search, Bell } from "lucide-react";
+import { Search, Bell, LifeBuoy } from "lucide-react";
 import { Input } from "./ui/input";
 import { PlaceHolderImages } from "@/lib/placeholder-images";
 import Image from 'next/image';
@@ -87,7 +87,9 @@ export function AppHeader() {
               <DropdownMenuItem asChild>
                 <Link href="/profile">Profile</Link>
               </DropdownMenuItem>
-              <DropdownMenuItem>Settings</DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link href="/help">Hướng dẫn</Link>
+              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
             </>
