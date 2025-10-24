@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth, useUser, useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { EmailAuthProvider, reauthenticateWithCredential, updateEmail } from 'firebase/auth';
+import { EmailAuthProvider, reauthenticateWithCredential, verifyBeforeUpdateEmail } from 'firebase/auth';
 import type { User } from 'firebase/auth';
 import type { SystemUser } from '@/lib/types';
 import { writeBatch, doc } from 'firebase/firestore';
@@ -58,31 +59,24 @@ export function ChangeEmailForm({ user, userData }: ChangeEmailFormProps) {
     }
 
     try {
-        // 1. Re-authenticate user
+        // 1. Re-authenticate user to ensure they are the legitimate user.
         const credential = EmailAuthProvider.credential(user.email, values.currentPassword);
         await reauthenticateWithCredential(user, credential);
         
-        // 2. If successful, update the email in Firebase Auth
-        await updateEmail(user, values.newEmail);
+        // 2. Send a verification email to the new address.
+        await verifyBeforeUpdateEmail(user, values.newEmail);
 
-        // 3. Update email in Firestore collections using a batch write
-        const batch = writeBatch(firestore);
-        
-        // Update 'users' collection
-        const userDocRef = doc(firestore, 'users', user.uid);
-        batch.update(userDocRef, { email: values.newEmail });
-
-        // Update role-specific collection ('students' or 'supervisors')
-        if (userData.role === 'student' || userData.role === 'supervisor') {
-            const profileDocRef = doc(firestore, `${userData.role}s`, user.uid);
-            batch.update(profileDocRef, { email: values.newEmail });
-        }
-
-        await batch.commit();
+        // NOTE: The email in Firestore ('users', 'students', 'supervisors' collections)
+        // is NOT updated here. It should be updated only AFTER the user has verified
+        // the new email by clicking the link. This typically requires a backend process
+        // (like a Cloud Function trigger) or a dedicated page the user lands on after
+        // clicking the verification link to complete the update in Firestore.
+        // For this client-side form, we only handle the auth part.
 
         toast({
-            title: 'Thành công',
-            description: `Email của bạn đã được thay đổi thành ${values.newEmail}.`,
+            title: 'Yêu cầu đã được gửi',
+            description: `Một email xác thực đã được gửi đến ${values.newEmail}. Vui lòng kiểm tra hộp thư và làm theo hướng dẫn để hoàn tất việc thay đổi email.`,
+            duration: 9000,
         });
         form.reset();
 
@@ -102,16 +96,6 @@ export function ChangeEmailForm({ user, userData }: ChangeEmailFormProps) {
             title: 'Đổi Email thất bại',
             description: description,
         });
-
-        // Emit a permission error if it's a Firestore issue
-        if (error.name === 'FirebaseError' && error.code.includes('permission-denied')) {
-             const contextualError = new FirestorePermissionError({
-                path: `batch write for user ${user.uid}`,
-                operation: 'update',
-                requestResourceData: { email: values.newEmail },
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        }
     }
   }
 
@@ -145,7 +129,7 @@ export function ChangeEmailForm({ user, userData }: ChangeEmailFormProps) {
           )}
         />
         <Button type="submit" disabled={form.formState.isSubmitting}>
-          {form.formState.isSubmitting ? 'Đang cập nhật...' : 'Cập nhật Email'}
+          {form.formState.isSubmitting ? 'Đang gửi yêu cầu...' : 'Gửi yêu cầu đổi Email'}
         </Button>
       </form>
     </Form>
