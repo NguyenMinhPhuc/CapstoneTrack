@@ -30,6 +30,7 @@ import { Separator } from './ui/separator';
 interface ViewEarlyInternshipProgressDialogProps {
   internship: EarlyInternship;
   reports: EarlyInternshipWeeklyReport[];
+  goalHours: number;
   onFinished: () => void;
   forceRefresh: () => void;
 }
@@ -41,7 +42,7 @@ const statusConfig = {
 };
 
 
-export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinished, forceRefresh }: ViewEarlyInternshipProgressDialogProps) {
+export function ViewEarlyInternshipProgressDialog({ internship, reports, goalHours, onFinished, forceRefresh }: ViewEarlyInternshipProgressDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [newHours, setNewHours] = useState('');
@@ -53,6 +54,13 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [editingComment, setEditingComment] = useState('');
   const [editingHours, setEditingHours] = useState<string>('');
+
+  const totalApprovedHours = useMemo(() => {
+    if (!reports) return 0;
+    return reports
+      .filter(report => report.status === 'approved')
+      .reduce((sum, report) => sum + report.hours, 0);
+  }, [reports]);
 
 
   const sortedReports = useMemo(() => {
@@ -164,6 +172,9 @@ export function ViewEarlyInternshipProgressDialog({ internship, reports, onFinis
         <DialogDescription>
           Xem và ghi nhận tiến độ hàng tuần cho sinh viên: {internship.studentName} ({internship.studentIdentifier})
         </DialogDescription>
+         <div className="text-sm font-semibold pt-2">
+            Tổng giờ đã duyệt: <span className="text-primary">{totalApprovedHours.toFixed(0)}/{goalHours} giờ</span>
+        </div>
       </DialogHeader>
       
       <div className="py-4 grid grid-cols-1 md:grid-cols-2 gap-6">

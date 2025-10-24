@@ -522,6 +522,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                         setSelectedInternship(null);
                     }}
                     forceRefresh={forceRefresh}
+                    goalHours={goalHours}
                 />
             )}
         </DialogContent>
