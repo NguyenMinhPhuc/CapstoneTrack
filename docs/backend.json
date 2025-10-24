@@ -735,6 +735,14 @@
             "type": "string",
             "enum": ["pending_review", "approved", "rejected"],
             "description": "The review status of the report."
+        },
+        "workDone": {
+            "type": "string",
+            "description": "The work done by the student for the week."
+        },
+        "nextWeekPlan": {
+            "type": "string",
+            "description": "The student's plan for the next week."
         }
       },
       "required": ["id", "earlyInternshipId", "studentId", "supervisorId", "weekNumber", "hours", "reviewDate", "status"]
@@ -840,3 +848,5 @@
     }
   }
 }
+
+    
