@@ -832,4 +832,3 @@
     "rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    \n    /**\n     * =====================================\n     * 🚀 DEVELOPMENT MODE - FULL ACCESS\n     * =====================================\n     * ⚠️ CHỈ DÙNG KHI ĐANG PHÁT TRIỂN\n     * Toàn quyền cho mọi người (bao gồm cả anonymous).\n     * Khi lên production, PHẢI khóa lại!\n     */\n\n    match /{document=**} {\n      allow read, write: if true;\n    }\n\n  }\n}\n"
   }
 }
-    
