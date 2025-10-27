@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -7,6 +8,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
@@ -19,6 +22,11 @@ import { BookCheck } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { GradeReportPloTable } from './grade-report-plo-table';
 
+const statusLabel: Record<string, string> = {
+  ongoing: 'Đang diễn ra',
+  upcoming: 'Sắp diễn ra',
+  completed: 'Đã hoàn thành',
+};
 
 export function GradeReportDashboard() {
   const firestore = useFirestore();
@@ -29,6 +37,17 @@ export function GradeReportDashboard() {
     [firestore]
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
+  
+  const groupedSessions = useMemo(() => {
+    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
+    return sessions.reduce((acc, session) => {
+      const group = acc[session.status] || [];
+      group.push(session);
+      acc[session.status] = group;
+      return acc;
+    }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
+  }, [sessions]);
+
 
   const selectedSession = useMemo(() => {
       return sessions?.find(s => s.id === selectedSessionId) || null;
@@ -62,7 +81,7 @@ export function GradeReportDashboard() {
   const { data: councilGraduationRubric, isLoading: isLoadingCouncilGradRubric } = useDoc<Rubric>(councilGradRubricDocRef);
   const { data: councilInternshipRubric, isLoading: isLoadingCouncilInternRubric } = useDoc<Rubric>(councilInternRubricDocRef);
   const { data: supervisorGraduationRubric, isLoading: isLoadingSupervisorGradRubric } = useDoc<Rubric>(supervisorGradRubricDocRef);
-  const { data: companyInternshipRubric, isLoading: isLoadingCompanyInternRubric } = useDoc<Rubric>(companyInternRubricDocRef);
+  const { data: companyInternshipRubric, isLoading: isLoadingCompanyInternRubric } = useDoc<Rubric>(companyInternshipRubricDocRef);
   
   // --- End of data fetching ---
 
@@ -84,11 +103,18 @@ export function GradeReportDashboard() {
               <SelectValue placeholder={isLoadingSessions ? "Đang tải..." : "Chọn một đợt"} />
             </SelectTrigger>
             <SelectContent>
-              {sessions?.map(session => (
-                <SelectItem key={session.id} value={session.id}>
-                  {session.name}
-                </SelectItem>
-              ))}
+               {Object.entries(groupedSessions).map(([status, sessionList]) =>
+                  sessionList.length > 0 && (
+                      <SelectGroup key={status}>
+                          <SelectLabel>{statusLabel[status] || status}</SelectLabel>
+                          {sessionList.map(session => (
+                              <SelectItem key={session.id} value={session.id}>
+                                  {session.name}
+                              </SelectItem>
+                          ))}
+                      </SelectGroup>
+                  )
+              )}
             </SelectContent>
           </Select>
         </CardContent>
