@@ -124,7 +124,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
 
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full overflow-hidden">
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollAreaRef}>
         {isLoading && (
@@ -156,7 +156,12 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
                                 isCurrentUser && "prose-invert", // Basic styling for links in dark background
                                 "prose-a:text-blue-300 hover:prose-a:underline"
                              )}>
-                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                <ReactMarkdown 
+                                  remarkPlugins={[remarkGfm]}
+                                  components={{
+                                      a: ({node, ...props}) => <a {...props} target="_blank" rel="noopener noreferrer" />
+                                  }}
+                                >
                                   {msg.content}
                                 </ReactMarkdown>
                             </div>
@@ -206,4 +211,3 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
     </div>
   );
 }
-
