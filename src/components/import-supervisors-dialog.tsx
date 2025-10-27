@@ -1,3 +1,4 @@
+
 'use client';
 import { useState, ChangeEvent } from 'react';
 import * as XLSX from 'xlsx';
@@ -22,12 +23,11 @@ import { useToast } from '@/hooks/use-toast';
 import { Progress } from '@/components/ui/progress';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning, Rocket } from 'lucide-react';
-import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useFirestore } from '@/firebase';
 import { doc, setDoc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
-import { v4 as uuidv4 } from 'uuid';
 
 
 interface SupervisorData {
@@ -126,7 +126,7 @@ export function ImportSupervisorsDialog({ onFinished }: ImportSupervisorsDialogP
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
             const email = row['Email'];
-            const password = uuidv4(); // Generate a strong random password
+            const password = String(row['Password'] || '123456');
 
             if (!email) {
                 errorCount++;
@@ -145,9 +145,6 @@ export function ImportSupervisorsDialog({ onFinished }: ImportSupervisorsDialogP
             try {
                 const userCredential = await createUserWithEmailAndPassword(tempAuth, email, password);
                 const user = userCredential.user;
-                
-                // Send password reset email immediately after creation
-                await sendPasswordResetEmail(tempAuth, email);
 
                 const batch = writeBatch(firestore);
 
@@ -198,7 +195,7 @@ export function ImportSupervisorsDialog({ onFinished }: ImportSupervisorsDialogP
         setIsImporting(false);
         toast({
             title: 'Hoàn tất nhập liệu',
-            description: `Thành công: ${successCount}. Thất bại: ${errorCount}. Email đặt lại mật khẩu đã được gửi đến các tài khoản mới.`,
+            description: `Thành công: ${successCount}. Thất bại: ${errorCount}. Mật khẩu mặc định là '123456' nếu không được cung cấp.`,
             duration: 9000,
         });
         
