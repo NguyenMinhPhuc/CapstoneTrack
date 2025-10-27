@@ -20,7 +20,7 @@ import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase
 import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
-import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Student } from '@/lib/types';
 
@@ -65,6 +65,20 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Check if email already exists in 'users' collection
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, where('email', '==', values.email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        toast({
+            variant: 'destructive',
+            title: 'Email đã tồn tại',
+            description: 'Email này đã được sử dụng cho một tài khoản khác.',
+        });
+        return;
+    }
+
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
     const password = uuidv4(); // Generate a strong random password
