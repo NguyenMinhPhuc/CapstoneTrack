@@ -119,6 +119,11 @@ export function AppSidebar() {
                     <Link href="/qna"><MessageSquare /><span>Hỏi & Đáp</span></Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/resources")} tooltip="Tài nguyên">
+                    <Link href="/resources"><Library /><span>Tài nguyên</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
 
             {userData?.role === 'student' && (
               <>
