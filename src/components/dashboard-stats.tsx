@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import {
   Card,
   CardContent,
@@ -11,7 +11,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Users, FileText, Briefcase, UserCheck } from "lucide-react";
 import { useUser, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import type { DefenseRegistration, ProjectTopic, DefenseSession, EarlyInternship, DefenseCouncilMember, DefenseSubCommittee } from "@/lib/types";
 
 export function DashboardStats() {
@@ -54,7 +54,7 @@ export function DashboardStats() {
 
   // This effect is complex and needs to run once allSessions and user are available
   // It fetches sub-collections for each session, which is not ideal but necessary for this stat.
-  useMemo(() => {
+  useEffect(() => {
     const fetchCouncilData = async () => {
       if (!allSessions || !user) return;
       setIsLoadingCouncilCount(true);
