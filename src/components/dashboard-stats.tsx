@@ -18,48 +18,38 @@ export function DashboardStats() {
   const { user } = useUser();
   const firestore = useFirestore();
 
-  // Fetch ongoing sessions
-  const ongoingSessionsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'defenseSessions'), where('status', '==', 'ongoing')),
-    [firestore]
-  );
-  const { data: ongoingSessions, isLoading: isLoadingSessions } = useCollection<DefenseSession>(ongoingSessionsQuery);
-  const ongoingSessionIds = useMemo(() => ongoingSessions?.map(s => s.id) || [], [ongoingSessions]);
+  // --- Fetch ALL relevant data for the supervisor ---
+  const allSessionsQuery = useMemoFirebase(() => collection(firestore, 'defenseSessions'), [firestore]);
+  const { data: allSessions, isLoading: isLoadingAllSessions } = useCollection<DefenseSession>(allSessionsQuery);
 
-  // Fetch data related to the current supervisor FOR ONGOING SESSIONS
   const gradRegistrationsQuery = useMemoFirebase(
-    () => user && ongoingSessionIds.length > 0 ? query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', user.uid), where('sessionId', 'in', ongoingSessionIds)) : null,
-    [user, ongoingSessionIds]
+    () => user ? query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', user.uid)) : null,
+    [user, firestore]
   );
   const { data: gradRegistrations, isLoading: isLoadingGradRegs } = useCollection<DefenseRegistration>(gradRegistrationsQuery);
   
   const internRegistrationsQuery = useMemoFirebase(
-    () => user && ongoingSessionIds.length > 0 ? query(collection(firestore, 'defenseRegistrations'), where('internshipSupervisorId', '==', user.uid), where('sessionId', 'in', ongoingSessionIds)) : null,
-    [user, ongoingSessionIds]
+    () => user ? query(collection(firestore, 'defenseRegistrations'), where('internshipSupervisorId', '==', user.uid)) : null,
+    [user, firestore]
   );
   const { data: internRegistrations, isLoading: isLoadingInternRegs } = useCollection<DefenseRegistration>(internRegistrationsQuery);
 
-
   const topicsQuery = useMemoFirebase(
-      () => user && ongoingSessionIds.length > 0 ? query(collection(firestore, 'projectTopics'), where('supervisorId', '==', user.uid), where('sessionId', 'in', ongoingSessionIds)) : null,
-      [user, ongoingSessionIds]
+      () => user ? query(collection(firestore, 'projectTopics'), where('supervisorId', '==', user.uid)) : null,
+      [user, firestore]
   );
   const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
 
   const earlyInternshipQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', user.uid), where('status', '==', 'ongoing')) : null,
-    [user]
+    () => user ? query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', user.uid)) : null,
+    [user, firestore]
   );
   const { data: earlyInternships, isLoading: isLoadingEarlyInternships } = useCollection<EarlyInternship>(earlyInternshipQuery);
   
-  // Fetch ALL sessions to count council participations across all time
-  const allSessionsQuery = useMemoFirebase(() => collection(firestore, 'defenseSessions'), [firestore]);
-  const { data: allSessions, isLoading: isLoadingAllSessions } = useCollection<DefenseSession>(allSessionsQuery);
-
+  // --- Council participation count (this remains the same as it's a total count) ---
   const [councilCount, setCouncilCount] = useState(0);
   const [isLoadingCouncilCount, setIsLoadingCouncilCount] = useState(true);
 
-  // This effect is complex and needs to run once allSessions and user are available
   useEffect(() => {
     const fetchCouncilData = async () => {
       if (!allSessions || !user) return;
@@ -72,7 +62,7 @@ export function DashboardStats() {
           
           const [councilSnapshot, subCommitteeSnapshot] = await Promise.all([
               getDocs(councilQuery),
-              getDocs(subCommitteeQuery)
+              getDocs(subCommitteeSnapshot)
           ]);
 
           count += councilSnapshot.size;
@@ -93,54 +83,98 @@ export function DashboardStats() {
 
     fetchCouncilData();
   }, [allSessions, user, firestore]);
-
-  const isLoading = isLoadingSessions || isLoadingGradRegs || isLoadingTopics || isLoadingEarlyInternships || isLoadingCouncilCount || isLoadingAllSessions || isLoadingInternRegs;
   
-  const totalInternshipStudents = (internRegistrations?.length || 0) + (earlyInternships?.length || 0);
+  // --- Process data into ongoing vs. completed stats ---
+  const stats = useMemo(() => {
+    const ongoingSessionIds = new Set(allSessions?.filter(s => s.status === 'ongoing').map(s => s.id) || []);
+    const completedSessionIds = new Set(allSessions?.filter(s => s.status === 'completed').map(s => s.id) || []);
+
+    const gradStudentsOngoing = gradRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId)).length || 0;
+    const gradStudentsCompleted = gradRegistrations?.filter(r => completedSessionIds.has(r.sessionId)).length || 0;
+
+    const topicsOngoing = topics?.filter(t => ongoingSessionIds.has(t.sessionId)).length || 0;
+    const topicsCompleted = topics?.filter(t => completedSessionIds.has(t.sessionId)).length || 0;
+    
+    // Regular internship students from defense registrations
+    const internRegsOngoing = internRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId)).length || 0;
+    const internRegsCompleted = internRegistrations?.filter(r => completedSessionIds.has(r.sessionId)).length || 0;
+
+    // Early internship students
+    const earlyInternsOngoing = earlyInternships?.filter(e => e.status === 'ongoing').length || 0;
+    const earlyInternsCompleted = earlyInternships?.filter(e => e.status === 'completed').length || 0;
+
+    return {
+        gradStudents: { ongoing: gradStudentsOngoing, completed: gradStudentsCompleted },
+        topics: { ongoing: topicsOngoing, completed: topicsCompleted },
+        internStudents: { 
+            ongoing: internRegsOngoing + earlyInternsOngoing, 
+            completed: internRegsCompleted + earlyInternsCompleted 
+        },
+        councilCount: councilCount
+    }
+
+  }, [allSessions, gradRegistrations, internRegistrations, topics, earlyInternships, councilCount]);
+
+
+  const isLoading = isLoadingAllSessions || isLoadingGradRegs || isLoadingInternRegs || isLoadingTopics || isLoadingEarlyInternships || isLoadingCouncilCount;
 
   if (isLoading) {
     return <DashboardStats.Skeleton />;
   }
   
-  const stats = [
+  const statsCards = [
     {
       title: "SV Hướng dẫn TN",
-      value: gradRegistrations?.length ?? 0,
+      ongoing: stats.gradStudents.ongoing,
+      completed: stats.gradStudents.completed,
       icon: <Users className="h-6 w-6 text-muted-foreground" />,
-      change: "Trong các đợt đang diễn ra",
     },
     {
       title: "Đề tài HD",
-      value: topics?.length ?? 0,
+      ongoing: stats.topics.ongoing,
+      completed: stats.topics.completed,
       icon: <FileText className="h-6 w-6 text-muted-foreground" />,
-      change: "Trong các đợt đang diễn ra",
     },
     {
       title: "SV Hướng dẫn TT",
-      value: totalInternshipStudents,
+      ongoing: stats.internStudents.ongoing,
+      completed: stats.internStudents.completed,
       icon: <Briefcase className="h-6 w-6 text-muted-foreground" />,
-      change: "Đợt chính thức & thực tập sớm",
     },
     {
       title: "Hội đồng đã tham gia",
-      value: councilCount,
+      total: stats.councilCount,
       icon: <UserCheck className="h-6 w-6 text-muted-foreground" />,
       change: "Tổng số từ trước đến nay",
     },
   ];
 
-
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat) => (
+      {statsCards.map((stat) => (
         <Card key={stat.title}>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
             {stat.icon}
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold font-headline">{stat.value}</div>
-            <p className="text-xs text-muted-foreground">{stat.change}</p>
+            {stat.total !== undefined ? (
+              <>
+                <div className="text-2xl font-bold font-headline">{stat.total}</div>
+                <p className="text-xs text-muted-foreground">{stat.change}</p>
+              </>
+            ) : (
+              <div className="space-y-1">
+                 <div className="flex items-baseline gap-2">
+                    <span className="text-2xl font-bold font-headline">{stat.ongoing}</span>
+                    <span className="text-xs text-muted-foreground">đang diễn ra</span>
+                </div>
+                 <div className="flex items-baseline gap-2">
+                    <span className="text-xl font-bold font-headline text-muted-foreground/80">{stat.completed}</span>
+                    <span className="text-xs text-muted-foreground">đã hoàn thành</span>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
       ))}
@@ -166,3 +200,4 @@ DashboardStats.Skeleton = function DashboardStatsSkeleton() {
     </div>
   );
 };
+
