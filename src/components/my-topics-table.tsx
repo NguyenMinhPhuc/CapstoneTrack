@@ -32,10 +32,12 @@ import { Badge } from './ui/badge';
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
+} from '@/components/ui/select';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -174,6 +176,16 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
     return new Map(sessions.map(s => [s.id, s.name]));
+  }, [sessions]);
+
+  const groupedSessions = useMemo(() => {
+    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
+    return sessions.reduce((acc, session) => {
+      const group = acc[session.status] || [];
+      group.push(session);
+      acc[session.status] = group;
+      return acc;
+    }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
   }, [sessions]);
 
   const registrationsByTopic = useMemo(() => {
@@ -404,9 +416,30 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     </SelectTrigger>
                     <SelectContent>
                         <SelectItem value="all">Tất cả các đợt</SelectItem>
-                        {sessions?.map(session => (
-                            <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                        ))}
+                        {groupedSessions.ongoing?.length > 0 && (
+                            <SelectGroup>
+                                <SelectLabel>Đang hoạt động</SelectLabel>
+                                {groupedSessions.ongoing.map(session => (
+                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        )}
+                         {groupedSessions.upcoming?.length > 0 && (
+                            <SelectGroup>
+                                <SelectLabel>Sắp diễn ra</SelectLabel>
+                                {groupedSessions.upcoming.map(session => (
+                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        )}
+                         {groupedSessions.completed?.length > 0 && (
+                            <SelectGroup>
+                                <SelectLabel>Đã hoàn thành</SelectLabel>
+                                {groupedSessions.completed.map(session => (
+                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
+                                ))}
+                            </SelectGroup>
+                        )}
                     </SelectContent>
                 </Select>
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
