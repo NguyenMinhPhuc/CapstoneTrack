@@ -88,15 +88,15 @@ export function DashboardStats() {
     const ongoingSessionIds = new Set(allSessions?.filter(s => s.status === 'ongoing').map(s => s.id) || []);
     const completedSessionIds = new Set(allSessions?.filter(s => s.status === 'completed').map(s => s.id) || []);
 
-    const gradStudentsOngoing = gradRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId)).length || 0;
-    const gradStudentsCompleted = gradRegistrations?.filter(r => completedSessionIds.has(r.sessionId)).length || 0;
+    const gradStudentsOngoing = gradRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId) && r.graduationStatus === 'reporting').length || 0;
+    const gradStudentsCompleted = gradRegistrations?.filter(r => r.graduationStatus === 'completed').length || 0;
 
-    const topicsOngoing = topics?.filter(t => ongoingSessionIds.has(t.sessionId)).length || 0;
+    const topicsOngoing = topics?.filter(t => ongoingSessionIds.has(t.sessionId) && t.status !== 'taken').length || 0;
     const topicsCompleted = topics?.filter(t => completedSessionIds.has(t.sessionId)).length || 0;
     
     // Regular internship students from defense registrations
-    const internRegsOngoing = internRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId)).length || 0;
-    const internRegsCompleted = internRegistrations?.filter(r => completedSessionIds.has(r.sessionId)).length || 0;
+    const internRegsOngoing = internRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId) && r.internshipStatus === 'reporting').length || 0;
+    const internRegsCompleted = internRegistrations?.filter(r => r.internshipStatus === 'completed').length || 0;
 
     // Early internship students
     const earlyInternsOngoing = earlyInternships?.filter(e => e.status === 'ongoing').length || 0;
