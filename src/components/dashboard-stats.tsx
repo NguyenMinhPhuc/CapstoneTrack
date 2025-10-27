@@ -22,17 +22,46 @@ export function DashboardStats() {
   const allSessionsQuery = useMemoFirebase(() => collection(firestore, 'defenseSessions'), [firestore]);
   const { data: allSessions, isLoading: isLoadingAllSessions } = useCollection<GraduationDefenseSession>(allSessionsQuery);
 
+  const ongoingSessionIds = useMemo(() => allSessions?.filter(s => s.status === 'ongoing').map(s => s.id) || [], [allSessions]);
+
   const gradRegistrationsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', user.uid)) : null,
-    [user, firestore]
+    () => {
+        if (!user || ongoingSessionIds.length === 0) return null;
+        return query(
+            collection(firestore, 'defenseRegistrations'), 
+            where('supervisorId', '==', user.uid),
+            where('sessionId', 'in', ongoingSessionIds)
+        );
+    },
+    [user, firestore, ongoingSessionIds]
   );
   const { data: gradRegistrations, isLoading: isLoadingGradRegs } = useCollection<DefenseRegistration>(gradRegistrationsQuery);
   
-  const internRegistrationsQuery = useMemoFirebase(
-    () => user ? query(collection(firestore, 'defenseRegistrations'), where('internshipSupervisorId', '==', user.uid)) : null,
+  const allGradRegistrationsCompletedQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', user.uid), where('graduationStatus', '==', 'completed')) : null,
     [user, firestore]
   );
+  const { data: gradRegistrationsCompleted, isLoading: isLoadingGradRegsCompleted } = useCollection<DefenseRegistration>(allGradRegistrationsCompletedQuery);
+  
+  const internRegistrationsQuery = useMemoFirebase(
+    () => {
+       if (!user || ongoingSessionIds.length === 0) return null;
+       return query(
+            collection(firestore, 'defenseRegistrations'), 
+            where('internshipSupervisorId', '==', user.uid),
+            where('sessionId', 'in', ongoingSessionIds)
+       );
+    },
+    [user, firestore, ongoingSessionIds]
+  );
   const { data: internRegistrations, isLoading: isLoadingInternRegs } = useCollection<DefenseRegistration>(internRegistrationsQuery);
+
+  const allInternRegistrationsCompletedQuery = useMemoFirebase(
+    () => user ? query(collection(firestore, 'defenseRegistrations'), where('internshipSupervisorId', '==', user.uid), where('internshipStatus', '==', 'completed')) : null,
+    [user, firestore]
+  );
+  const { data: internRegistrationsCompleted, isLoading: isLoadingInternRegsCompleted } = useCollection<DefenseRegistration>(allInternRegistrationsCompletedQuery);
+
 
   const topicsQuery = useMemoFirebase(
       () => user ? query(collection(firestore, 'projectTopics'), where('supervisorId', '==', user.uid)) : null,
@@ -88,34 +117,36 @@ export function DashboardStats() {
     const ongoingSessionIds = new Set(allSessions?.filter(s => s.status === 'ongoing').map(s => s.id) || []);
     const completedSessionIds = new Set(allSessions?.filter(s => s.status === 'completed').map(s => s.id) || []);
 
-    const gradStudentsOngoing = gradRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId) && r.graduationStatus === 'reporting').length || 0;
-    const gradStudentsCompleted = gradRegistrations?.filter(r => r.graduationStatus === 'completed').length || 0;
+    const gradStudentsOngoing = gradRegistrations?.filter(r => r.graduationStatus === 'reporting').length || 0;
+    
+    const gradStudentsCompletedCount = gradRegistrationsCompleted?.length || 0;
 
     const topicsOngoing = topics?.filter(t => ongoingSessionIds.has(t.sessionId) && t.status !== 'taken').length || 0;
     const topicsCompleted = topics?.filter(t => completedSessionIds.has(t.sessionId)).length || 0;
     
     // Regular internship students from defense registrations
-    const internRegsOngoing = internRegistrations?.filter(r => ongoingSessionIds.has(r.sessionId) && r.internshipStatus === 'reporting').length || 0;
-    const internRegsCompleted = internRegistrations?.filter(r => r.internshipStatus === 'completed').length || 0;
-
+    const internRegsOngoing = internRegistrations?.filter(r => r.internshipStatus === 'reporting').length || 0;
+    
     // Early internship students
     const earlyInternsOngoing = earlyInternships?.filter(e => e.status === 'ongoing').length || 0;
     const earlyInternsCompleted = earlyInternships?.filter(e => e.status === 'completed').length || 0;
+    
+    const internRegsCompletedCount = internRegistrationsCompleted?.length || 0;
 
     return {
-        gradStudents: { ongoing: gradStudentsOngoing, completed: gradStudentsCompleted },
+        gradStudents: { ongoing: gradStudentsOngoing, completed: gradStudentsCompletedCount },
         topics: { ongoing: topicsOngoing, completed: topicsCompleted },
         internStudents: { 
             ongoing: internRegsOngoing + earlyInternsOngoing, 
-            completed: internRegsCompleted + earlyInternsCompleted 
+            completed: internRegsCompletedCount + earlyInternsCompleted 
         },
         councilCount: councilCount
     }
 
-  }, [allSessions, gradRegistrations, internRegistrations, topics, earlyInternships, councilCount]);
+  }, [allSessions, gradRegistrations, gradRegistrationsCompleted, internRegistrations, internRegistrationsCompleted, topics, earlyInternships, councilCount]);
 
 
-  const isLoading = isLoadingAllSessions || isLoadingGradRegs || isLoadingInternRegs || isLoadingTopics || isLoadingEarlyInternships || isLoadingCouncilCount;
+  const isLoading = isLoadingAllSessions || isLoadingGradRegs || isLoadingInternRegs || isLoadingTopics || isLoadingEarlyInternships || isLoadingCouncilCount || isLoadingGradRegsCompleted || isLoadingInternRegsCompleted;
 
   if (isLoading) {
     return <DashboardStats.Skeleton />;
