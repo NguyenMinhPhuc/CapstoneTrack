@@ -110,12 +110,12 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tóm tắt</FormLabel>
-              <MarkdownToolbar textareaRef={summaryRef} />
+              <MarkdownToolbar textareaRef={summaryRef} onChange={field.onChange} />
               <FormControl>
                 <Textarea
                   ref={summaryRef}
                   placeholder="Mô tả ngắn gọn về nội dung, bối cảnh và vấn đề mà đề tài giải quyết."
-                  className="resize-y min-h-[100px]"
+                  className="resize-y min-h-[100px] rounded-t-none"
                   {...field}
                    disabled={isFormDisabled}
                 />
@@ -130,12 +130,12 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mục tiêu của đề tài</FormLabel>
-              <MarkdownToolbar textareaRef={objectivesRef} />
+              <MarkdownToolbar textareaRef={objectivesRef} onChange={field.onChange} />
               <FormControl>
                 <Textarea
                   ref={objectivesRef}
                   placeholder="Liệt kê các mục tiêu cụ thể mà đề tài cần đạt được (ví dụ: gạch đầu dòng)."
-                  className="resize-y min-h-[100px]"
+                  className="resize-y min-h-[100px] rounded-t-none"
                   {...field}
                    disabled={isFormDisabled}
                 />
@@ -150,12 +150,12 @@ export function ReportSubmissionForm({ registration }: ReportSubmissionFormProps
           render={({ field }) => (
             <FormItem>
               <FormLabel>Kết quả mong đợi</FormLabel>
-              <MarkdownToolbar textareaRef={expectedResultsRef} />
+              <MarkdownToolbar textareaRef={expectedResultsRef} onChange={field.onChange} />
               <FormControl>
                 <Textarea
                   ref={expectedResultsRef}
                   placeholder="Mô tả các sản phẩm hoặc kết quả cụ thể sẽ có sau khi hoàn thành đề tài (ví dụ: ứng dụng web, bài báo khoa học...)."
-                  className="resize-y min-h-[100px]"
+                  className="resize-y min-h-[100px] rounded-t-none"
                   {...field}
                    disabled={isFormDisabled}
                 />

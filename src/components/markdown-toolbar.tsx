@@ -7,9 +7,10 @@ import { Bold, Italic, List, ListOrdered } from 'lucide-react';
 
 interface MarkdownToolbarProps {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  onChange: (...event: any[]) => void;
 }
 
-export function MarkdownToolbar({ textareaRef }: MarkdownToolbarProps) {
+export function MarkdownToolbar({ textareaRef, onChange }: MarkdownToolbarProps) {
   const applyStyle = (style: 'bold' | 'italic' | 'bullet' | 'number') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -23,15 +24,12 @@ export function MarkdownToolbar({ textareaRef }: MarkdownToolbarProps) {
     let newCursorPos = 0;
 
     const insertText = (text: string, cursorPos: number) => {
-      textarea.value = value.substring(0, start) + text + value.substring(end);
+      const newValue = value.substring(0, start) + text + value.substring(end);
+      onChange(newValue); // Use the provided onChange handler
       textarea.focus();
       
-      // Use setTimeout to ensure the cursor position is set after the value is updated.
       setTimeout(() => {
         textarea.selectionStart = textarea.selectionEnd = start + cursorPos;
-        // Dispatch an input event to notify React Hook Form of the change
-        const event = new Event('input', { bubbles: true, cancelable: true });
-        textarea.dispatchEvent(event);
       }, 0);
     };
 

@@ -165,12 +165,12 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mô tả tóm tắt</FormLabel>
-                    <MarkdownToolbar textareaRef={summaryRef} />
+                    <MarkdownToolbar textareaRef={summaryRef} onChange={field.onChange} />
                     <FormControl>
                       <Textarea
                         ref={summaryRef}
                         placeholder="Mô tả ngắn gọn về bối cảnh, vấn đề và hướng giải quyết của đề tài."
-                        className="resize-y"
+                        className="resize-y rounded-t-none"
                         {...field}
                       />
                     </FormControl>
@@ -184,12 +184,12 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
-                    <MarkdownToolbar textareaRef={objectivesRef} />
+                    <MarkdownToolbar textareaRef={objectivesRef} onChange={field.onChange} />
                     <FormControl>
                       <Textarea
                         ref={objectivesRef}
                         placeholder="Liệt kê các mục tiêu cụ thể, ví dụ: &#10;- Nghiên cứu... &#10;- Xây dựng mô hình... &#10;- Triển khai ứng dụng..."
-                        className="resize-y"
+                        className="resize-y rounded-t-none"
                         {...field}
                       />
                     </FormControl>
@@ -203,12 +203,12 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
-                    <MarkdownToolbar textareaRef={expectedResultsRef} />
+                    <MarkdownToolbar textareaRef={expectedResultsRef} onChange={field.onChange} />
                     <FormControl>
                       <Textarea
                         ref={expectedResultsRef}
                         placeholder="Liệt kê các sản phẩm, kết quả cụ thể, ví dụ: &#10;- Báo cáo toàn văn &#10;- Source code ứng dụng &#10;- Bộ dữ liệu đã xử lý..."
-                        className="resize-y"
+                        className="resize-y rounded-t-none"
                         {...field}
                       />
                     </FormControl>
