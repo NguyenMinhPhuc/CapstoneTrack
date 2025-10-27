@@ -41,7 +41,7 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound, ArrowUpDown } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
@@ -68,6 +68,10 @@ type RoleStats = {
     disabled: number;
 }
 
+type SortKey = 'email' | 'role' | 'status' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
+
 export function UserManagementTable() {
   const firestore = useFirestore();
   const auth = useAuth();
@@ -80,6 +84,7 @@ export function UserManagementTable() {
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
   const usersCollectionRef = useMemoFirebase(
@@ -133,14 +138,53 @@ export function UserManagementTable() {
       filtered = users.filter(user => user.email && duplicateEmails.has(user.email));
     }
 
-    return filtered.filter(user => {
+    let sortableUsers = [...filtered];
+
+    if (sortConfig !== null) {
+      sortableUsers.sort((a, b) => {
+        const aValue = a[sortConfig.key] ?? '';
+        const bValue = b[sortConfig.key] ?? '';
+        
+        if (sortConfig.key === 'createdAt') {
+             const dateA = aValue?.toDate ? aValue.toDate().getTime() : 0;
+             const dateB = bValue?.toDate ? bValue.toDate().getTime() : 0;
+             if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+             if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+             return 0;
+        }
+
+        if (String(aValue) < String(bValue)) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (String(aValue) > String(bValue)) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableUsers.filter(user => {
       const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
       const roleMatch = roleFilter === 'all' || user.role === roleFilter;
       const statusMatch = statusFilter === 'all' || user.status === statusFilter;
       return searchMatch && roleMatch && statusMatch;
     });
-  }, [users, searchTerm, roleFilter, statusFilter, showOnlyDuplicates]);
+  }, [users, searchTerm, roleFilter, statusFilter, showOnlyDuplicates, sortConfig]);
+  
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
 
   const roleVariant: Record<SystemUser['role'], 'default' | 'secondary' | 'outline'> = {
     'admin': 'default',
@@ -419,10 +463,26 @@ export function UserManagementTable() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">#</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Created At</TableHead>
+              <TableHead>
+                <Button variant="ghost" className="px-0" onClick={() => requestSort('email')}>
+                    User {getSortIcon('email')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                 <Button variant="ghost" className="px-0" onClick={() => requestSort('role')}>
+                    Role {getSortIcon('role')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="px-0" onClick={() => requestSort('status')}>
+                    Status {getSortIcon('status')}
+                </Button>
+              </TableHead>
+              <TableHead className="hidden md:table-cell">
+                 <Button variant="ghost" className="px-0" onClick={() => requestSort('createdAt')}>
+                    Created At {getSortIcon('createdAt')}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
