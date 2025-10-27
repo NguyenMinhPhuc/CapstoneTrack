@@ -190,6 +190,7 @@ export function ResourceManagementTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>Tên</TableHead>
               <TableHead>Mô tả</TableHead>
               <TableHead>Phân loại</TableHead>
@@ -198,8 +199,9 @@ export function ResourceManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredResources?.map((resource) => (
+            {filteredResources?.map((resource, index) => (
               <TableRow key={resource.id}>
+                <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{resource.name}</TableCell>
                 <TableCell>{resource.summary}</TableCell>
                 <TableCell>
