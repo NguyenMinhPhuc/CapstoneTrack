@@ -40,6 +40,7 @@ import {
   Clock,
   CheckSquare,
   LifeBuoy,
+  MessageSquare,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -110,6 +111,11 @@ export function AppSidebar() {
             <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/")} tooltip="Dashboard">
                     <Link href="/"><LayoutDashboard /><span>Dashboard</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/qna")} tooltip="Hỏi & Đáp">
+                    <Link href="/qna"><MessageSquare /><span>Hỏi & Đáp</span></Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
 

@@ -144,6 +144,14 @@
         "facultyRank": {
           "type": "string",
           "description": "The faculty rank of the supervisor."
+        },
+        "canGuideGraduation": {
+          "type": "boolean",
+          "description": "Whether the supervisor can guide graduation projects."
+        },
+        "canGuideInternship": {
+          "type": "boolean",
+          "description": "Whether the supervisor can guide internships."
         }
       },
       "required": [
@@ -672,6 +680,30 @@
         "earlyInternshipGoalHours": {
           "type": "number",
           "description": "The target number of hours for the early internship program."
+        },
+        "themePrimary": {
+            "type": "string",
+            "description": "The HSL value for the primary theme color."
+        },
+        "themePrimaryForeground": {
+            "type": "string",
+            "description": "The HSL value for the primary theme's foreground text color."
+        },
+        "themeBackground": {
+            "type": "string",
+            "description": "The HSL value for the background theme color."
+        },
+        "themeForeground": {
+            "type": "string",
+            "description": "The HSL value for the theme's foreground text color."
+        },
+        "themeAccent": {
+            "type": "string",
+            "description": "The HSL value for the accent theme color."
+        },
+        "themeAccentForeground": {
+            "type": "string",
+            "description": "The HSL value for the theme's accent foreground text color."
         }
       }
     },
@@ -756,6 +788,56 @@
         }
       },
       "required": ["id", "earlyInternshipId", "studentId", "supervisorId", "weekNumber", "hours", "reviewDate", "status"]
+    },
+    "Conversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Conversation",
+      "type": "object",
+      "description": "Represents a single Q&A thread.",
+      "properties": {
+        "id": { "type": "string" },
+        "subject": { "type": "string" },
+        "participantIds": { "type": "array", "items": { "type": "string" }},
+        "createdAt": { "type": "string", "format": "date-time" },
+        "lastMessageAt": { "type": "string", "format": "date-time" },
+        "lastMessageSnippet": { "type": "string" },
+        "readBy": { "type": "array", "items": { "type": "string" }}
+      },
+      "required": ["id", "subject", "participantIds", "createdAt", "lastMessageAt"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a conversation.",
+      "properties": {
+        "id": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "mentionedUserIds": { "type": "array", "items": { "type": "string" }}
+      },
+      "required": ["id", "conversationId", "senderId", "senderName", "content", "createdAt"]
+    },
+    "Notification": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents a notification for a user.",
+      "properties": {
+        "id": { "type": "string" },
+        "recipientId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "type": { "type": "string", "enum": ["new_message", "mention"] },
+        "message": { "type": "string" },
+        "link": { "type": "string", "format": "uri" },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "recipientId", "senderId", "type", "message", "link", "isRead", "createdAt"]
     }
   },
   "auth": {
@@ -855,8 +937,24 @@
         "$ref": "#/entities/EarlyInternshipWeeklyReport"
       },
       "description": "Stores weekly progress for early internships."
+    },
+    "/conversations/{conversationId}": {
+      "schema": {
+        "$ref": "#/entities/Conversation"
+      },
+      "description": "Stores a Q&A conversation thread."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "Stores messages within a conversation."
+    },
+    "/notifications/{notificationId}": {
+      "schema": {
+        "$ref": "#/entities/Notification"
+      },
+      "description": "Stores notifications for users."
     }
   }
 }
-
-    
