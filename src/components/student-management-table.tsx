@@ -1,8 +1,8 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Table,
   TableBody,
@@ -50,7 +50,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -380,6 +380,34 @@ export function StudentManagementTable() {
     setSelectedRowIds([]);
   }
 
+  const exportToExcel = () => {
+    const dataToExport = filteredStudents.map((student, index) => ({
+      'STT': index + 1,
+      'MSSV': student.studentId,
+      'Họ': student.firstName,
+      'Tên': student.lastName,
+      'Lớp': student.className,
+      'Email': student.email,
+      'Chuyên ngành': student.major,
+      'Trạng thái học tập': statusLabel[student.status],
+      'Trạng thái TN': completionStatusLabel[student.graduationStatus || 'not_achieved'],
+      'Trạng thái TT': completionStatusLabel[student.internshipStatus || 'not_achieved'],
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachSinhVien');
+    
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, 
+      { wch: 30 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+    ];
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {type: 'application/octet-stream'});
+    saveAs(data, 'DanhSachSinhVien.xlsx');
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -610,6 +638,10 @@ export function StudentManagementTable() {
                     </DropdownMenu>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
+                    <Button onClick={exportToExcel} variant="outline" className="w-full">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Xuất Excel
+                    </Button>
                     <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="w-full">
@@ -825,3 +857,4 @@ export function StudentManagementTable() {
 
 
     
+
