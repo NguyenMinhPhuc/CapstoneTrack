@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -43,7 +43,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Supervisor, SystemUser } from '@/lib/types';
@@ -54,6 +54,9 @@ import { Input } from './ui/input';
 import { AddSupervisorForm } from './add-supervisor-form';
 import { EditSupervisorForm } from './edit-supervisor-form';
 import { Badge } from './ui/badge';
+import { Checkbox } from './ui/checkbox';
+import { AssignGuidanceScopeDialog } from './assign-guidance-scope-dialog';
+
 
 const statusLabel: Record<SystemUser['status'], string> = {
   active: 'Hoạt động',
@@ -73,10 +76,13 @@ export function SupervisorManagementTable() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isAssignScopeDialogOpen, setIsAssignScopeDialogOpen] = useState(false);
   const [supervisorToDisable, setSupervisorToDisable] = useState<Supervisor | null>(null);
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [guidanceFilter, setGuidanceFilter] = useState('all');
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+
 
   const supervisorsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'supervisors'),
@@ -150,6 +156,27 @@ export function SupervisorManagementTable() {
     }
   };
   
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+        if (checked === true) {
+            setSelectedRowIds(filteredSupervisors?.map(s => s.id) || []);
+        } else {
+            setSelectedRowIds([]);
+        }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedRowIds(prev => [...prev, id]);
+    } else {
+        setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
+  };
+  
+  const handleDialogFinished = () => {
+    setIsAssignScopeDialogOpen(false);
+    setSelectedRowIds([]);
+  };
+  
   const isLoading = isLoadingSupervisors || isLoadingUsers;
 
   if (isLoading) {
@@ -186,23 +213,43 @@ export function SupervisorManagementTable() {
     }
     return <div className="flex items-center gap-1">{badges}</div>;
   };
+  
+  const isAllSelected = filteredSupervisors && selectedRowIds.length > 0 && selectedRowIds.length === filteredSupervisors.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredSupervisors || selectedRowIds.length < filteredSupervisors.length);
 
   return (
     <div className="space-y-4">
     <Card>
       <CardHeader>
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div className="relative flex-1 md:grow-0">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Tìm kiếm theo tên, email, khoa..."
-                className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="flex items-center gap-2">
+                 {selectedRowIds.length > 0 && (
+                    <Dialog open={isAssignScopeDialogOpen} onOpenChange={setIsAssignScopeDialogOpen}>
+                        <DialogTrigger asChild>
+                             <Button variant="outline" size="sm">
+                                <Users className="mr-2 h-4 w-4" />
+                                Gán phạm vi HD ({selectedRowIds.length})
+                            </Button>
+                        </DialogTrigger>
+                         <AssignGuidanceScopeDialog
+                            supervisorIds={selectedRowIds}
+                            allSupervisors={supervisorsWithStatus}
+                            onFinished={handleDialogFinished}
+                          />
+                    </Dialog>
+                )}
             </div>
             <div className="flex w-full sm:w-auto items-center gap-2">
+                <div className="relative flex-1 md:grow-0">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Tìm kiếm theo tên, email, khoa..."
+                    className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
+                </div>
                  <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="outline" size="sm" className="h-9 gap-1 text-sm w-full sm:w-auto">
@@ -269,6 +316,12 @@ export function SupervisorManagementTable() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[50px]">
+                <Checkbox
+                    checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                    onCheckedChange={handleSelectAll}
+                />
+              </TableHead>
               <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>Họ và Tên</TableHead>
               <TableHead>Email</TableHead>
@@ -281,7 +334,13 @@ export function SupervisorManagementTable() {
           </TableHeader>
           <TableBody>
             {filteredSupervisors?.map((supervisor, index) => (
-              <TableRow key={supervisor.id}>
+              <TableRow key={supervisor.id} data-state={selectedRowIds.includes(supervisor.id) && "selected"}>
+                <TableCell>
+                     <Checkbox
+                        checked={selectedRowIds.includes(supervisor.id)}
+                        onCheckedChange={(checked) => handleRowSelect(supervisor.id, !!checked)}
+                     />
+                </TableCell>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{`${supervisor.firstName} ${supervisor.lastName}`}</TableCell>
                 <TableCell>{supervisor.email}</TableCell>
