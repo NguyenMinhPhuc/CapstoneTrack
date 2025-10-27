@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { Textarea } from './ui/textarea';
 
@@ -52,22 +53,21 @@ export function AddSubCommitteeForm({ sessionId, onFinished }: AddSubCommitteeFo
       createdAt: serverTimestamp(),
     };
     
-    addDoc(subcommitteesCollectionRef, newSubcommitteeData)
-        .then(() => {
-            toast({
-                title: 'Thành công',
-                description: `Đã tạo tiểu ban mới: ${values.name}`,
-            });
-            onFinished();
-        })
-        .catch(error => {
-            const contextualError = new FirestorePermissionError({
-              path: subcommitteesCollectionRef.path,
-              operation: 'create',
-              requestResourceData: newSubcommitteeData,
-            });
-            errorEmitter.emit('permission-error', contextualError);
+    try {
+        await addDoc(subcommitteesCollectionRef, newSubcommitteeData);
+        toast({
+            title: 'Thành công',
+            description: `Đã tạo tiểu ban mới: ${values.name}`,
         });
+        onFinished();
+    } catch (error: any) {
+        console.error("Error creating subcommittee:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: error.message,
+        });
+    }
   }
 
   return (

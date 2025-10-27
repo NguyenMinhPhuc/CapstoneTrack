@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,7 +16,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import type { Student, Supervisor } from '@/lib/types';
 import { useEffect, useState } from 'react';
@@ -122,22 +123,21 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       internshipStatus: 'not_reporting' as const, // Default to not reporting for internship
     };
 
-    addDoc(registrationsCollectionRef, newRegistrationData)
-      .then(() => {
+    try {
+        await addDoc(registrationsCollectionRef, newRegistrationData);
         toast({
           title: 'Thành công',
           description: `Đã thêm sinh viên ${newRegistrationData.studentName} vào đợt báo cáo.`,
         });
         onFinished();
-      })
-      .catch((error) => {
-        const contextualError = new FirestorePermissionError({
-          path: registrationsCollectionRef.path,
-          operation: 'create',
-          requestResourceData: newRegistrationData,
+      } catch (error: any) {
+        console.error("Error creating registration:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: error.message,
         });
-        errorEmitter.emit('permission-error', contextualError);
-      });
+      }
   }
 
   return (

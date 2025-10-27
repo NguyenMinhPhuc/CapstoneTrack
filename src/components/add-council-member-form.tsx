@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -21,7 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import type { Supervisor, DefenseCouncilMember } from '@/lib/types';
 import { useMemo } from 'react';
@@ -79,22 +80,21 @@ export function AddCouncilMemberForm({
       createdAt: serverTimestamp(),
     };
     
-    addDoc(councilCollectionRef, newMemberData)
-        .then(() => {
-            toast({
-                title: 'Thành công',
-                description: 'Đã thêm thành viên mới vào hội đồng.',
-            });
-            onFinished();
-        })
-        .catch(error => {
-            const contextualError = new FirestorePermissionError({
-              path: councilCollectionRef.path,
-              operation: 'create',
-              requestResourceData: newMemberData,
-            });
-            errorEmitter.emit('permission-error', contextualError);
+    try {
+        await addDoc(councilCollectionRef, newMemberData);
+        toast({
+            title: 'Thành công',
+            description: 'Đã thêm thành viên mới vào hội đồng.',
         });
+        onFinished();
+    } catch (error: any) {
+        console.error("Error adding council member:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: error.message,
+        });
+    }
   }
 
   return (

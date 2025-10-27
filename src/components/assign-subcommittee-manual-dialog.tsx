@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -17,13 +18,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, writeBatch, doc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { doc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, DefenseSubCommittee } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
 import { Label } from './ui/label';
-import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
 
 interface AssignSubcommitteeManualDialogProps {
@@ -77,12 +78,6 @@ export function AssignSubcommitteeManualDialog({
       onFinished();
     } catch (error: any) {
       console.error('Error manually assigning subcommittee:', error);
-       const contextualError = new FirestorePermissionError({
-          path: 'batch update on defenseRegistrations',
-          operation: 'update',
-          requestResourceData: { subCommitteeId: selectedSubcommitteeId },
-        });
-        errorEmitter.emit('permission-error', contextualError);
       toast({
         variant: 'destructive',
         title: 'Lỗi',

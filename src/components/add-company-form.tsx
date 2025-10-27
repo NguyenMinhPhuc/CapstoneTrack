@@ -17,7 +17,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
@@ -95,22 +95,21 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
         };
     }
 
-    addDoc(companiesCollectionRef, companyData)
-      .then(() => {
+    try {
+        await addDoc(companiesCollectionRef, companyData);
         toast({
           title: 'Thành công',
           description: `Doanh nghiệp "${values.name}" đã được tạo.`,
         });
         onFinished();
-      })
-      .catch((error) => {
-        const contextualError = new FirestorePermissionError({
-          path: companiesCollectionRef.path,
-          operation: 'create',
-          requestResourceData: companyData,
+      } catch (error: any) {
+        console.error("Error creating company:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: error.message,
         });
-        errorEmitter.emit('permission-error', contextualError);
-      });
+      }
   }
 
   return (

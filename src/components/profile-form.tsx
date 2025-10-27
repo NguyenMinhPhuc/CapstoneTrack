@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
 import type { User } from 'firebase/auth';
@@ -70,13 +70,13 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
                     title: 'Đồng bộ hóa thành công',
                     description: 'Email của bạn đã được cập nhật trên toàn hệ thống.',
                 });
-            } catch(e) {
-                 const contextualError = new FirestorePermissionError({
-                    path: `batch update for user ${user.uid}`,
-                    operation: 'update',
-                    requestResourceData: { email: user.email },
+            } catch(e: any) {
+                 console.error("Error syncing email:", e);
+                toast({
+                    variant: "destructive",
+                    title: "Lỗi đồng bộ hóa email",
+                    description: e.message,
                 });
-                errorEmitter.emit('permission-error', contextualError);
             }
         }
       }
@@ -108,20 +108,20 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
         lastName: values.lastName,
     };
     
-    updateDoc(profileDocRef, updateData)
-        .catch(error => {
-            const contextualError = new FirestorePermissionError({
-                path: profileDocRef.path,
-                operation: 'update',
-                requestResourceData: updateData,
-            });
-            errorEmitter.emit('permission-error', contextualError);
+    try {
+        await updateDoc(profileDocRef, updateData);
+        toast({
+            title: 'Thành công',
+            description: 'Thông tin hồ sơ của bạn đã được cập nhật.',
         });
-    
-      toast({
-        title: 'Thành công',
-        description: 'Thông tin hồ sơ của bạn đã được cập nhật.',
-      });
+    } catch (error: any) {
+        console.error("Error updating profile:", error);
+        toast({
+            variant: "destructive",
+            title: "Lỗi",
+            description: error.message,
+        });
+    }
   }
   
   if (isProfileLoading) {

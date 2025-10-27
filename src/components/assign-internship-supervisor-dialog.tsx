@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -10,7 +11,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { writeBatch, doc } from 'firebase/firestore';
 import type { DefenseRegistration, Supervisor } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -75,12 +76,6 @@ export function AssignInternshipSupervisorDialog({
       onFinished();
     } catch (error: any) {
       console.error('Error assigning internship supervisor:', error);
-       const contextualError = new FirestorePermissionError({
-          path: 'batch update on defenseRegistrations',
-          operation: 'update',
-          requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', contextualError);
       toast({
         variant: 'destructive',
         title: 'Lỗi',
