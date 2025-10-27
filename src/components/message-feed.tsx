@@ -124,7 +124,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
 
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex flex-col h-full">
       {/* Messages Area */}
       <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollAreaRef}>
         {isLoading && (
@@ -153,8 +153,10 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
                             {!isCurrentUser && <p className="font-semibold mb-1">{msg.senderName}</p>}
                              <div className={cn(
                                 "prose prose-sm max-w-none text-inherit prose-p:my-0",
-                                isCurrentUser && "prose-invert", // Basic styling for links in dark background
-                                "prose-a:text-blue-300 hover:prose-a:underline"
+                                // For outgoing messages, brighten the link for better contrast on dark primary background
+                                isCurrentUser 
+                                    ? "prose-a:text-primary-foreground/80 hover:prose-a:text-primary-foreground" 
+                                    : "prose-a:text-primary hover:prose-a:underline"
                              )}>
                                 <ReactMarkdown 
                                   remarkPlugins={[remarkGfm]}
