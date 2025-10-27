@@ -42,7 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users, ArrowUpDown, ChevronUp, ChevronDown, Upload, FileDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Supervisor, SystemUser } from '@/lib/types';
@@ -55,6 +55,9 @@ import { EditSupervisorForm } from './edit-supervisor-form';
 import { Badge } from './ui/badge';
 import { Checkbox } from './ui/checkbox';
 import { AssignGuidanceScopeDialog } from './assign-guidance-scope-dialog';
+import { ImportSupervisorsDialog } from './import-supervisors-dialog';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 
 const statusLabel: Record<SystemUser['status'], string> = {
@@ -79,6 +82,7 @@ export function SupervisorManagementTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignScopeDialogOpen, setIsAssignScopeDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [supervisorToDisable, setSupervisorToDisable] = useState<Supervisor | null>(null);
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -219,6 +223,21 @@ export function SupervisorManagementTable() {
     setIsAssignScopeDialogOpen(false);
     setSelectedRowIds([]);
   };
+
+  const handleExportTemplate = () => {
+    const headers = ["Email", "HoGV", "TenGV", "Khoa", "ChucVu", "HuongDanTN", "HuongDanTT"];
+    const worksheet = XLSX.utils.json_to_sheet([{}], { header: headers });
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachGiaoVien");
+    
+    // Set column widths
+    worksheet['!cols'] = headers.map(h => ({ wch: h.length > 15 ? h.length : 15 }));
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {type: 'application/octet-stream'});
+    saveAs(data, 'Template_GiaoVien.xlsx');
+  };
+
   
   const isLoading = isLoadingSupervisors || isLoadingUsers;
 
@@ -282,76 +301,93 @@ export function SupervisorManagementTable() {
                     </Dialog>
                 )}
             </div>
-            <div className="flex w-full sm:w-auto items-center gap-2">
-                <div className="relative flex-1 md:grow-0">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    type="search"
-                    placeholder="Tìm kiếm theo tên, email, khoa..."
-                    className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-9 gap-1 text-sm w-full sm:w-auto">
-                      <ListFilter className="h-3.5 w-3.5" />
-                      <span className="sr-only sm:not-sr-only">Lọc</span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuLabel>Phạm vi hướng dẫn</DropdownMenuLabel>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuCheckboxItem
-                      checked={guidanceFilter === 'all'}
-                      onCheckedChange={() => setGuidanceFilter('all')}
-                    >
-                      Tất cả
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={guidanceFilter === 'graduation'}
-                      onCheckedChange={() => setGuidanceFilter('graduation')}
-                    >
-                      Tốt nghiệp
-                    </DropdownMenuCheckboxItem>
-                    <DropdownMenuCheckboxItem
-                      checked={guidanceFilter === 'internship'}
-                      onCheckedChange={() => setGuidanceFilter('internship')}
-                    >
-                      Thực tập
-                    </DropdownMenuCheckboxItem>
-                     <DropdownMenuCheckboxItem
-                      checked={guidanceFilter === 'both'}
-                      onCheckedChange={() => setGuidanceFilter('both')}
-                    >
-                      Cả hai
-                    </DropdownMenuCheckboxItem>
-                     <DropdownMenuCheckboxItem
-                      checked={guidanceFilter === 'none'}
-                      onCheckedChange={() => setGuidanceFilter('none')}
-                    >
-                      Không hướng dẫn
-                    </DropdownMenuCheckboxItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                    <DialogTrigger asChild>
-                        <Button className="w-full sm:w-auto">
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Thêm Giáo viên
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+                <div className="flex w-full sm:w-auto gap-2">
+                  <div className="relative w-full sm:w-auto">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        type="search"
+                        placeholder="Tìm kiếm theo tên, email, khoa..."
+                        className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[320px]"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                  </div>
+                   <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="sm" className="h-9 gap-1 text-sm">
+                          <ListFilter className="h-3.5 w-3.5" />
+                          <span className="sr-only sm:not-sr-only">Lọc</span>
                         </Button>
-                    </DialogTrigger>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                        <DialogTitle>Thêm Giáo viên Hướng dẫn mới</DialogTitle>
-                        <DialogDescription>
-                            Điền thông tin chi tiết để tạo một hồ sơ giáo viên mới. Một tài khoản sẽ được tự động tạo.
-                        </DialogDescription>
-                        </DialogHeader>
-                        <AddSupervisorForm onFinished={() => setIsAddDialogOpen(false)} />
-                    </DialogContent>
-                </Dialog>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Phạm vi hướng dẫn</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuCheckboxItem
+                          checked={guidanceFilter === 'all'}
+                          onCheckedChange={() => setGuidanceFilter('all')}
+                        >
+                          Tất cả
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={guidanceFilter === 'graduation'}
+                          onCheckedChange={() => setGuidanceFilter('graduation')}
+                        >
+                          Tốt nghiệp
+                        </DropdownMenuCheckboxItem>
+                        <DropdownMenuCheckboxItem
+                          checked={guidanceFilter === 'internship'}
+                          onCheckedChange={() => setGuidanceFilter('internship')}
+                        >
+                          Thực tập
+                        </DropdownMenuCheckboxItem>
+                         <DropdownMenuCheckboxItem
+                          checked={guidanceFilter === 'both'}
+                          onCheckedChange={() => setGuidanceFilter('both')}
+                        >
+                          Cả hai
+                        </DropdownMenuCheckboxItem>
+                         <DropdownMenuCheckboxItem
+                          checked={guidanceFilter === 'none'}
+                          onCheckedChange={() => setGuidanceFilter('none')}
+                        >
+                          Không hướng dẫn
+                        </DropdownMenuCheckboxItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                </div>
+                <div className="flex gap-2 w-full sm:w-auto">
+                    <Button onClick={handleExportTemplate} variant="outline" className="w-full">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Xuất mẫu
+                    </Button>
+                    <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+                      <DialogTrigger asChild>
+                        <Button variant="outline" className="w-full">
+                          <Upload className="mr-2 h-4 w-4" />
+                          Nhập từ Excel
+                        </Button>
+                      </DialogTrigger>
+                      <ImportSupervisorsDialog onFinished={() => setIsImportDialogOpen(false)} />
+                    </Dialog>
+                    <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button className="w-full">
+                                <PlusCircle className="mr-2 h-4 w-4" />
+                                Thêm Giáo viên
+                            </Button>
+                        </DialogTrigger>
+                        <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                            <DialogTitle>Thêm Giáo viên Hướng dẫn mới</DialogTitle>
+                            <DialogDescription>
+                                Điền thông tin chi tiết để tạo một hồ sơ giáo viên mới. Một tài khoản sẽ được tự động tạo.
+                            </DialogDescription>
+                            </DialogHeader>
+                            <AddSupervisorForm onFinished={() => setIsAddDialogOpen(false)} />
+                        </DialogContent>
+                    </Dialog>
+                </div>
             </div>
         </div>
       </CardHeader>
