@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from './ui/select';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
-import type { GraduationDefenseSession } from '@/lib/types';
+import type { GraduationDefenseSession, ProjectTopic } from '@/lib/types';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { ScrollArea } from './ui/scroll-area';
 import { MarkdownToolbar } from './markdown-toolbar';
