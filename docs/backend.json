@@ -39,5 +39,19 @@
       "password",
       "anonymous"
     ]
+  },
+  "firestore": {
+    "/conversations/{conversationId}": {
+      "schema": {
+        "$ref": "#/entities/Conversation"
+      },
+      "description": "Stores conversation metadata."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": {
+        "$ref": "#/entities/Message"
+      },
+      "description": "Stores messages for a conversation."
+    }
   }
 }

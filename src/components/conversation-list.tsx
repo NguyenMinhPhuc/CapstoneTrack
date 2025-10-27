@@ -26,12 +26,14 @@ export function ConversationList({
 
   const conversationsQuery = useMemoFirebase(
     () =>
-      query(
-        collection(firestore, 'conversations'),
-        where('participantIds', 'array-contains', currentUser.uid),
-        orderBy('lastMessageAt', 'desc')
-      ),
-    [firestore, currentUser.uid]
+      currentUser?.uid // Only create query if user is available
+        ? query(
+            collection(firestore, 'conversations'),
+            where('participantIds', 'array-contains', currentUser.uid),
+            orderBy('lastMessageAt', 'desc')
+          )
+        : null, // Return null if no user, so useCollection waits
+    [firestore, currentUser?.uid]
   );
 
   const { data: conversations, isLoading } = useCollection<Conversation>(conversationsQuery);
