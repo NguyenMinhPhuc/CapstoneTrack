@@ -47,7 +47,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users, ArrowUpDown, ChevronUp, ChevronDown, Upload, FileDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users, ArrowUpDown, ChevronUp, ChevronDown, Upload, FileDown, KeyRound } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Supervisor, SystemUser } from '@/lib/types';
@@ -63,6 +63,8 @@ import { AssignGuidanceScopeDialog } from './assign-guidance-scope-dialog';
 import { ImportSupervisorsDialog } from './import-supervisors-dialog';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
+import { cn } from '@/lib/utils';
 
 
 const statusLabel: Record<SystemUser['status'], string> = {
@@ -111,10 +113,11 @@ export function SupervisorManagementTable() {
 
   const supervisorsWithStatus = useMemo(() => {
     if (!supervisors || !users) return [];
-    const userStatusMap = new Map(users.map(u => [u.id, u.status]));
+    const userStatusMap = new Map(users.map(u => [u.id, { status: u.status, passwordInitialized: u.passwordInitialized }]));
     return supervisors.map(s => ({
       ...s,
-      status: userStatusMap.get(s.id) || 'pending',
+      status: userStatusMap.get(s.id)?.status || 'pending',
+      passwordInitialized: userStatusMap.get(s.id)?.passwordInitialized || false,
     }));
   }, [supervisors, users]);
 
@@ -230,9 +233,10 @@ export function SupervisorManagementTable() {
   };
 
   const handleExportTemplate = () => {
-    const headers = ["Email", "HoGV", "TenGV", "Khoa", "ChucVu", "HuongDanTN", "HuongDanTT"];
+    const headers = ["Email", "Password", "HoGV", "TenGV", "Khoa", "ChucVu", "HuongDanTN", "HuongDanTT"];
     const sampleData = [{
       Email: "gv.a@example.com",
+      Password: "123456",
       HoGV: "Nguyễn Văn",
       TenGV: "A",
       Khoa: "Công nghệ thông tin",
@@ -245,7 +249,6 @@ export function SupervisorManagementTable() {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachGiaoVien");
     
-    // Set column widths
     worksheet['!cols'] = headers.map(h => ({ wch: h.length > 20 ? h.length : 20 }));
     
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
@@ -396,7 +399,7 @@ export function SupervisorManagementTable() {
                             <DialogHeader>
                             <DialogTitle>Thêm Giáo viên Hướng dẫn mới</DialogTitle>
                             <DialogDescription>
-                                Điền thông tin chi tiết để tạo một hồ sơ giáo viên mới. Một tài khoản sẽ được tự động tạo.
+                                Điền thông tin chi tiết để tạo một hồ sơ giáo viên mới. Một email đặt lại mật khẩu sẽ được gửi đến họ.
                             </DialogDescription>
                             </DialogHeader>
                             <AddSupervisorForm onFinished={() => setIsAddDialogOpen(false)} />
@@ -457,7 +460,21 @@ export function SupervisorManagementTable() {
                 </TableCell>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{`${supervisor.firstName} ${supervisor.lastName}`}</TableCell>
-                <TableCell>{supervisor.email}</TableCell>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger>
+                            <KeyRound className={cn("h-4 w-4", supervisor.passwordInitialized ? 'text-green-500' : 'text-yellow-500')} />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            {supervisor.passwordInitialized ? 'Đã đổi mật khẩu' : 'Chưa đổi mật khẩu mặc định'}
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                      {supervisor.email}
+                  </div>
+                </TableCell>
                 <TableCell>{supervisor.department}</TableCell>
                 <TableCell>{getGuidanceBadges(supervisor)}</TableCell>
                 <TableCell>
