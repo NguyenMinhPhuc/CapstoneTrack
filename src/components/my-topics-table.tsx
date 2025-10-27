@@ -389,7 +389,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
         <CardContent>
            <div className="border rounded-md">
                 <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
-                    <div className="col-span-5">Tên Đề tài</div>
+                    <div className="col-span-1 text-center">STT</div>
+                    <div className="col-span-4">Tên Đề tài</div>
                     <div className="col-span-2">Đợt báo cáo</div>
                     <div className="col-span-2">Lĩnh vực</div>
                     <div className="col-span-1 text-center">SL SV</div>
@@ -397,7 +398,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     <div className="col-span-1 text-right pr-8">Hành động</div>
                 </div>
                  <Accordion type="multiple" className="space-y-2">
-                    {filteredTopics?.map((topic) => {
+                    {filteredTopics?.map((topic, index) => {
                         const registeredStudents = registrationsByTopic.get(`${topic.sessionId}-${topic.title}`) || [];
                         const registeredCount = registeredStudents.length;
 
@@ -406,7 +407,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             <div className="flex items-center px-4 hover:bg-muted/50">
                                 <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
                                     <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
-                                        <div className="col-span-5 font-medium truncate" title={topic.title}>{topic.title}</div>
+                                        <div className="col-span-1 text-center">{index + 1}</div>
+                                        <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
                                         <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
                                         <div className="col-span-2 truncate">{topic.field}</div>
                                         <div className="col-span-1 text-center">
