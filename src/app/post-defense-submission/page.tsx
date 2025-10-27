@@ -44,7 +44,7 @@ export default function PostDefenseSubmissionPage() {
 
   useEffect(() => {
     if (isUserLoading || isUserDataLoading) {
-        return; // Wait for user data to load
+        return; 
     }
 
     if (!user) {
@@ -59,20 +59,10 @@ export default function PostDefenseSubmissionPage() {
 
 
   useEffect(() => {
-    // Wait until settings are loaded to decide
-    if (isLoadingSettings) return;
-
-    // If feature is disabled, stop here. The UI will show the correct message.
-    if (!isFeatureEnabled) {
-        setIsLoading(false);
-        return;
-    }
-
     if (!user || !firestore) {
         setIsLoading(false);
         return;
     }
-
 
     const findActiveRegistration = async () => {
         setIsLoading(true);
@@ -103,7 +93,6 @@ export default function PostDefenseSubmissionPage() {
                 const regDoc = registrationSnapshot.docs[0];
                 const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
                 
-                // Only set active registration if student has an approved report or completed internship
                 if (registrationData.reportStatus === 'approved' || registrationData.internshipStatus === 'completed') {
                     setActiveRegistration(registrationData);
                     setSubmissionLink(registrationData.postDefenseReportLink || '');
@@ -116,7 +105,7 @@ export default function PostDefenseSubmissionPage() {
         }
     };
     findActiveRegistration();
-  }, [user, firestore, isLoadingSettings, isFeatureEnabled]);
+  }, [user, firestore]);
 
   const handleSubmit = async () => {
     if (!activeRegistration) return;
@@ -150,6 +139,8 @@ export default function PostDefenseSubmissionPage() {
       </main>
     );
   }
+  
+  const showMainContent = isFeatureEnabled && activeSession?.postDefenseSubmissionLink;
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
@@ -164,12 +155,12 @@ export default function PostDefenseSubmissionPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {!isFeatureEnabled || !activeRegistration || !activeSession?.postDefenseSubmissionLink ? (
+                {!showMainContent ? (
                     <Alert>
                         <Info className="h-4 w-4" />
                         <AlertTitle>Chưa đến thời gian nộp</AlertTitle>
                         <AlertDescription>
-                             Hiện tại chưa có link nộp báo cáo sau hội đồng, hoặc báo cáo của bạn chưa được duyệt, hoặc tính năng này đang được khóa bởi admin. Vui lòng quay lại sau.
+                             Hiện tại chưa có link nộp báo cáo sau hội đồng hoặc tính năng này đang được khóa bởi admin. Vui lòng quay lại sau.
                         </AlertDescription>
                     </Alert>
                 ) : (
@@ -185,34 +176,47 @@ export default function PostDefenseSubmissionPage() {
                             </div>
                          )}
 
-                        <div className="space-y-2">
-                            <Label htmlFor="submission-link" className="font-semibold">Link báo cáo hoàn chỉnh của bạn</Label>
-                            <div className="flex gap-2">
-                                <Input 
-                                    id="submission-link"
-                                    value={submissionLink}
-                                    onChange={(e) => setSubmissionLink(e.target.value)}
-                                    placeholder="https://docs.google.com/..."
-                                />
-                                <Button onClick={handleSubmit} disabled={isSubmitting || !submissionLink}>
-                                    {isSubmitting ? 'Đang lưu...' : 'Lưu'}
-                                </Button>
-                            </div>
+                        <div className="text-sm">
+                            <Label>Link nộp bài chung của Khoa</Label>
+                             <a href={activeSession.postDefenseSubmissionLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold flex items-center gap-1.5 mt-1">
+                                <LinkIcon className="inline h-4 w-4"/> {activeSession.postDefenseSubmissionLink}
+                            </a>
+                            <p className="text-muted-foreground mt-1">Vui lòng truy cập link trên để nộp bài theo yêu cầu và dán lại link đã nộp vào ô bên dưới để Khoa lưu trữ.</p>
                         </div>
-
-                         {activeRegistration.postDefenseReportLink && (
-                            <Alert variant="default" className="border-green-500 text-green-800 dark:text-green-300">
-                                <CheckCircle className="h-4 w-4" />
-                                <AlertTitle>Đã nộp thành công</AlertTitle>
+                        
+                        {activeRegistration ? (
+                             <div className="space-y-2 pt-4 border-t">
+                                <Label htmlFor="submission-link" className="font-semibold">Link báo cáo hoàn chỉnh của bạn</Label>
+                                <div className="flex gap-2">
+                                    <Input 
+                                        id="submission-link"
+                                        value={submissionLink}
+                                        onChange={(e) => setSubmissionLink(e.target.value)}
+                                        placeholder="https://docs.google.com/..."
+                                    />
+                                    <Button onClick={handleSubmit} disabled={isSubmitting || !submissionLink}>
+                                        {isSubmitting ? 'Đang lưu...' : 'Lưu'}
+                                    </Button>
+                                </div>
+                                {activeRegistration.postDefenseReportLink && (
+                                    <Alert variant="default" className="border-green-500 text-green-800 dark:text-green-300 mt-4">
+                                        <CheckCircle className="h-4 w-4" />
+                                        <AlertTitle>Đã nộp thành công</AlertTitle>
+                                        <AlertDescription>
+                                            Bạn đã nộp link báo cáo. Bạn vẫn có thể cập nhật lại nếu cần.
+                                        </AlertDescription>
+                                    </Alert>
+                                )}
+                            </div>
+                        ) : (
+                             <Alert variant="destructive">
+                                <Info className="h-4 w-4" />
+                                <AlertTitle>Chưa đủ điều kiện nộp</AlertTitle>
                                 <AlertDescription>
-                                    Bạn đã nộp link báo cáo. Bạn vẫn có thể cập nhật lại nếu cần.
+                                    Bạn cần có báo cáo được duyệt trong đợt này để có thể nộp link báo cáo sau hội đồng.
                                 </AlertDescription>
                             </Alert>
-                         )}
-
-                        <div className="text-sm text-muted-foreground">
-                            <strong>Lưu ý:</strong> Vui lòng truy cập <a href={activeSession.postDefenseSubmissionLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline font-semibold">link này <LinkIcon className="inline h-3 w-3"/></a> để nộp bài theo yêu cầu và dán lại link đã nộp vào ô trên để lưu trữ.
-                        </div>
+                        )}
                     </>
                 )}
             </CardContent>
@@ -221,3 +225,4 @@ export default function PostDefenseSubmissionPage() {
     </main>
   );
 }
+
