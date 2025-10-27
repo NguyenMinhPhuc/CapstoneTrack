@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -18,6 +17,7 @@ import { differenceInWeeks, startOfWeek, format } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
 import { ViewStudentEarlyInternshipProgressDialog } from './view-student-early-internship-progress-dialog';
+import { ScrollArea } from './ui/scroll-area';
 
 interface StudentDashboardProps {
   user: User;
@@ -66,6 +66,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
   const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
   const goalHours = settings?.earlyInternshipGoalHours ?? 700;
+
+  const sessionsQuery = useMemoFirebase(() => query(collection(firestore, 'graduationDefenseSessions'), where('status', 'in', ['ongoing', 'upcoming'])), [firestore]);
+  const { data: availableSessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
   const reportsQuery = useMemoFirebase(
     () => activeRegistration ? query(collection(firestore, 'weeklyProgressReports'), where('registrationId', '==', activeRegistration.id)) : null,
@@ -166,7 +169,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   };
 
 
-  if (isLoading || isLoadingStudent || isLoadingEarlyInternships) {
+  if (isLoading || isLoadingStudent || isLoadingEarlyInternships || isLoadingSessions) {
     return (
         <div className="p-4 sm:p-6 lg:p-8 space-y-8">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -219,52 +222,34 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                 </div>
             </CardContent>
           </Card>
-           {activeSession && (
-              <Card>
-                <CardHeader>
-                    <div className="flex justify-between items-start">
-                        <CardTitle className="flex items-center gap-2">
-                            <Calendar /> Đợt báo cáo hiện tại
-                        </CardTitle>
-                        <Badge>{activeSession.status}</Badge>
-                    </div>
-                     <CardDescription>{activeSession.name}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                    <div className="flex items-center gap-3">
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                            <p className="font-semibold">Ngày bắt đầu</p>
-                            <p>{toDate(activeSession.startDate) ? format(toDate(activeSession.startDate)!, 'PPP') : 'N/A'}</p>
+           
+          {availableSessions && availableSessions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Calendar /> Các đợt báo cáo
+                </CardTitle>
+                <CardDescription>Các đợt đang và sắp diễn ra trong năm học.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-48">
+                  <div className="space-y-4">
+                    {availableSessions.map((session) => (
+                      <div key={session.id} className="p-3 border rounded-lg bg-muted/50">
+                        <div className="flex justify-between items-center">
+                          <p className="font-semibold">{session.name}</p>
+                          <Badge variant={session.status === 'ongoing' ? 'default' : 'secondary'}>{session.status}</Badge>
                         </div>
-                    </div>
-                     <div className="flex items-center gap-3">
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                            <p className="font-semibold">Hạn đăng ký</p>
-                            <p>{toDate(activeSession.registrationDeadline) ? format(toDate(activeSession.registrationDeadline)!, 'PPP') : 'N/A'}</p>
+                        <div className="text-xs text-muted-foreground mt-2 space-y-1">
+                          <p>Bắt đầu: {toDate(session.startDate) ? format(toDate(session.startDate)!, 'dd/MM/yyyy') : 'N/A'}</p>
+                          <p>Hạn ĐK: {toDate(session.registrationDeadline) ? format(toDate(session.registrationDeadline)!, 'dd/MM/yyyy') : 'N/A'}</p>
                         </div>
-                    </div>
-                     <div className="flex items-center gap-3">
-                        <CalendarIcon className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                            <p className="font-semibold">Ngày báo cáo dự kiến</p>
-                            <p>{toDate(activeSession.expectedReportDate) ? format(toDate(activeSession.expectedReportDate)!, 'PPP') : 'N/A'}</p>
-                        </div>
-                    </div>
-                     {activeSession.zaloGroupLink && (
-                         <div className="flex items-center gap-3">
-                            <LinkIcon className="h-4 w-4 text-muted-foreground" />
-                            <div>
-                                <p className="font-semibold">Nhóm Zalo</p>
-                                <a href={activeSession.zaloGroupLink} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline break-all">
-                                    Tham gia
-                                </a>
-                             </div>
-                         </div>
-                     )}
-                </CardContent>
-              </Card>
+                      </div>
+                    ))}
+                  </div>
+                </ScrollArea>
+              </CardContent>
+            </Card>
           )}
 
           {activeEarlyInternship && (
@@ -335,7 +320,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                   <Book /> Thông tin Học phần
                 </CardTitle>
                 <CardDescription>
-                  Đây là thông tin về đề tài tốt nghiệp và thực tập bạn đã đăng ký trong đợt này.
+                  Đây là thông tin về đề tài tốt nghiệp và thực tập bạn đã đăng ký trong đợt <span className="font-semibold">{activeSession?.name}</span>.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
