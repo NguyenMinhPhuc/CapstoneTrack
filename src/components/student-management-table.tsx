@@ -279,6 +279,36 @@ export function StudentManagementTable() {
     setIsDeleteDialogOpen(true);
   };
 
+  const handleBatchStatusChange = async (newStatus: Student['status']) => {
+    if (selectedRowIds.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Chưa chọn sinh viên',
+        description: 'Vui lòng chọn ít nhất một sinh viên để cập nhật.',
+      });
+      return;
+    }
+    const batch = writeBatch(firestore);
+    selectedRowIds.forEach(id => {
+      const studentDocRef = doc(firestore, 'students', id);
+      batch.update(studentDocRef, { status: newStatus });
+    });
+    try {
+      await batch.commit();
+      toast({
+        title: 'Thành công',
+        description: `Đã cập nhật trạng thái cho ${selectedRowIds.length} sinh viên.`,
+      });
+      setSelectedRowIds([]);
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái sinh viên.',
+      });
+    }
+  };
+
   const handleCompletionStatusChange = async (studentId: string, field: 'graduationStatus' | 'internshipStatus', newStatus: 'achieved' | 'not_achieved') => {
     const studentDocRef = doc(firestore, 'students', studentId);
     try {
@@ -435,7 +465,7 @@ export function StudentManagementTable() {
   }
 
   const isAllSelected = filteredStudents && selectedRowIds.length > 0 && selectedRowIds.length === filteredStudents.length;
-  const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredStudents?.length ?? 0);
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredStudents || selectedRowIds.length < filteredStudents.length);
 
   const getPercentage = (value: number, total: number) => {
     if (total === 0) return '0%';
@@ -543,6 +573,21 @@ export function StudentManagementTable() {
             <div className="flex items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Users className="mr-2 h-4 w-4" />
+                            Cập nhật trạng thái ({selectedRowIds.length})
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('studying')}>Đang học</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('reserved')}>Bảo lưu</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('dropped_out')}>Đã nghỉ học</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('graduated')}>Đã tốt nghiệp</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
                       <Dialog open={isAssignClassDialogOpen} onOpenChange={setIsAssignClassDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -875,5 +920,6 @@ export function StudentManagementTable() {
 
 
     
+
 
 
