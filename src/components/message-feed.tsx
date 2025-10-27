@@ -3,7 +3,7 @@
 import type { User } from 'firebase/auth';
 import { MessageSquare, Send } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, arrayUnion, writeBatch } from 'firebase/firestore';
 import type { Message, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
@@ -95,14 +95,14 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
             senderId: currentUser.uid,
             senderName: currentUserData.displayName || currentUser.email || 'N/A',
             content: newMessage,
-            createdAt: serverTimestamp(),
+            createdAt: new Date(),
         };
 
         const batch = writeBatch(firestore);
         
         batch.set(messageRef, messageData);
         batch.update(conversationDocRef, {
-            lastMessageAt: serverTimestamp(),
+            lastMessageAt: new Date(),
             lastMessageSnippet: newMessage.substring(0, 90),
             readBy: [currentUser.uid], // Sender has read the message
         });

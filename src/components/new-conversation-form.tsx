@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, writeBatch, doc, serverTimestamp } from 'firebase/firestore';
+import { collection, writeBatch, doc } from 'firebase/firestore';
 import { UserCombobox } from './user-combobox';
 import type { User } from 'firebase/auth';
 import type { SystemUser } from '@/lib/types';
@@ -71,8 +71,8 @@ export function NewConversationForm({ currentUser, onFinished }: NewConversation
       subject: values.subject,
       participantIds: Array.from(new Set(participantIds)),
       participantNames: Array.from(new Set(participantNames)),
-      createdAt: serverTimestamp(),
-      lastMessageAt: serverTimestamp(),
+      createdAt: new Date(),
+      lastMessageAt: new Date(),
       lastMessageSnippet: values.message.substring(0, 90),
       readBy: [currentUser.uid],
     };
@@ -81,9 +81,9 @@ export function NewConversationForm({ currentUser, onFinished }: NewConversation
       id: messageRef.id,
       conversationId: conversationRef.id,
       senderId: currentUser.uid,
-      senderName: currentUserData.displayName || currentUserData.email || 'N/A',
+      senderName: currentUserData.displayName || currentUser.email || 'N/A',
       content: values.message,
-      createdAt: serverTimestamp(),
+      createdAt: new Date(),
     };
 
     batch.set(conversationRef, conversationData);
