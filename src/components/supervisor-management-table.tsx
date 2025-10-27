@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -43,7 +42,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Supervisor, SystemUser } from '@/lib/types';
@@ -70,6 +69,9 @@ const statusVariant: Record<SystemUser['status'], 'default' | 'secondary' | 'des
   disabled: 'destructive',
 };
 
+type SortKey = 'firstName' | 'email' | 'department' | 'status' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 export function SupervisorManagementTable() {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -82,6 +84,7 @@ export function SupervisorManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [guidanceFilter, setGuidanceFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
   const supervisorsCollectionRef = useMemoFirebase(
@@ -106,10 +109,35 @@ export function SupervisorManagementTable() {
     }));
   }, [supervisors, users]);
 
-
   const filteredSupervisors = useMemo(() => {
     if (!supervisorsWithStatus) return [];
-    return supervisorsWithStatus.filter(supervisor => {
+    
+    let sortableSupervisors = [...supervisorsWithStatus];
+
+    if (sortConfig !== null) {
+      sortableSupervisors.sort((a, b) => {
+        const aValue = a[sortConfig.key] ?? '';
+        const bValue = b[sortConfig.key] ?? '';
+        
+        if (sortConfig.key === 'createdAt') {
+          const dateA = (aValue as any)?.toDate ? (aValue as any).toDate().getTime() : 0;
+          const dateB = (bValue as any)?.toDate ? (bValue as any).toDate().getTime() : 0;
+          if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+        }
+
+        if (String(aValue) < String(bValue)) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (String(aValue) > String(bValue)) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableSupervisors.filter(supervisor => {
       const term = searchTerm.toLowerCase();
       const nameMatch = `${supervisor.firstName} ${supervisor.lastName}`.toLowerCase().includes(term);
       const emailMatch = supervisor.email?.toLowerCase().includes(term);
@@ -123,7 +151,22 @@ export function SupervisorManagementTable() {
 
       return (nameMatch || emailMatch || departmentMatch) && guidanceMatch;
     });
-  }, [supervisorsWithStatus, searchTerm, guidanceFilter]);
+  }, [supervisorsWithStatus, searchTerm, guidanceFilter, sortConfig]);
+  
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
+  };
   
   const handleEditClick = (supervisor: Supervisor) => {
     setSelectedSupervisor(supervisor);
@@ -323,12 +366,32 @@ export function SupervisorManagementTable() {
                 />
               </TableHead>
               <TableHead className="w-[50px]">STT</TableHead>
-              <TableHead>Họ và Tên</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Khoa</TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => requestSort('firstName')} className="px-0 hover:bg-transparent">
+                  Họ và Tên {getSortIcon('firstName')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => requestSort('email')} className="px-0 hover:bg-transparent">
+                  Email {getSortIcon('email')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" onClick={() => requestSort('department')} className="px-0 hover:bg-transparent">
+                  Khoa {getSortIcon('department')}
+                </Button>
+              </TableHead>
               <TableHead>Phạm vi HD</TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
+              <TableHead>
+                 <Button variant="ghost" onClick={() => requestSort('status')} className="px-0 hover:bg-transparent">
+                    Trạng thái {getSortIcon('status')}
+                </Button>
+              </TableHead>
+              <TableHead className="hidden md:table-cell">
+                 <Button variant="ghost" onClick={() => requestSort('createdAt')} className="px-0 hover:bg-transparent">
+                    Ngày tạo {getSortIcon('createdAt')}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
