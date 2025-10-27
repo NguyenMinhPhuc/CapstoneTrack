@@ -9,6 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { ConversationList } from './conversation-list';
 import { MessageFeed } from './message-feed';
