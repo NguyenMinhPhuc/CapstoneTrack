@@ -1,22 +1,26 @@
-
 'use client';
 
 import { useMemo } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-  CardFooter,
-} from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileText, Download, GraduationCap, Briefcase } from 'lucide-react';
+import { Download, GraduationCap, Briefcase } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Resource } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+} from '@/components/ui/card';
+
 
 export function ResourceList() {
   const firestore = useFirestore();
@@ -35,34 +39,54 @@ export function ResourceList() {
     return { graduationResources: graduation, internshipResources: internship };
   }, [resources]);
   
-  const ResourceCard = ({ resource }: { resource: Resource }) => (
-    <Card className="flex flex-col">
-      <CardHeader className="flex-row items-start gap-4 space-y-0">
-        <div className="space-y-1">
-          <CardTitle>{resource.name}</CardTitle>
-          <CardDescription>{resource.summary || 'Không có mô tả.'}</CardDescription>
-        </div>
-      </CardHeader>
-      <CardContent className="flex-grow">
-        {/* Can add more details here if needed */}
+  const ResourceTable = ({ resources }: { resources: Resource[] }) => (
+    <Card>
+      <CardContent className="p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-[50px]">STT</TableHead>
+              <TableHead>Tên tài liệu</TableHead>
+              <TableHead>Mô tả</TableHead>
+              <TableHead className="text-right">Tải xuống</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {resources.length > 0 ? (
+              resources.map((resource, index) => (
+                <TableRow key={resource.id}>
+                  <TableCell>{index + 1}</TableCell>
+                  <TableCell className="font-medium">{resource.name}</TableCell>
+                  <TableCell className="text-muted-foreground">{resource.summary || 'Không có mô tả.'}</TableCell>
+                  <TableCell className="text-right">
+                    <Button asChild variant="outline" size="sm">
+                      <a href={resource.link} target="_blank" rel="noopener noreferrer">
+                        <Download className="mr-2 h-4 w-4" />
+                        Tải
+                      </a>
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={4} className="h-24 text-center">
+                  Chưa có tài nguyên nào trong mục này.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
       </CardContent>
-      <CardFooter>
-        <a href={resource.link} target="_blank" rel="noopener noreferrer" className="w-full">
-            <Button className="w-full">
-                <Download className="mr-2 h-4 w-4" />
-                Tải xuống
-            </Button>
-        </a>
-      </CardFooter>
     </Card>
   );
 
+
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-48 w-full" />
-        ))}
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-full" />
+        <Skeleton className="h-48 w-full" />
       </div>
     );
   }
@@ -80,26 +104,10 @@ export function ResourceList() {
         </TabsTrigger>
       </TabsList>
       <TabsContent value="graduation" className="mt-6">
-        {graduationResources.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {graduationResources.map(resource => (
-              <ResourceCard key={resource.id} resource={resource} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">Chưa có tài nguyên nào cho mục tốt nghiệp.</p>
-        )}
+        <ResourceTable resources={graduationResources} />
       </TabsContent>
       <TabsContent value="internship" className="mt-6">
-        {internshipResources.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {internshipResources.map(resource => (
-              <ResourceCard key={resource.id} resource={resource} />
-            ))}
-          </div>
-        ) : (
-          <p className="text-center text-muted-foreground py-8">Chưa có tài nguyên nào cho mục thực tập.</p>
-        )}
+        <ResourceTable resources={internshipResources} />
       </TabsContent>
     </Tabs>
   );
