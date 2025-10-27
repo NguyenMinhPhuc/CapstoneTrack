@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Users, FileText, Briefcase, UserCheck } from "lucide-react";
 import { useUser, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import type { DefenseRegistration, ProjectTopic, DefenseSession, EarlyInternship, DefenseCouncilMember, DefenseSubCommittee } from "@/lib/types";
+import type { DefenseRegistration, ProjectTopic, GraduationDefenseSession, EarlyInternship, DefenseSubCommittee } from "@/lib/types";
 
 export function DashboardStats() {
   const { user } = useUser();
@@ -20,7 +20,7 @@ export function DashboardStats() {
 
   // --- Fetch ALL relevant data for the supervisor ---
   const allSessionsQuery = useMemoFirebase(() => collection(firestore, 'defenseSessions'), [firestore]);
-  const { data: allSessions, isLoading: isLoadingAllSessions } = useCollection<DefenseSession>(allSessionsQuery);
+  const { data: allSessions, isLoading: isLoadingAllSessions } = useCollection<GraduationDefenseSession>(allSessionsQuery);
 
   const gradRegistrationsQuery = useMemoFirebase(
     () => user ? query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', user.uid)) : null,
@@ -58,11 +58,10 @@ export function DashboardStats() {
       for (const session of allSessions) {
         try {
           const councilQuery = query(collection(firestore, `defenseSessions/${session.id}/council`), where('supervisorId', '==', user.uid));
-          const subCommitteeQuery = query(collection(firestore, `defenseSessions/${session.id}/subCommittees`));
+          const subCommitteeSnapshot = await getDocs(collection(firestore, `defenseSessions/${session.id}/subCommittees`));
           
-          const [councilSnapshot, subCommitteeSnapshot] = await Promise.all([
+          const [councilSnapshot] = await Promise.all([
               getDocs(councilQuery),
-              getDocs(subCommitteeSnapshot)
           ]);
 
           count += councilSnapshot.size;
@@ -200,4 +199,3 @@ DashboardStats.Skeleton = function DashboardStatsSkeleton() {
     </div>
   );
 };
-
