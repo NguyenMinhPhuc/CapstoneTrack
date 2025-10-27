@@ -17,70 +17,63 @@ export function MarkdownToolbar({ textareaRef, onChange }: MarkdownToolbarProps)
 
     const start = textarea.selectionStart;
     const end = textarea.selectionEnd;
-    const selectedText = textarea.value.substring(start, end);
     const value = textarea.value;
+    const selectedText = value.substring(start, end);
     
-    let newText = '';
-    let newCursorPos = 0;
-
-    const insertText = (text: string, cursorPos: number) => {
-      const newValue = value.substring(0, start) + text + value.substring(end);
-      onChange(newValue); // Use the provided onChange handler
-      textarea.focus();
-      
-      setTimeout(() => {
-        textarea.selectionStart = textarea.selectionEnd = start + cursorPos;
-      }, 0);
-    };
+    let replacement = '';
+    let cursorOffset = 0;
 
     switch (style) {
       case 'bold':
-        if (selectedText) {
-          newText = `**${selectedText}**`;
-          insertText(newText, newText.length);
-        } else {
-          newText = '****';
-          insertText(newText, 2);
-        }
+        replacement = `**${selectedText}**`;
+        cursorOffset = 2;
         break;
       case 'italic':
-        if (selectedText) {
-          newText = `*${selectedText}*`;
-          insertText(newText, newText.length);
-        } else {
-          newText = '**';
-          insertText(newText, 1);
+        replacement = `*${selectedText}*`;
+        cursorOffset = 1;
+        break;
+      case 'bullet':
+        {
+          const lines = selectedText.split('\n');
+          if (lines.length > 1 && selectedText) {
+            replacement = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
+          } else {
+            const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+            const prefix = value.substring(lineStart, start).trim().length === 0 ? '' : '\n';
+            replacement = `${prefix}- ${selectedText}`;
+          }
         }
         break;
-      case 'bullet': {
-        const lines = selectedText.split('\n');
-        if (lines.length > 1 && selectedText) {
-           newText = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
-           insertText(newText, newText.length);
-        } else {
-          const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-          const prefix = value.substring(lineStart, start).trim().length === 0 ? '' : '\n';
-          newText = `${prefix}- `;
-          insertText(newText, newText.length);
+      case 'number':
+        {
+           const lines = selectedText.split('\n');
+           if (lines.length > 1 && selectedText) {
+             replacement = lines.map((line, index) => line.trim() ? `${index + 1}. ${line}` : line).join('\n');
+           } else {
+             const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+             const prefix = value.substring(lineStart, start).trim().length === 0 ? '' : '\n';
+             replacement = `${prefix}1. ${selectedText}`;
+           }
         }
         break;
-      }
-      case 'number': {
-        const lines = selectedText.split('\n');
-        if (lines.length > 1 && selectedText) {
-          newText = lines.map((line, index) => line.trim() ? `${index + 1}. ${line}` : line).join('\n');
-          insertText(newText, newText.length);
-        } else {
-           const lineStart = value.lastIndexOf('\n', start - 1) + 1;
-           const prefix = value.substring(lineStart, start).trim().length === 0 ? '' : '\n';
-           newText = `${prefix}1. `;
-           insertText(newText, newText.length);
-        }
-        break;
-      }
       default:
         break;
     }
+    
+    const newValue = value.substring(0, start) + replacement + value.substring(end);
+    onChange(newValue);
+
+    textarea.focus();
+    setTimeout(() => {
+        if (selectedText) {
+            textarea.selectionStart = start + replacement.length;
+            textarea.selectionEnd = start + replacement.length;
+        } else {
+            const newCursorPos = start + cursorOffset;
+            textarea.selectionStart = newCursorPos;
+            textarea.selectionEnd = newCursorPos;
+        }
+    }, 0);
   };
 
   return (
