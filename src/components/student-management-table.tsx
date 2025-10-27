@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -50,9 +51,9 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown, KeyRound } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -116,6 +117,8 @@ export function StudentManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
+  const [graduationStatusFilter, setGraduationStatusFilter] = useState('all');
+  const [internshipStatusFilter, setInternshipStatusFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
@@ -229,10 +232,12 @@ export function StudentManagementTable() {
       
       const classFilterMatch = classFilter === 'all' || student.className === classFilter;
       const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
+      const gradStatusMatch = graduationStatusFilter === 'all' || (student.graduationStatus || 'not_achieved') === graduationStatusFilter;
+      const internStatusMatch = internshipStatusFilter === 'all' || (student.internshipStatus || 'not_achieved') === internshipStatusFilter;
 
-      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch;
+      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch && gradStatusMatch && internStatusMatch;
     });
-  }, [students, searchTerm, classFilter, courseFilter, sortConfig]);
+  }, [students, searchTerm, classFilter, courseFilter, graduationStatusFilter, internshipStatusFilter, sortConfig]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -633,6 +638,19 @@ export function StudentManagementTable() {
                                     {className}
                                 </DropdownMenuCheckboxItem>
                             ))}
+                             <DropdownMenuSeparator />
+                             <DropdownMenuLabel>Trạng thái Tốt nghiệp</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'all'} onCheckedChange={() => setGraduationStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'achieved'} onCheckedChange={() => setGraduationStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'not_achieved'} onCheckedChange={() => setGraduationStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
+
+                             <DropdownMenuSeparator />
+                             <DropdownMenuLabel>Trạng thái Thực tập</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'all'} onCheckedChange={() => setInternshipStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'achieved'} onCheckedChange={() => setInternshipStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
                           </ScrollArea>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -857,4 +875,5 @@ export function StudentManagementTable() {
 
 
     
+
 
