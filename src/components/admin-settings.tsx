@@ -14,6 +14,19 @@ import { Separator } from './ui/separator';
 import { Input } from './ui/input';
 import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import * as z from 'zod';
+import { Form, FormControl, FormField, FormItem, FormMessage } from './ui/form';
+
+
+const themeFormSchema = z.object({
+  themePrimary: z.string().optional(),
+  themePrimaryForeground: z.string().optional(),
+});
+
+type ThemeFormData = z.infer<typeof themeFormSchema>;
+
 
 export function AdminSettings() {
     const firestore = useFirestore();
@@ -22,11 +35,25 @@ export function AdminSettings() {
     const { data: settings, isLoading } = useDoc<SystemSettings>(settingsDocRef);
     const [goalHours, setGoalHours] = useState(700);
     
+    const themeForm = useForm<ThemeFormData>({
+      resolver: zodResolver(themeFormSchema),
+      defaultValues: {
+        themePrimary: '',
+        themePrimaryForeground: '',
+      },
+    });
+
     useEffect(() => {
-        if (settings?.earlyInternshipGoalHours) {
-            setGoalHours(settings.earlyInternshipGoalHours);
+        if (settings) {
+            if (settings.earlyInternshipGoalHours) {
+                setGoalHours(settings.earlyInternshipGoalHours);
+            }
+            themeForm.reset({
+              themePrimary: settings.themePrimary || '',
+              themePrimaryForeground: settings.themePrimaryForeground || '',
+            })
         }
-    }, [settings]);
+    }, [settings, themeForm]);
 
     const handleFeatureToggle = async (feature: keyof Omit<SystemSettings, 'id'>, enabled: boolean) => {
         const updateData = { [feature]: enabled };
@@ -65,6 +92,29 @@ export function AdminSettings() {
                 errorEmitter.emit('permission-error', contextualError);
             });
     }
+    
+    const onThemeSubmit = async (values: ThemeFormData) => {
+      const updateData = {
+        themePrimary: values.themePrimary,
+        themePrimaryForeground: values.themePrimaryForeground,
+      };
+
+      setDoc(settingsDocRef, updateData, { merge: true })
+        .then(() => {
+          toast({
+            title: 'Thành công',
+            description: 'Giao diện đã được cập nhật.',
+          });
+        })
+        .catch(error => {
+          const contextualError = new FirestorePermissionError({
+            path: settingsDocRef.path,
+            operation: 'update',
+            requestResourceData: updateData,
+          });
+          errorEmitter.emit('permission-error', contextualError);
+        });
+    };
 
     if (isLoading) {
         return (
@@ -83,6 +133,49 @@ export function AdminSettings() {
     
     return (
         <div className="space-y-6">
+            <Card>
+                <CardHeader>
+                    <CardTitle>Cài đặt Giao diện</CardTitle>
+                    <CardDescription>
+                        Tùy chỉnh màu sắc chủ đạo của ứng dụng. Nhập giá trị HSL (ví dụ: 231 48% 48%).
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Form {...themeForm}>
+                    <form onSubmit={themeForm.handleSubmit(onThemeSubmit)} className="space-y-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                           <FormField
+                              control={themeForm.control}
+                              name="themePrimary"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Màu chủ đạo (Primary)</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="ví dụ: 231 48% 48%" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={themeForm.control}
+                              name="themePrimaryForeground"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Màu chữ trên màu chủ đạo</FormLabel>
+                                  <FormControl>
+                                    <Input placeholder="ví dụ: 0 0% 98%" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                        </div>
+                        <Button type="submit" disabled={themeForm.formState.isSubmitting}>Lưu Giao diện</Button>
+                    </form>
+                  </Form>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle>Cài đặt chung</CardTitle>

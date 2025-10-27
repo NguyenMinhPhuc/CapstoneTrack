@@ -223,6 +223,8 @@ export type SystemSettings = {
     forceOpenReportSubmission?: boolean;
     requireReportApproval?: boolean;
     earlyInternshipGoalHours?: number;
+    themePrimary?: string;
+    themePrimaryForeground?: string;
 }
 
 export type ProjectTopic = {

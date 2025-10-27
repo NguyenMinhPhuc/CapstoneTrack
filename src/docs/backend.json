@@ -680,6 +680,14 @@
         "earlyInternshipGoalHours": {
           "type": "number",
           "description": "The target number of hours for the early internship program."
+        },
+        "themePrimary": {
+            "type": "string",
+            "description": "The HSL value for the primary theme color."
+        },
+        "themePrimaryForeground": {
+            "type": "string",
+            "description": "The HSL value for the primary theme's foreground text color."
         }
       }
     },
