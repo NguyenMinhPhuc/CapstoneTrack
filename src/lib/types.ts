@@ -24,6 +24,7 @@ export type SystemUser = {
   status: 'active' | 'pending' | 'disabled';
   passwordInitialized?: boolean;
   createdAt: any; 
+  displayName?: string;
 };
 
 export type DefenseSession = {
@@ -306,10 +307,23 @@ export type EarlyInternshipWeeklyReport = {
     status: 'pending_review' | 'approved' | 'rejected';
 };
 
-    
+export type Conversation = {
+    id: string;
+    subject: string;
+    participantIds: string[];
+    participantNames: string[];
+    createdAt: any;
+    lastMessageAt: any;
+    lastMessageSnippet: string;
+    readBy: string[];
+}
 
-    
-
-    
-
-    
+export type Message = {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    senderName: string;
+    content: string;
+    createdAt: any;
+    mentionedUserIds?: string[];
+}
