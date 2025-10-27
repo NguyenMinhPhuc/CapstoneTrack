@@ -22,7 +22,7 @@ import { useCollection, useFirestore, errorEmitter, FirestorePermissionError, us
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { CalendarIcon, GraduationCap, Briefcase, UserCheck, Building, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addMonths, startOfMonth, getDay, addDays } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import type { Rubric, InternshipCompany } from '@/lib/types';
 import { Separator } from './ui/separator';
@@ -91,6 +91,31 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       control: form.control,
       name: 'sessionType'
   });
+  
+  const startDate = useWatch({
+      control: form.control,
+      name: 'startDate'
+  });
+
+  React.useEffect(() => {
+    if (startDate) {
+      // Logic: Saturday of the second week of the month, 3 months from the start date.
+      // 1. Add 3 months to start date
+      const futureMonth = addMonths(startDate, 3);
+      // 2. Get the first day of that month
+      const firstDayOfFutureMonth = startOfMonth(futureMonth);
+      // 3. Find the day of the week for the 1st (0=Sun, 1=Mon, ..., 6=Sat)
+      const firstDayOfWeek = getDay(firstDayOfFutureMonth);
+      // 4. Calculate days to add to get to the first Saturday
+      // (6 - firstDayOfWeek + 7) % 7 ensures we always move forward to the next Saturday
+      const daysUntilFirstSaturday = (6 - firstDayOfWeek + 7) % 7;
+      // 5. First Saturday is found. Add 7 more days to get to the second Saturday.
+      const secondSaturday = addDays(firstDayOfFutureMonth, daysUntilFirstSaturday + 7);
+
+      form.setValue('expectedReportDate', secondSaturday);
+    }
+  }, [startDate, form]);
+
   
   const cleanRubricId = (value: string | undefined) => value === NO_RUBRIC_VALUE ? '' : value;
 
@@ -515,5 +540,3 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
     </>
   );
 }
-
-    
