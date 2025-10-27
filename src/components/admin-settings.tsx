@@ -17,7 +17,7 @@ import { Button } from './ui/button';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import * as z from 'zod';
-import { Form, FormControl, FormField, FormItem, FormMessage } from './ui/form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 
 
 const themeFormSchema = z.object({
