@@ -327,3 +327,12 @@ export type Message = {
     createdAt: any;
     mentionedUserIds?: string[];
 }
+
+export type Resource = {
+  id: string;
+  name: string;
+  summary?: string;
+  category: 'graduation' | 'internship';
+  link: string;
+  createdAt: any;
+}

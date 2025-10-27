@@ -41,6 +41,7 @@ import {
   CheckSquare,
   LifeBuoy,
   MessageSquare,
+  Library,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -252,6 +253,11 @@ export function AppSidebar() {
                                  <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/topics")} tooltip="Topic Management">
                                         <Link href="/admin/topics"><BookA /><span>Quản lý Đề tài</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/resources")} tooltip="Resource Management">
+                                        <Link href="/admin/resources"><Library /><span>Quản lý Tài nguyên</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                  <SidebarMenuItem>

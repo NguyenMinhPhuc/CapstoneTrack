@@ -32,6 +32,21 @@
         "mentionedUserIds": { "type": "array", "items": { "type": "string" }}
       },
       "required": ["id", "conversationId", "senderId", "senderName", "content", "createdAt"]
+    },
+    "Resource": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Resource",
+      "type": "object",
+      "description": "Represents a single educational resource like a form or template.",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "summary": { "type": "string" },
+        "category": { "type": "string", "enum": ["graduation", "internship"] },
+        "link": { "type": "string", "format": "uri" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["id", "name", "category", "link", "createdAt"]
     }
   },
   "auth": {
@@ -52,6 +67,12 @@
         "$ref": "#/entities/Message"
       },
       "description": "Stores messages for a conversation."
+    },
+    "/resources/{resourceId}": {
+      "schema": {
+        "$ref": "#/entities/Resource"
+      },
+      "description": "Stores educational resources."
     }
   }
 }
