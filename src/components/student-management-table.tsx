@@ -69,6 +69,7 @@ import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 import { StudentStatusDetailsDialog } from './student-status-details-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -78,7 +79,7 @@ const statusLabel: Record<Student['status'], string> = {
   graduated: 'Đã tốt nghiệp',
 };
 
-const completionStatusLabel = {
+const completionStatusLabel: Record<'achieved' | 'not_achieved', string> = {
   achieved: 'Đã đạt',
   not_achieved: 'Chưa đạt',
 };
