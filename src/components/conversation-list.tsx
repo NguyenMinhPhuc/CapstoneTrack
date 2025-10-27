@@ -24,19 +24,17 @@ export function ConversationList({
 }: ConversationListProps) {
   const firestore = useFirestore();
 
-  // const conversationsQuery = useMemoFirebase(
-  //   () =>
-  //     query(
-  //       collection(firestore, 'conversations'),
-  //       where('participantIds', 'array-contains', currentUser.uid),
-  //       orderBy('lastMessageAt', 'desc')
-  //     ),
-  //   [firestore, currentUser.uid]
-  // );
+  const conversationsQuery = useMemoFirebase(
+    () =>
+      query(
+        collection(firestore, 'conversations'),
+        where('participantIds', 'array-contains', currentUser.uid),
+        orderBy('lastMessageAt', 'desc')
+      ),
+    [firestore, currentUser.uid]
+  );
 
-  // const { data: conversations, isLoading } = useCollection<Conversation>(conversationsQuery);
-  const conversations: Conversation[] = [];
-  const isLoading = false;
+  const { data: conversations, isLoading } = useCollection<Conversation>(conversationsQuery);
 
 
   if (isLoading) {

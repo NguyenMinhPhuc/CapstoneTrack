@@ -1,4 +1,3 @@
-
 {
   "entities": {
     "UserAccount": {
@@ -798,6 +797,7 @@
         "id": { "type": "string" },
         "subject": { "type": "string" },
         "participantIds": { "type": "array", "items": { "type": "string" }},
+        "participantNames": { "type": "array", "items": { "type": "string" }},
         "createdAt": { "type": "string", "format": "date-time" },
         "lastMessageAt": { "type": "string", "format": "date-time" },
         "lastMessageSnippet": { "type": "string" },
