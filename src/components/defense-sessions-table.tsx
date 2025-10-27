@@ -60,6 +60,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { EditDefenseSessionForm } from './edit-defense-session-form';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 
 type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
@@ -80,6 +81,16 @@ const statusVariant: Record<SessionStatus, 'secondary' | 'default' | 'outline'> 
   completed: 'outline',
 };
 
+const getAcademicYear = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0 = January, 7 = August
+
+    if (month >= 7) { // August or later
+        return `${year} - ${year + 1}`;
+    } else { // July or earlier
+        return `${year - 1} - ${year}`;
+    }
+};
 
 export function DefenseSessionsTable() {
   const firestore = useFirestore();
@@ -91,6 +102,7 @@ export function DefenseSessionsTable() {
   const [sessionToDelete, setSessionToDelete] = useState<DefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [academicYearFilter, setAcademicYearFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'startDate', direction: 'desc' });
 
 
@@ -100,6 +112,27 @@ export function DefenseSessionsTable() {
   );
 
   const { data: sessions, isLoading } = useCollection<DefenseSession>(sessionsCollectionRef);
+  
+  const toDate = (timestamp: any): Date | undefined => {
+    if (!timestamp) return undefined;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
+  
+  const academicYears = useMemo(() => {
+    if (!sessions) return [];
+    const years = new Set<string>();
+    sessions.forEach(session => {
+        const date = toDate(session.startDate);
+        if (date) {
+            years.add(getAcademicYear(date));
+        }
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [sessions]);
+
 
   const sessionStats = useMemo(() => {
     const stats = {
@@ -118,14 +151,6 @@ export function DefenseSessionsTable() {
       return acc;
     }, stats);
   }, [sessions]);
-
-    const toDate = (timestamp: any): Date | undefined => {
-        if (!timestamp) return undefined;
-        if (timestamp && typeof timestamp.toDate === 'function') {
-            return timestamp.toDate();
-        }
-        return timestamp;
-    };
 
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
@@ -158,9 +183,13 @@ export function DefenseSessionsTable() {
     return sortableSessions.filter(session => {
         const searchMatch = session.name.toLowerCase().includes(searchTerm.toLowerCase());
         const statusMatch = statusFilter === 'all' || session.status === statusFilter;
-        return searchMatch && statusMatch;
+        
+        const sessionDate = toDate(session.startDate);
+        const academicYearMatch = academicYearFilter === 'all' || (sessionDate ? getAcademicYear(sessionDate) === academicYearFilter : false);
+
+        return searchMatch && statusMatch && academicYearMatch;
     });
-  }, [sessions, searchTerm, statusFilter, sortConfig]);
+  }, [sessions, searchTerm, statusFilter, academicYearFilter, sortConfig]);
 
     const requestSort = (key: SortKey) => {
         let direction: SortDirection = 'asc';
@@ -325,6 +354,19 @@ export function DefenseSessionsTable() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                     <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Lọc theo năm học" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tất cả năm học</SelectItem>
+                            {academicYears.map(year => (
+                                <SelectItem key={year} value={year}>
+                                    Năm học {year}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9 gap-1 text-sm w-full sm:w-auto">
