@@ -48,6 +48,7 @@ import { doc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Button } from "./ui/button";
+import type { SystemSettings } from "@/lib/types";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -60,6 +61,10 @@ export function AppSidebar() {
   }, [user, firestore]);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings, isLoading: isLoadingSettings } = useDoc<SystemSettings>(settingsDocRef);
+  const isPostDefenseSubmissionEnabled = settings?.enablePostDefenseSubmission ?? false;
 
   const isActive = (href: string) => {
     if (href === '/') {
@@ -68,7 +73,7 @@ export function AppSidebar() {
     return pathname.startsWith(href);
   }
 
-  const isLoading = isUserLoading || isUserDataLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isLoadingSettings;
 
   if (isLoading) {
       return (
@@ -161,7 +166,7 @@ export function AppSidebar() {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/post-defense-submission")} tooltip="Nộp sau HĐ">
+                                    <SidebarMenuButton asChild isActive={isActive("/post-defense-submission")} tooltip="Nộp sau HĐ" disabled={!isPostDefenseSubmissionEnabled}>
                                         <Link href="/post-defense-submission"><FileUp /><span>Nộp sau Hội đồng</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
