@@ -206,6 +206,11 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/graduation-guidance")} tooltip="Hướng dẫn Tốt nghiệp">
+                        <Link href="/graduation-guidance"><GraduationCap /><span>Hướng dẫn Tốt nghiệp</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/early-internship-guidance")} tooltip="Hướng dẫn TT sớm">
                         <Link href="/early-internship-guidance"><Clock /><span>Hướng dẫn TT sớm</span></Link>
                     </SidebarMenuButton>
