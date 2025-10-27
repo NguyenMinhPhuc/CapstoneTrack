@@ -43,28 +43,36 @@ export default function PostDefenseSubmissionPage() {
   const isFeatureEnabled = settings?.enablePostDefenseSubmission ?? false;
 
   useEffect(() => {
-    if (isUserLoading || isLoadingSettings) {
-        return; // Wait for initial auth and settings checks
+    if (isUserLoading || isUserDataLoading) {
+        return; // Wait for user data to load
     }
 
     if (!user) {
         router.push('/login');
         return;
     }
-
-    // Only redirect if user data is loaded and conditions are not met
-    if (!isUserDataLoading) {
-       if (userData && userData.role !== 'student') {
-            router.push('/');
-        } else if (!isFeatureEnabled) {
-            router.push('/');
-        }
+    
+    if (userData && userData.role !== 'student') {
+        router.push('/');
     }
-  }, [user, isUserLoading, userData, isUserDataLoading, settings, isLoadingSettings, isFeatureEnabled, router]);
+  }, [user, isUserLoading, userData, isUserDataLoading, router]);
 
 
   useEffect(() => {
-    if (!user || !firestore) return;
+    // Wait until settings are loaded to decide
+    if (isLoadingSettings) return;
+
+    // If feature is disabled, stop here. The UI will show the correct message.
+    if (!isFeatureEnabled) {
+        setIsLoading(false);
+        return;
+    }
+
+    if (!user || !firestore) {
+        setIsLoading(false);
+        return;
+    }
+
 
     const findActiveRegistration = async () => {
         setIsLoading(true);
@@ -95,7 +103,7 @@ export default function PostDefenseSubmissionPage() {
                 const regDoc = registrationSnapshot.docs[0];
                 const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
                 
-                // Only set active registration if student has an approved report
+                // Only set active registration if student has an approved report or completed internship
                 if (registrationData.reportStatus === 'approved' || registrationData.internshipStatus === 'completed') {
                     setActiveRegistration(registrationData);
                     setSubmissionLink(registrationData.postDefenseReportLink || '');
@@ -108,7 +116,7 @@ export default function PostDefenseSubmissionPage() {
         }
     };
     findActiveRegistration();
-  }, [user, firestore]);
+  }, [user, firestore, isLoadingSettings, isFeatureEnabled]);
 
   const handleSubmit = async () => {
     if (!activeRegistration) return;
@@ -156,12 +164,12 @@ export default function PostDefenseSubmissionPage() {
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-6">
-                {!activeRegistration || !activeSession?.postDefenseSubmissionLink ? (
+                {!isFeatureEnabled || !activeRegistration || !activeSession?.postDefenseSubmissionLink ? (
                     <Alert>
                         <Info className="h-4 w-4" />
                         <AlertTitle>Chưa đến thời gian nộp</AlertTitle>
                         <AlertDescription>
-                            Hiện tại chưa có link nộp báo cáo sau hội đồng, hoặc báo cáo của bạn chưa được duyệt. Vui lòng quay lại sau.
+                             Hiện tại chưa có link nộp báo cáo sau hội đồng, hoặc báo cáo của bạn chưa được duyệt, hoặc tính năng này đang được khóa bởi admin. Vui lòng quay lại sau.
                         </AlertDescription>
                     </Alert>
                 ) : (

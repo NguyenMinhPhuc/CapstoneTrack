@@ -166,7 +166,7 @@ export function AppSidebar() {
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/post-defense-submission")} tooltip="Nộp sau HĐ" disabled={!isPostDefenseSubmissionEnabled}>
+                                    <SidebarMenuButton asChild isActive={isActive("/post-defense-submission")} tooltip="Nộp sau HĐ">
                                         <Link href="/post-defense-submission"><FileUp /><span>Nộp sau Hội đồng</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
