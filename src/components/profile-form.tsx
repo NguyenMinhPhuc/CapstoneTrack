@@ -20,6 +20,7 @@ import type { SystemUser } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { useEffect } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { updateProfile } from 'firebase/auth';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -103,13 +104,26 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
         return;
     }
     
-    const updateData = {
-        firstName: values.firstName,
-        lastName: values.lastName,
-    };
+    const displayName = `${values.firstName} ${values.lastName}`.trim();
     
     try {
-        await updateDoc(profileDocRef, updateData);
+        const batch = writeBatch(firestore);
+        
+        // Update the profile document (student/supervisor)
+        batch.update(profileDocRef, {
+            firstName: values.firstName,
+            lastName: values.lastName,
+        });
+
+        // Update the users document
+        const userDocRef = doc(firestore, 'users', user.uid);
+        batch.update(userDocRef, { displayName: displayName });
+
+        // Update the auth user profile
+        await updateProfile(user, { displayName: displayName });
+
+        await batch.commit();
+
         toast({
             title: 'Thành công',
             description: 'Thông tin hồ sơ của bạn đã được cập nhật.',

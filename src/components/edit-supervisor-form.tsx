@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,10 +14,12 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
-import type { Supervisor } from '@/lib/types';
+import { useFirestore, useDoc } from '@/firebase';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
+import type { Supervisor, SystemUser } from '@/lib/types';
 import { Checkbox } from './ui/checkbox';
+import { updateProfile } from 'firebase/auth';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -38,6 +39,10 @@ interface EditSupervisorFormProps {
 export function EditSupervisorForm({ supervisor, onFinished }: EditSupervisorFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const auth = useAuth();
+  
+  const { data: user } = useDoc<SystemUser>(doc(firestore, 'users', supervisor.id));
+
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -53,13 +58,32 @@ export function EditSupervisorForm({ supervisor, onFinished }: EditSupervisorFor
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const supervisorDocRef = doc(firestore, 'supervisors', supervisor.id);
+    
+    const displayName = `${values.firstName} ${values.lastName}`.trim();
     
     try {
-      // We don't update email here as it's tied to auth.
-      const { email, ...updateData } = values;
+      const batch = writeBatch(firestore);
 
-      await updateDoc(supervisorDocRef, updateData);
+      // 1. Update supervisor document
+      const supervisorDocRef = doc(firestore, 'supervisors', supervisor.id);
+      const { email, ...updateData } = values;
+      batch.update(supervisorDocRef, updateData);
+
+      // 2. Update user document
+      const userDocRef = doc(firestore, 'users', supervisor.id);
+      batch.update(userDocRef, { displayName: displayName });
+
+      // 3. Update auth display name
+      if (auth.currentUser && auth.currentUser.uid === supervisor.id) {
+        await updateProfile(auth.currentUser, { displayName });
+      } else {
+        // This case is for an admin editing another user.
+        // There is no direct client-side SDK method to update another user's auth profile.
+        // This would typically be handled by a Cloud Function.
+        console.warn("Cannot update auth profile for another user from the client.");
+      }
+
+      await batch.commit();
       
       toast({
         title: 'Thành công',

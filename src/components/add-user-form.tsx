@@ -22,10 +22,12 @@ import {
 } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, updateProfile } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { doc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
+import type { SystemUser } from '@/lib/types';
+
 
 // IMPORTANT: To prevent "auth/network-request-failed" errors, ensure that the
 // domain your application is running on (e.g., localhost) is added to the
@@ -33,6 +35,8 @@ import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 // Authentication > Settings > Authorized domains.
 
 const formSchema = z.object({
+  firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
+  lastName: z.string().min(1, { message: 'Tên là bắt buộc.' }),
   email: z.string().email({ message: 'Email không hợp lệ.' }),
   password: z.string().min(6, { message: 'Mật khẩu phải có ít nhất 6 ký tự.' }),
   role: z.enum(['student', 'supervisor', 'admin'], {
@@ -64,6 +68,8 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
     defaultValues: {
       email: '',
       password: '',
+      firstName: '',
+      lastName: '',
     },
   });
 
@@ -78,32 +84,49 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
         values.password
       );
       const user = userCredential.user;
+      
+      const displayName = `${values.firstName} ${values.lastName}`.trim();
+      await updateProfile(user, { displayName: displayName });
 
-      // 2. ALWAYS create a document in the 'users' collection for management
+      // 2. Create documents in Firestore using a batch
+      const batch = writeBatch(firestore);
+
       const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, {
+      const userData: SystemUser = {
+        id: user.uid,
         email: values.email,
+        displayName: displayName,
         role: values.role,
         status: 'active', // Default status for new users
+        passwordInitialized: true,
         createdAt: serverTimestamp(),
-      });
-
+      };
+      batch.set(userDocRef, userData);
+      
       // 3. Optionally, create a profile in the role-specific collection
       if (values.role === 'student') {
         const studentDocRef = doc(firestore, 'students', user.uid);
-        await setDoc(studentDocRef, {
-            email: values.email,
+        batch.set(studentDocRef, {
+            id: user.uid,
             userId: user.uid,
+            firstName: values.firstName,
+            lastName: values.lastName,
+            email: values.email,
             createdAt: serverTimestamp(),
         });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
-        await setDoc(supervisorDocRef, {
-            email: values.email,
+        batch.set(supervisorDocRef, {
+            id: user.uid,
             userId: user.uid,
+            firstName: values.firstName,
+            lastName: values.lastName,
+            email: values.email,
             createdAt: serverTimestamp(),
         });
       }
+
+      await batch.commit();
 
       toast({
         title: 'Thành công',
@@ -135,6 +158,34 @@ export function AddUserForm({ onFinished }: AddUserFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+        <div className="grid grid-cols-2 gap-4">
+            <FormField
+            control={form.control}
+            name="firstName"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Họ</FormLabel>
+                <FormControl>
+                    <Input placeholder="Nguyễn Văn" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+            <FormField
+            control={form.control}
+            name="lastName"
+            render={({ field }) => (
+                <FormItem>
+                <FormLabel>Tên</FormLabel>
+                <FormControl>
+                    <Input placeholder="An" {...field} />
+                </FormControl>
+                <FormMessage />
+                </FormItem>
+            )}
+            />
+        </div>
         <FormField
           control={form.control}
           name="email"

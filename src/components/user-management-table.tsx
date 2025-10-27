@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -35,9 +33,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuPortal,
-  DropdownMenuTrigger,
+  DropdownMenuSubTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
@@ -69,7 +66,7 @@ type RoleStats = {
     disabled: number;
 }
 
-type SortKey = 'email' | 'role' | 'status' | 'createdAt';
+type SortKey = 'displayName' | 'email' | 'role' | 'status' | 'createdAt';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -184,6 +181,14 @@ export function UserManagementTable() {
                 if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
                 return 0;
             }
+            
+             if (sortConfig.key === 'displayName') {
+                const aName = a.displayName || a.email;
+                const bName = b.displayName || b.email;
+                 if (aName < bName) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aName > bName) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            }
 
             if (String(aValue) < String(bValue)) {
                 return sortConfig.direction === 'asc' ? -1 : 1;
@@ -193,7 +198,7 @@ export function UserManagementTable() {
             }
         }
 
-        return (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0) - (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0);
+        return (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0) - (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0);
     });
 
     return sortableUsers;
@@ -475,7 +480,7 @@ export function UserManagementTable() {
                                 Add User
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                             <DialogTitle>Add New User</DialogTitle>
                             <DialogDescription>
@@ -495,22 +500,22 @@ export function UserManagementTable() {
             <TableRow>
               <TableHead className="w-[50px]">#</TableHead>
               <TableHead>
-                <Button variant="ghost" className="px-0" onClick={() => requestSort('email')}>
-                    User {getSortIcon('email')}
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('displayName')}>
+                    User {getSortIcon('displayName')}
                 </Button>
               </TableHead>
               <TableHead>
-                 <Button variant="ghost" className="px-0" onClick={() => requestSort('role')}>
+                 <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('role')}>
                     Role {getSortIcon('role')}
                 </Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" className="px-0" onClick={() => requestSort('status')}>
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('status')}>
                     Status {getSortIcon('status')}
                 </Button>
               </TableHead>
               <TableHead className="hidden md:table-cell">
-                 <Button variant="ghost" className="px-0" onClick={() => requestSort('createdAt')}>
+                 <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('createdAt')}>
                     Created At {getSortIcon('createdAt')}
                 </Button>
               </TableHead>
@@ -529,9 +534,12 @@ export function UserManagementTable() {
                         {defaultAvatar && (
                             <Image src={defaultAvatar.imageUrl} alt={user.email} width={40} height={40} data-ai-hint={defaultAvatar.imageHint}/>
                         )}
-                      <AvatarFallback>{user.email.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{user.displayName ? user.displayName.substring(0, 2).toUpperCase() : user.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <div className="font-medium">{user.email}</div>
+                    <div>
+                        <div className="font-medium">{user.displayName || 'Chưa có tên'}</div>
+                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                    </div>
                     {isLinked && (
                         <TooltipProvider>
                             <Tooltip>

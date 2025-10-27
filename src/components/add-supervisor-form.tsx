@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,11 +16,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { Checkbox } from './ui/checkbox';
+import type { SystemUser } from '@/lib/types';
+
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -82,20 +83,22 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
     try {
         const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
         const user = userCredential.user;
+        
+        const displayName = `${values.firstName} ${values.lastName}`.trim();
+        await updateProfile(user, { displayName: displayName });
 
-        // After creating the user, immediately send a password reset email
-        // This allows them to set their own password securely.
         await sendPasswordResetEmail(tempAuth, values.email);
 
         const batch = writeBatch(firestore);
 
         const userDocRef = doc(firestore, 'users', user.uid);
-        const userData = {
+        const userData: SystemUser = {
             id: user.uid,
             email: values.email,
+            displayName: displayName,
             role: 'supervisor' as const,
             status: 'active' as const,
-            passwordInitialized: true, // User will set their own password
+            passwordInitialized: false,
             createdAt: serverTimestamp(),
         };
         batch.set(userDocRef, userData);

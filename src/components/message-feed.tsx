@@ -1,11 +1,10 @@
-
 'use client';
 
 import type { User } from 'firebase/auth';
 import { MessageSquare, Send } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, orderBy, addDoc, serverTimestamp, doc, updateDoc } from 'firebase/firestore';
-import type { Message } from '@/lib/types';
+import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { collection, query, orderBy, addDoc, serverTimestamp, doc, updateDoc, arrayUnion } from 'firebase/firestore';
+import type { Message, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
@@ -37,6 +36,12 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
         : null,
     [firestore, conversationId]
   );
+  
+  const currentUserDocRef = useMemoFirebase(
+      () => doc(firestore, 'users', currentUser.uid),
+      [firestore, currentUser.uid]
+  );
+  const { data: currentUserData } = useDoc<SystemUser>(currentUserDocRef);
 
   const { data: messages, isLoading } = useCollection<Message>(messagesQuery);
   
@@ -45,10 +50,10 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
     if (conversationId && currentUser) {
       const convoRef = doc(firestore, 'conversations', conversationId);
       updateDoc(convoRef, {
-        readBy: [currentUser.uid]
+        readBy: arrayUnion(currentUser.uid)
       }).catch(err => console.error("Could not mark conversation as read", err));
     }
-  }, [conversationId, currentUser, firestore]);
+  }, [conversationId, currentUser, firestore, messages]);
   
   // Scroll to bottom when new messages arrive
   useEffect(() => {
@@ -76,30 +81,33 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
   }
 
   const handleSendMessage = async () => {
-    if (!newMessage.trim() || !conversationId) return;
+    if (!newMessage.trim() || !conversationId || !currentUserData) return;
 
     const messagesCollectionRef = collection(firestore, 'conversations', conversationId, 'messages');
     const conversationDocRef = doc(firestore, 'conversations', conversationId);
+    
+    const messageRef = doc(messagesCollectionRef);
 
     try {
         const messageData = {
+            id: messageRef.id,
             conversationId: conversationId,
             senderId: currentUser.uid,
-            senderName: currentUser.displayName || currentUser.email || 'N/A',
+            senderName: currentUserData.displayName || currentUser.email || 'N/A',
             content: newMessage,
             createdAt: serverTimestamp(),
         };
 
-        // Use Promise.all to send message and update conversation metadata concurrently
-        await Promise.all([
-            addDoc(messagesCollectionRef, messageData),
-            updateDoc(conversationDocRef, {
-                lastMessageAt: serverTimestamp(),
-                lastMessageSnippet: newMessage.substring(0, 90),
-                readBy: [currentUser.uid], // Sender has read the message
-            })
-        ]);
+        const batch = writeBatch(firestore);
+        
+        batch.set(messageRef, messageData);
+        batch.update(conversationDocRef, {
+            lastMessageAt: serverTimestamp(),
+            lastMessageSnippet: newMessage.substring(0, 90),
+            readBy: [currentUser.uid], // Sender has read the message
+        });
 
+        await batch.commit();
         setNewMessage('');
     } catch (error) {
         console.error("Error sending message:", error);
@@ -139,7 +147,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
                                 ? "bg-primary text-primary-foreground"
                                 : "bg-muted"
                         )}>
-                            <p className="font-semibold">{!isCurrentUser && msg.senderName}</p>
+                            {!isCurrentUser && <p className="font-semibold mb-1">{msg.senderName}</p>}
                             <p className="whitespace-pre-wrap">{msg.content}</p>
                             <p className={cn(
                                 "text-xs mt-1",
@@ -150,7 +158,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
                         </div>
                          {isCurrentUser && (
                             <Avatar className="h-8 w-8">
-                                <AvatarFallback>{msg.senderName.substring(0, 2).toUpperCase()}</AvatarFallback>
+                                <AvatarFallback>{currentUserData?.displayName?.substring(0,2).toUpperCase() || 'Me'}</AvatarFallback>
                             </Avatar>
                         )}
                     </div>

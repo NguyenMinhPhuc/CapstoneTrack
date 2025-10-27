@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,9 +15,11 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
-import { doc, updateDoc } from 'firebase/firestore';
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { updateProfile } from 'firebase/auth';
+import { useAuth } from '@/firebase';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -41,6 +42,7 @@ interface EditStudentFormProps {
 export function EditStudentForm({ student, onFinished }: EditStudentFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
+  const auth = useAuth();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -57,18 +59,30 @@ export function EditStudentForm({ student, onFinished }: EditStudentFormProps) {
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const studentDocRef = doc(firestore, 'students', student.id);
+    const displayName = `${values.firstName} ${values.lastName}`.trim();
     
     try {
-      // We don't update email here as it's tied to auth.
-      const { email, ...updateData } = values;
+      const batch = writeBatch(firestore);
       
+      // 1. Update student document
+      const studentDocRef = doc(firestore, 'students', student.id);
+      const { email, ...updateData } = values;
       const dataToUpdate = {
         ...updateData,
         enrollmentYear: updateData.enrollmentYear || null,
       };
+      batch.update(studentDocRef, dataToUpdate);
 
-      await updateDoc(studentDocRef, dataToUpdate);
+      // 2. Update users document
+      const userDocRef = doc(firestore, 'users', student.id);
+      batch.update(userDocRef, { displayName: displayName });
+      
+      // 3. Update auth display name if it's the current user
+      if (auth.currentUser && auth.currentUser.uid === student.id) {
+          await updateProfile(auth.currentUser, { displayName });
+      }
+
+      await batch.commit();
       
       toast({
         title: 'Thành công',

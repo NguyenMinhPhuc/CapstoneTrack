@@ -64,6 +64,9 @@ export function ConversationList({
       <div className="p-2 space-y-1">
         {conversations.map(convo => {
             const isUnread = convo.readBy && !convo.readBy.includes(currentUser.uid);
+            const otherParticipants = convo.participantNames.filter(name => name !== (currentUser.displayName || currentUser.email));
+            const displaySubject = convo.subject || `Hội thoại với ${otherParticipants.join(', ')}`;
+            
             return (
               <button
                 key={convo.id}
@@ -73,9 +76,9 @@ export function ConversationList({
                   selectedConversationId === convo.id && 'bg-muted'
                 )}
               >
-                <div className="flex items-center justify-between">
+                <div className="flex items-start justify-between">
                   <p className={cn('font-semibold truncate', isUnread && 'text-primary')}>
-                    {convo.subject}
+                    {displaySubject}
                   </p>
                   {convo.lastMessageAt && (
                      <p className="text-xs text-muted-foreground flex-shrink-0 ml-2">

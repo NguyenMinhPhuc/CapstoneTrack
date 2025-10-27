@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -31,8 +30,8 @@ import {
   CardTitle,
 } from './ui/card';
 import { useAuth, useFirestore } from '@/firebase';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { doc, serverTimestamp, setDoc, writeBatch } from 'firebase/firestore';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -71,35 +70,48 @@ export function SignUpForm() {
       );
       const user = userCredential.user;
 
-      // 1. ALWAYS create a document in the 'users' collection for management
+      const displayName = `${values.firstName} ${values.lastName}`.trim();
+      await updateProfile(user, { displayName: displayName });
+
+      // Create documents in Firestore using a batch
+      const batch = writeBatch(firestore);
+
+      // 1. Create a document in the 'users' collection for management
       const userDocRef = doc(firestore, 'users', user.uid);
-      await setDoc(userDocRef, {
+      batch.set(userDocRef, {
+        id: user.uid,
         email: values.email,
+        displayName: displayName,
         role: values.role,
-        passwordInitialized: true, // User sets their own password, so it's initialized
+        status: 'active',
+        passwordInitialized: true, 
         createdAt: serverTimestamp(),
       });
 
-      // 2. Optionally, create a profile in the role-specific collection
+      // 2. Create a profile in the role-specific collection
       if (values.role === 'student') {
         const studentDocRef = doc(firestore, 'students', user.uid);
-        await setDoc(studentDocRef, {
+        batch.set(studentDocRef, {
+          id: user.uid,
+          userId: user.uid,
           firstName: values.firstName,
           lastName: values.lastName,
           email: values.email,
-          userId: user.uid,
           createdAt: serverTimestamp(),
         });
       } else if (values.role === 'supervisor') {
         const supervisorDocRef = doc(firestore, 'supervisors', user.uid);
-        await setDoc(supervisorDocRef, {
+        batch.set(supervisorDocRef, {
+            id: user.uid,
+            userId: user.uid,
             firstName: values.firstName,
             lastName: values.lastName,
             email: values.email,
-            userId: user.uid,
             createdAt: serverTimestamp(),
         });
       }
+      
+      await batch.commit();
 
       toast({
         title: 'Thành công',
