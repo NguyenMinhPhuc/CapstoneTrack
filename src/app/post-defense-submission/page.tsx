@@ -93,7 +93,8 @@ export default function PostDefenseSubmissionPage() {
                 const regDoc = registrationSnapshot.docs[0];
                 const registrationData = { id: regDoc.id, ...regDoc.data() } as DefenseRegistration;
                 
-                if (registrationData.reportStatus === 'approved' || registrationData.internshipStatus === 'completed') {
+                // Only set active registration if the report has been approved
+                if (registrationData.reportStatus === 'approved') {
                     setActiveRegistration(registrationData);
                     setSubmissionLink(registrationData.postDefenseReportLink || '');
                 }
