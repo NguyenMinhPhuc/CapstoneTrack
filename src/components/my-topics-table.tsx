@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -467,16 +466,16 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             return (
                                 <AccordionItem value={topic.id} key={topic.id} className="border-b">
                                     <div className="flex items-center px-4 hover:bg-muted/50">
+                                        <div className="flex items-center gap-2 py-4">
+                                            <Checkbox
+                                                checked={selectedRowIds.includes(topic.id)}
+                                                onCheckedChange={(checked) => handleRowSelect(topic.id, !!checked)}
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
                                         <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
                                             <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
-                                                <div className="col-span-1 flex items-center gap-2">
-                                                    <Checkbox
-                                                        checked={selectedRowIds.includes(topic.id)}
-                                                        onCheckedChange={(checked) => handleRowSelect(topic.id, !!checked)}
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    />
-                                                    <span className="sr-only">Toggle</span>
-                                                </div>
+                                                <div className="col-span-1 text-center">{index + 1}</div>
                                                 <div className="col-span-5 font-medium truncate" title={topic.title}>{topic.title}</div>
                                                 <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
                                                 <div className="col-span-1 text-center">
@@ -617,7 +616,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             </div>
                         </div>
                         <div className="space-y-1">
-                            <h4 className="font-semibold flex items-center gap-2 text-base"><FileSignature className="h-4 w-4 text-primary" /> Phương pháp & Công nghệ</h4>
+                            <h4 className="font-semibold flex items-center gap-2 text-base"><FileSignature className="h-4 w-4 text-primary" /> Phương pháp & Công nghệ thực hiện</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.implementationPlan || ''}</ReactMarkdown>
                             </div>
