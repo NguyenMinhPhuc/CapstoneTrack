@@ -42,22 +42,28 @@ export default function PostDefenseSubmissionPage() {
   const isFeatureEnabled = settings?.enablePostDefenseSubmission ?? false;
 
   useEffect(() => {
-    if (isUserLoading || isUserDataLoading || isLoadingSettings) {
+    const isDataLoading = isUserLoading || isUserDataLoading || isLoadingSettings;
+    if (isDataLoading) {
       return; // Wait for all data to load
     }
+
     if (!user) {
       router.push('/login');
       return;
     }
+    
+    // Only check roles and feature status after all data is confirmed loaded
     if (userData && userData.role !== 'student') {
       router.push('/');
       return;
     }
-    if (settings !== undefined && !isFeatureEnabled) {
+    
+    if (settings && !isFeatureEnabled) {
       router.push('/');
       return;
     }
-  }, [user, userData, isUserLoading, isUserDataLoading, router, settings, isFeatureEnabled, isLoadingSettings]);
+
+  }, [user, isUserLoading, userData, isUserDataLoading, settings, isLoadingSettings, isFeatureEnabled, router]);
 
   useEffect(() => {
     if (!user || !firestore) return;
@@ -126,7 +132,9 @@ export default function PostDefenseSubmissionPage() {
     }
   }
 
-  if (isLoading || isUserLoading || isLoadingSettings) {
+  const isPageLoading = isLoading || isUserLoading || isLoadingSettings || isUserDataLoading;
+
+  if (isPageLoading) {
     return (
       <main className="p-4 sm:p-6 lg:p-8">
         <Card>
@@ -207,3 +215,4 @@ export default function PostDefenseSubmissionPage() {
     </main>
   );
 }
+
