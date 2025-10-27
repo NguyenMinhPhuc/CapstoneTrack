@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -446,22 +445,26 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           )}
         </CardHeader>
         <CardContent>
-           <div className="border rounded-md">
-            <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
-                <div className="col-span-1 text-center pl-8">STT</div>
-                <div className="col-span-4">Tên đề tài</div>
-                <div className="col-span-2">Đợt báo cáo</div>
-                <div className="col-span-1 text-center">SL SV</div>
-                <div className="col-span-2">Trạng thái</div>
-                <div className="col-span-2 text-right pr-8">Hành động</div>
-            </div>
             <Accordion type="multiple" className="w-full">
+                <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50 rounded-t-md border-b">
+                     <div className="col-span-1 flex justify-start pl-3" onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                            checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                            onCheckedChange={handleSelectAll}
+                        />
+                    </div>
+                    <div className="col-span-4">Tên đề tài</div>
+                    <div className="col-span-2">Đợt báo cáo</div>
+                    <div className="col-span-1 text-center">SL SV</div>
+                    <div className="col-span-2">Trạng thái</div>
+                    <div className="col-span-2 text-right pr-8">Hành động</div>
+                </div>
                 {filteredTopics.length > 0 ? (
-                    filteredTopics.map((topic, index) => {
+                    filteredTopics.map((topic) => {
                         const registeredStudents = registrationsByTopic.get(`${topic.sessionId}-${topic.title}`) || [];
                         const registeredCount = registeredStudents.length;
                         return (
-                            <AccordionItem value={topic.id} key={topic.id} className="border-b last:border-b-0">
+                             <AccordionItem value={topic.id} key={topic.id} className="border-b last:border-b-0">
                                 <div className="flex items-center px-4 hover:bg-muted/50 data-[state=open]:bg-muted/50">
                                     <div className="py-4" onClick={(e) => e.stopPropagation()}>
                                         <Checkbox
@@ -471,7 +474,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                     </div>
                                     <AccordionTrigger className="w-full p-0 hover:no-underline flex-1">
                                         <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4 pl-3">
-                                            <div className="col-span-1 text-center">{index + 1}</div>
                                             <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
                                             <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
                                             <div className="col-span-1 text-center">
@@ -481,7 +483,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                             <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
                                                         </Button>
                                                     </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-4xl">
+                                                     <DialogContent className="sm:max-w-4xl">
                                                         <DialogHeader>
                                                             <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
                                                             <DialogDescription>Đề tài: {topic.title}</DialogDescription>
@@ -526,23 +528,29 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                     </DialogContent>
                                                 </Dialog>
                                             </div>
-                                            <div className="col-span-2"><Badge variant={statusVariant[topic.status]}>{statusLabel[topic.status]}</Badge></div>
+                                            <div className="col-span-2">
+                                                <Badge variant={statusVariant[topic.status]}>
+                                                    {statusLabel[topic.status]}
+                                                </Badge>
+                                            </div>
+                                            <div className="col-span-2 text-right">
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                                        <MoreHorizontal className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onClick={() => handleEditClick(topic)} disabled={topic.status === 'taken'}>Sửa</DropdownMenuItem>
+                                                        <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)} disabled={topic.status === 'taken'}>Xóa</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         </div>
                                     </AccordionTrigger>
-                                    <div className="col-span-1 flex justify-end pr-4">
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}><MoreHorizontal className="h-4 w-4" /></Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onClick={() => handleEditClick(topic)} disabled={topic.status === 'taken'}>Sửa</DropdownMenuItem>
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)} disabled={topic.status === 'taken'}>Xóa</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    </div>
                                 </div>
                                 <AccordionContent>
-                                    <div className="p-4 bg-muted/30">
+                                     <div className="p-4 bg-muted/30">
                                         <div className="space-y-6">
                                             {topic.status === 'rejected' && topic.rejectionReason && (
                                                 <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Lý do từ chối</AlertTitle><AlertDescription>{topic.rejectionReason}</AlertDescription></Alert>
@@ -557,10 +565,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         );
                     })
                 ) : (
-                    <tr><td colSpan={7} className="h-24 text-center">Không có đề tài nào phù hợp.</td></tr>
+                    <div className="text-center py-10 text-muted-foreground">
+                        Không tìm thấy đề tài nào phù hợp.
+                    </div>
                 )}
             </Accordion>
-        </div>
         </CardContent>
       </Card>
 
