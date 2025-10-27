@@ -14,11 +14,12 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
-import { differenceInWeeks, startOfWeek, format } from 'date-fns';
+import { differenceInWeeks, startOfWeek, format, isWithinInterval, sub } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
 import { ViewStudentEarlyInternshipProgressDialog } from './view-student-early-internship-progress-dialog';
 import { ScrollArea } from './ui/scroll-area';
+import { ProgressTimeline } from './progress-timeline';
 
 interface StudentDashboardProps {
   user: User;
@@ -174,6 +175,41 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     }
     return timestamp;
   };
+  
+    const reportSubmission = useMemo(() => {
+    if (!activeSession?.expectedReportDate) return null;
+    
+    const reportDate = toDate(activeSession.expectedReportDate);
+    if (!reportDate) return null;
+
+    const startDate = sub(reportDate, { weeks: 2 });
+    const endDate = sub(reportDate, { weeks: 1 });
+    const now = new Date();
+
+    return {
+        startDate,
+        endDate,
+        isWindowOpen: isWithinInterval(now, { start: startDate, end: endDate }),
+    }
+    }, [activeSession?.expectedReportDate]);
+
+    const canSubmitReport = (reportSubmission?.isWindowOpen || settings?.forceOpenReportSubmission);
+
+    const graduationTimelineSteps = [
+        { name: "Đăng ký đề tài", status: activeRegistration?.projectRegistrationStatus === 'approved' ? 'completed' : (activeRegistration?.projectTitle ? 'current' : 'pending') },
+        { name: "Nộp thuyết minh", status: activeRegistration?.proposalStatus === 'approved' ? 'completed' : (activeRegistration?.projectRegistrationStatus === 'approved' ? 'current' : 'pending') },
+        { name: "Thực hiện & Báo cáo tuần", status: activeRegistration?.proposalStatus === 'approved' && (!canSubmitReport) ? 'current' : (activeRegistration?.proposalStatus === 'approved' ? 'completed' : 'pending') },
+        { name: "Nộp báo cáo tốt nghiệp", status: activeRegistration?.reportStatus === 'approved' ? 'completed' : (canSubmitReport && activeRegistration?.proposalStatus === 'approved' ? 'current' : 'pending') },
+        { name: "Báo cáo trước hội đồng", status: activeRegistration?.reportStatus === 'approved' ? 'current' : 'pending' },
+    ];
+
+    const internshipTimelineSteps = [
+        { name: "Đăng ký thực tập", status: activeRegistration?.internshipRegistrationStatus === 'approved' ? 'completed' : (activeRegistration?.internship_companyName ? 'current' : 'pending') },
+        { name: "Nộp giấy tờ thực tập", status: activeRegistration?.internship_acceptanceLetterLink ? 'completed' : (activeRegistration?.internshipRegistrationStatus === 'approved' ? 'current' : 'pending') },
+        { name: "Tiến hành thực tập", status: activeRegistration?.internship_acceptanceLetterLink && !canSubmitReport ? 'current' : (activeRegistration?.internship_acceptanceLetterLink ? 'completed' : 'pending') },
+        { name: "Nộp báo cáo & giấy tờ", status: activeRegistration?.internship_reportLink ? 'completed' : (canSubmitReport && activeRegistration?.internship_acceptanceLetterLink ? 'current' : 'pending') },
+        { name: "Báo cáo trước hội đồng", status: activeRegistration?.internship_reportLink ? 'current' : 'pending' },
+    ];
 
 
   if (isLoading || isLoadingStudent || isLoadingEarlyInternships || isLoadingSessions) {
@@ -187,6 +223,10 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                 </div>
                 <div className="lg:col-span-2 space-y-8">
                     <Skeleton className="h-80 w-full" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <Skeleton className="h-64 w-full" />
+                         <Skeleton className="h-64 w-full" />
+                    </div>
                 </div>
             </div>
         </div>
@@ -321,7 +361,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         </div>
         
         {/* Right Column */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-8">
           {activeRegistration ? (
             <Card>
               <CardHeader>
@@ -408,6 +448,24 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                 </AlertDescription>
              </Alert>
           )}
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Lộ trình Tốt nghiệp</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ProgressTimeline steps={graduationTimelineSteps} />
+                    </CardContent>
+                </Card>
+                 <Card>
+                    <CardHeader>
+                        <CardTitle>Lộ trình Thực tập</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <ProgressTimeline steps={internshipTimelineSteps} />
+                    </CardContent>
+                </Card>
+           </div>
         </div>
       </div>
     </main>
