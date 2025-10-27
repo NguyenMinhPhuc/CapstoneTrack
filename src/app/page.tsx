@@ -2,7 +2,7 @@
 'use client';
 import { Suspense, useMemo } from 'react';
 import { DashboardStats } from '@/components/dashboard-stats';
-import { DashboardApplicationsTable } from '@/components/dashboard-applications-table';
+import { SupervisorDashboardTable } from '@/components/supervisor-dashboard-table';
 import { DashboardProgressChart } from '@/components/dashboard-progress-chart';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useUser, useDoc, useMemoFirebase, useFirestore, useCollection } from '@/firebase';
@@ -45,7 +45,7 @@ function SupervisorDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-3 lg:gap-8 space-y-8 lg:space-y-0">
         <div className="lg:col-span-2 space-y-8">
           <Suspense fallback={<Skeleton className="h-[400px] w-full rounded-lg" />}>
-            <DashboardApplicationsTable />
+            <SupervisorDashboardTable />
           </Suspense>
            {isLoadingSessions ? <Skeleton className="h-64 w-full" /> : (
             availableSessions && availableSessions.length > 0 && (
