@@ -30,6 +30,7 @@ import { collection, query, where } from "firebase/firestore";
 import type { DefenseRegistration, GraduationDefenseSession } from "@/lib/types";
 import { Skeleton } from './ui/skeleton';
 import Link from 'next/link';
+import { Button } from './ui/button';
 
 const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
   not_submitted: 'outline',
