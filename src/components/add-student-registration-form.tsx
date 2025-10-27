@@ -19,7 +19,7 @@ import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
 import type { Student, Supervisor } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { SupervisorSelect } from './supervisor-select';
+import { SupervisorCombobox } from './supervisor-combobox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -106,7 +106,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
         return;
     }
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
     
     const newRegistrationData = {
@@ -229,9 +229,9 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
             <FormItem>
               <FormLabel>Giáo viên hướng dẫn</FormLabel>
                <FormControl>
-                 <SupervisorSelect
-                    value={field.value || ''}
-                    onChange={field.onChange}
+                 <SupervisorCombobox
+                    value={field.value || null}
+                    onChange={(supervisorId) => field.onChange(supervisorId || '')}
                     onSupervisorSelect={setSelectedSupervisor}
                 />
                </FormControl>

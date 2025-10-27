@@ -18,7 +18,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, Supervisor } from '@/lib/types';
-import { SupervisorSelect } from './supervisor-select';
+import { SupervisorCombobox } from './supervisor-combobox';
 import { useState } from 'react';
 
 const NO_SUPERVISOR_VALUE = "__NONE__";
@@ -49,8 +49,8 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const registrationDocRef = doc(firestore, `defenseRegistrations`, registration.id);
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
-    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === '' ? '' : registration.supervisorName);
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
+    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === null ? '' : registration.supervisorName);
 
 
     const updateData = {
@@ -105,9 +105,9 @@ export function EditStudentRegistrationForm({ registration, onFinished }: EditSt
             <FormItem>
               <FormLabel>Giáo viên hướng dẫn</FormLabel>
                <FormControl>
-                 <SupervisorSelect
-                    value={field.value || ''}
-                    onChange={field.onChange}
+                 <SupervisorCombobox
+                    value={field.value || null}
+                    onChange={(supervisorId) => field.onChange(supervisorId || '')}
                     onSupervisorSelect={setSelectedSupervisor}
                 />
                </FormControl>
