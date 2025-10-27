@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -119,7 +120,16 @@ export function UserManagementTable() {
     if (!users) return [];
 
     let filtered = users;
+    
+    // Step 1: Filter by search, role, and status
+    filtered = users.filter(user => {
+      const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+      const statusMatch = statusFilter === 'all' || user.status === statusFilter;
+      return searchMatch && roleMatch && statusMatch;
+    });
 
+    // Step 2: If showOnlyDuplicates is checked, further filter to only include users with duplicate emails
     if (showOnlyDuplicates) {
       const emailCounts = users.reduce((acc, user) => {
         if (user.email) {
@@ -135,40 +145,47 @@ export function UserManagementTable() {
         }
       });
       
-      filtered = users.filter(user => user.email && duplicateEmails.has(user.email));
+      filtered = filtered.filter(user => user.email && duplicateEmails.has(user.email));
     }
+    
+    // Step 3: Sort the data
+    const sortableUsers = [...filtered];
 
-    let sortableUsers = [...filtered];
-
-    if (sortConfig !== null) {
-      sortableUsers.sort((a, b) => {
-        const aValue = a[sortConfig.key] ?? '';
-        const bValue = b[sortConfig.key] ?? '';
-        
-        if (sortConfig.key === 'createdAt') {
-             const dateA = aValue?.toDate ? aValue.toDate().getTime() : 0;
-             const dateB = bValue?.toDate ? bValue.toDate().getTime() : 0;
-             if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
-             if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
-             return 0;
+    sortableUsers.sort((a, b) => {
+        // If showing duplicates, always sort by email first to group them
+        if (showOnlyDuplicates && a.email && b.email) {
+            const emailCompare = a.email.localeCompare(b.email);
+            if (emailCompare !== 0) {
+                return emailCompare;
+            }
         }
 
-        if (String(aValue) < String(bValue)) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (String(aValue) > String(bValue)) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
-        return 0;
-      });
-    }
+        if (sortConfig !== null) {
+            const aValue = a[sortConfig.key] ?? '';
+            const bValue = b[sortConfig.key] ?? '';
+            
+            if (sortConfig.key === 'createdAt') {
+                const dateA = (aValue as any)?.toDate ? (aValue as any).toDate().getTime() : 0;
+                const dateB = (bValue as any)?.toDate ? (bValue as any).toDate().getTime() : 0;
+                if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            }
 
-    return sortableUsers.filter(user => {
-      const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
-      const statusMatch = statusFilter === 'all' || user.status === statusFilter;
-      return searchMatch && roleMatch && statusMatch;
+            if (String(aValue) < String(bValue)) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (String(aValue) > String(bValue)) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+        }
+
+        // Default secondary sort (e.g., by createdAt) if primary sort keys are equal
+        return (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0) - (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0);
     });
+
+    return sortableUsers;
+
   }, [users, searchTerm, roleFilter, statusFilter, showOnlyDuplicates, sortConfig]);
   
   const requestSort = (key: SortKey) => {
@@ -571,3 +588,4 @@ export function UserManagementTable() {
     </div>
   );
 }
+
