@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -64,6 +65,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '.
 
 type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
+type SessionType = 'graduation' | 'internship' | 'combined';
 
 type SortKey = 'name' | 'startDate' | 'registrationDeadline' | 'status';
 type SortDirection = 'asc' | 'desc';
@@ -80,6 +82,13 @@ const statusVariant: Record<SessionStatus, 'secondary' | 'default' | 'outline'> 
   ongoing: 'default',
   completed: 'outline',
 };
+
+const sessionTypeInfo: Record<SessionType, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+    graduation: { label: 'Tốt nghiệp', variant: 'default' },
+    internship: { label: 'Thực tập', variant: 'secondary' },
+    combined: { label: 'Kết hợp', variant: 'outline' },
+};
+
 
 const getAcademicYear = (date: Date): string => {
     const year = date.getFullYear();
@@ -447,13 +456,17 @@ export function DefenseSessionsTable() {
             </TableHeader>
             <TableBody>
               {filteredSessions?.map((session, index) => {
+                const typeInfo = sessionTypeInfo[session.sessionType] || sessionTypeInfo.combined;
                 return (
                   <TableRow key={session.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">
-                      <Link href={`/admin/defense-sessions/${session.id}`} className="hover:underline">
-                        {session.name}
-                      </Link>
+                      <div className="flex flex-col">
+                        <Link href={`/admin/defense-sessions/${session.id}`} className="hover:underline">
+                            {session.name}
+                        </Link>
+                        <Badge variant={typeInfo.variant} className="w-fit mt-1">{typeInfo.label}</Badge>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {session.startDate?.toDate && format(session.startDate.toDate(), 'dd/MM/yyyy')}
