@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -35,6 +35,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import Link from 'next/link';
@@ -73,6 +75,12 @@ const reportStatusLabel: Record<string, string> = {
     rejected: 'Bị từ chối',
 };
 
+const statusLabel: Record<string, string> = {
+  ongoing: 'Đang diễn ra',
+  upcoming: 'Sắp diễn ra',
+  completed: 'Đã hoàn thành',
+};
+
 export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGuidanceTableProps) {
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
@@ -107,6 +115,16 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
     return new Map(sessions.map(s => [s.id, s.name]));
+  }, [sessions]);
+
+  const groupedSessions = useMemo(() => {
+    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
+    return sessions.reduce((acc, session) => {
+      const group = acc[session.status] || [];
+      group.push(session);
+      acc[session.status] = group;
+      return acc;
+    }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
   }, [sessions]);
 
   const filteredRegistrations = useMemo(() => {
@@ -149,9 +167,18 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả các đợt</SelectItem>
-                {sessions?.map(session => (
-                  <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                ))}
+                 {Object.entries(groupedSessions).map(([status, sessionList]) =>
+                    sessionList.length > 0 && (
+                        <SelectGroup key={status}>
+                            <SelectLabel>{statusLabel[status] || status}</SelectLabel>
+                            {sessionList.map(session => (
+                                <SelectItem key={session.id} value={session.id}>
+                                    {session.name}
+                                </SelectItem>
+                            ))}
+                        </SelectGroup>
+                    )
+                )}
               </SelectContent>
             </Select>
           </div>
