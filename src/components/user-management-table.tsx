@@ -38,6 +38,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound } from 'lucide-react';
@@ -78,6 +79,7 @@ export function UserManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
 
 
   const usersCollectionRef = useMemoFirebase(
@@ -108,12 +110,37 @@ export function UserManagementTable() {
   }, [users]);
 
 
-  const filteredUsers = users?.filter(user => {
-    const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-    const roleMatch = roleFilter === 'all' || user.role === roleFilter;
-    const statusMatch = statusFilter === 'all' || user.status === statusFilter;
-    return searchMatch && roleMatch && statusMatch;
-  });
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+
+    let filtered = users;
+
+    if (showOnlyDuplicates) {
+      const emailCounts = users.reduce((acc, user) => {
+        if (user.email) {
+          acc.set(user.email, (acc.get(user.email) || 0) + 1);
+        }
+        return acc;
+      }, new Map<string, number>());
+
+      const duplicateEmails = new Set<string>();
+      emailCounts.forEach((count, email) => {
+        if (count > 1) {
+          duplicateEmails.add(email);
+        }
+      });
+      
+      filtered = users.filter(user => user.email && duplicateEmails.has(user.email));
+    }
+
+    return filtered.filter(user => {
+      const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+      const statusMatch = statusFilter === 'all' || user.status === statusFilter;
+      return searchMatch && roleMatch && statusMatch;
+    });
+  }, [users, searchTerm, roleFilter, statusFilter, showOnlyDuplicates]);
+
 
   const roleVariant: Record<SystemUser['role'], 'default' | 'secondary' | 'outline'> = {
     'admin': 'default',
@@ -293,13 +320,14 @@ export function UserManagementTable() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                             <DropdownMenuLabel>Lọc theo vai trò</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
                              <DropdownMenuCheckboxItem
                                 checked={roleFilter === 'all'}
                                 onCheckedChange={() => setRoleFilter('all')}
                             >
-                                All Roles
+                                Tất cả vai trò
                             </DropdownMenuCheckboxItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuCheckboxItem
                                 checked={roleFilter === 'admin'}
                                 onCheckedChange={() => setRoleFilter('admin')}
@@ -319,30 +347,38 @@ export function UserManagementTable() {
                                 Student
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuSeparator />
+                             <DropdownMenuLabel>Lọc theo trạng thái</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
                              <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'all'}
                                 onCheckedChange={() => setStatusFilter('all')}
                             >
-                                All Statuses
+                                Tất cả trạng thái
                             </DropdownMenuCheckboxItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'active'}
                                 onCheckedChange={() => setStatusFilter('active')}
                             >
-                                Active
+                                Đang hoạt động
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'pending'}
                                 onCheckedChange={() => setStatusFilter('pending')}
                             >
-                                Pending
+                                Đang chờ
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'disabled'}
                                 onCheckedChange={() => setStatusFilter('disabled')}
                             >
-                                Disabled
+                                Đã bị khóa
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={showOnlyDuplicates}
+                                onCheckedChange={setShowOnlyDuplicates}
+                            >
+                                Chỉ hiển thị email trùng lặp
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
