@@ -9,6 +9,7 @@ import { ScrollArea } from './ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import React from 'react';
 
 interface ConversationListProps {
   currentUser: User;
@@ -23,17 +24,20 @@ export function ConversationList({
 }: ConversationListProps) {
   const firestore = useFirestore();
 
-  const conversationsQuery = useMemoFirebase(
-    () =>
-      query(
-        collection(firestore, 'conversations'),
-        where('participantIds', 'array-contains', currentUser.uid),
-        orderBy('lastMessageAt', 'desc')
-      ),
-    [firestore, currentUser.uid]
-  );
+  // const conversationsQuery = useMemoFirebase(
+  //   () =>
+  //     query(
+  //       collection(firestore, 'conversations'),
+  //       where('participantIds', 'array-contains', currentUser.uid),
+  //       orderBy('lastMessageAt', 'desc')
+  //     ),
+  //   [firestore, currentUser.uid]
+  // );
 
-  const { data: conversations, isLoading } = useCollection<Conversation>(conversationsQuery);
+  // const { data: conversations, isLoading } = useCollection<Conversation>(conversationsQuery);
+  const conversations: Conversation[] = [];
+  const isLoading = false;
+
 
   if (isLoading) {
     return (
