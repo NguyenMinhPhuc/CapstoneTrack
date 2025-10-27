@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -42,10 +42,10 @@ import {
   DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound, ArrowUpDown, Link as LinkIcon } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
-import type { SystemUser } from '@/lib/types';
+import type { SystemUser, Student, Supervisor } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { Skeleton } from './ui/skeleton';
@@ -57,7 +57,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from './ui/input';
 import { ImportUsersDialog } from './import-users-dialog';
 import { cn } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
@@ -92,8 +92,25 @@ export function UserManagementTable() {
     () => collection(firestore, 'users'),
     [firestore]
   );
+  const { data: users, isLoading: isLoadingUsers } = useCollection<SystemUser>(usersCollectionRef);
+
+  const studentsCollectionRef = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsCollectionRef);
   
-  const { data: users, isLoading } = useCollection<SystemUser>(usersCollectionRef);
+  const supervisorsCollectionRef = useMemoFirebase(() => collection(firestore, 'supervisors'), [firestore]);
+  const { data: supervisors, isLoading: isLoadingSupervisors } = useCollection<Supervisor>(supervisorsCollectionRef);
+
+  const linkedUserIds = useMemo(() => {
+      const ids = new Set<string>();
+      if (students) {
+          students.forEach(s => ids.add(s.userId));
+      }
+      if (supervisors) {
+          supervisors.forEach(s => ids.add(s.userId));
+      }
+      return ids;
+  }, [students, supervisors]);
+
 
   const roleStats = useMemo(() => {
     const stats: Record<SystemUser['role'], RoleStats> = {
@@ -121,15 +138,6 @@ export function UserManagementTable() {
 
     let filtered = users;
     
-    // Step 1: Filter by search, role, and status
-    filtered = users.filter(user => {
-      const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
-      const statusMatch = statusFilter === 'all' || user.status === statusFilter;
-      return searchMatch && roleMatch && statusMatch;
-    });
-
-    // Step 2: If showOnlyDuplicates is checked, further filter to only include users with duplicate emails
     if (showOnlyDuplicates) {
       const emailCounts = users.reduce((acc, user) => {
         if (user.email) {
@@ -147,12 +155,17 @@ export function UserManagementTable() {
       
       filtered = filtered.filter(user => user.email && duplicateEmails.has(user.email));
     }
-    
-    // Step 3: Sort the data
+
+    filtered = filtered.filter(user => {
+      const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+      const statusMatch = statusFilter === 'all' || user.status === statusFilter;
+      return searchMatch && roleMatch && statusMatch;
+    });
+
     const sortableUsers = [...filtered];
 
     sortableUsers.sort((a, b) => {
-        // If showing duplicates, always sort by email first to group them
         if (showOnlyDuplicates && a.email && b.email) {
             const emailCompare = a.email.localeCompare(b.email);
             if (emailCompare !== 0) {
@@ -180,7 +193,6 @@ export function UserManagementTable() {
             }
         }
 
-        // Default secondary sort (e.g., by createdAt) if primary sort keys are equal
         return (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0) - (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0);
     });
 
@@ -266,6 +278,8 @@ export function UserManagementTable() {
       });
     }
   };
+  
+  const isLoading = isLoadingUsers || isLoadingStudents || isLoadingSupervisors;
 
   if (isLoading) {
     return (
@@ -504,7 +518,9 @@ export function UserManagementTable() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers?.map((user, index) => (
+            {filteredUsers?.map((user, index) => {
+              const isLinked = linkedUserIds.has(user.id);
+              return (
               <TableRow key={user.id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>
@@ -516,6 +532,18 @@ export function UserManagementTable() {
                       <AvatarFallback>{user.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
                     <div className="font-medium">{user.email}</div>
+                    {isLinked && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                     <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Tài khoản này đã được liên kết với một hồ sơ Sinh viên hoặc Giáo viên.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -563,7 +591,7 @@ export function UserManagementTable() {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </CardContent>
@@ -588,4 +616,3 @@ export function UserManagementTable() {
     </div>
   );
 }
-
