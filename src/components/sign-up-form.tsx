@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -75,6 +76,7 @@ export function SignUpForm() {
       await setDoc(userDocRef, {
         email: values.email,
         role: values.role,
+        passwordInitialized: true, // User sets their own password, so it's initialized
         createdAt: serverTimestamp(),
       });
 

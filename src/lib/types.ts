@@ -22,6 +22,7 @@ export type SystemUser = {
   email: string;
   role: 'admin' | 'supervisor' | 'student';
   status: 'active' | 'pending' | 'disabled';
+  passwordInitialized?: boolean;
   createdAt: any; 
 };
 

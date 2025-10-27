@@ -95,6 +95,7 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
             email: values.email,
             role: 'supervisor' as const,
             status: 'active' as const,
+            passwordInitialized: true, // User will set their own password
             createdAt: serverTimestamp(),
         };
         batch.set(userDocRef, userData);

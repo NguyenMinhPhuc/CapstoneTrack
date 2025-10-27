@@ -154,6 +154,7 @@ export function ImportSupervisorsDialog({ onFinished }: ImportSupervisorsDialogP
                     email: email,
                     role: 'supervisor',
                     status: 'active',
+                    passwordInitialized: false, // User has not changed the default password yet
                     createdAt: serverTimestamp(),
                 });
 
