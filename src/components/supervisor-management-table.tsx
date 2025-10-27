@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -39,8 +40,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
-  DropdownMenuSeparator,
   DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuPortal,
+  DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap, Users, ArrowUpDown, ChevronUp, ChevronDown, Upload, FileDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -226,12 +231,22 @@ export function SupervisorManagementTable() {
 
   const handleExportTemplate = () => {
     const headers = ["Email", "HoGV", "TenGV", "Khoa", "ChucVu", "HuongDanTN", "HuongDanTT"];
-    const worksheet = XLSX.utils.json_to_sheet([{}], { header: headers });
+    const sampleData = [{
+      Email: "gv.a@example.com",
+      HoGV: "Nguyễn Văn",
+      TenGV: "A",
+      Khoa: "Công nghệ thông tin",
+      ChucVu: "Giảng viên",
+      HuongDanTN: "true",
+      HuongDanTT: "false"
+    }];
+    
+    const worksheet = XLSX.utils.json_to_sheet(sampleData, { header: headers });
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "DanhSachGiaoVien");
     
     // Set column widths
-    worksheet['!cols'] = headers.map(h => ({ wch: h.length > 15 ? h.length : 15 }));
+    worksheet['!cols'] = headers.map(h => ({ wch: h.length > 20 ? h.length : 20 }));
     
     const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
     const data = new Blob([excelBuffer], {type: 'application/octet-stream'});
