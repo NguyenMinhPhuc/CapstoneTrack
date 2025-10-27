@@ -97,6 +97,16 @@
             "type": "string",
             "description": "The academic status of the student.",
             "enum": ["studying", "reserved", "dropped_out", "graduated"]
+        },
+        "graduationStatus": {
+            "type": "string",
+            "description": "The graduation completion status for the student.",
+            "enum": ["achieved", "not_achieved"]
+        },
+        "internshipStatus": {
+            "type": "string",
+            "description": "The internship completion status for the student.",
+            "enum": ["achieved", "not_achieved"]
         }
       },
       "required": [

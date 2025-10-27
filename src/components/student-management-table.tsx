@@ -50,7 +50,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -76,6 +76,11 @@ const statusLabel: Record<Student['status'], string> = {
   reserved: 'Bảo lưu',
   dropped_out: 'Đã nghỉ',
   graduated: 'Đã tốt nghiệp',
+};
+
+const completionStatusLabel = {
+  achieved: 'Đã đạt',
+  not_achieved: 'Chưa đạt',
 };
 
 const statusVariant: Record<Student['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -255,6 +260,24 @@ export function StudentManagementTable() {
     setStudentToDelete(student);
     setIsDeleteDialogOpen(true);
   };
+
+  const handleCompletionStatusChange = async (studentId: string, field: 'graduationStatus' | 'internshipStatus', newStatus: 'achieved' | 'not_achieved') => {
+    const studentDocRef = doc(firestore, 'students', studentId);
+    try {
+      await updateDoc(studentDocRef, { [field]: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Trạng thái hoàn thành của sinh viên đã được cập nhật.`,
+      });
+    } catch (error) {
+      console.error("Error updating student completion status:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái hoàn thành.',
+      });
+    }
+  }
 
   const handleStatusChange = async (studentId: string, newStatus: Student['status']) => {
     const studentDocRef = doc(firestore, 'students', studentId);
@@ -603,8 +626,9 @@ export function StudentManagementTable() {
                     Lớp {getSortIcon('className')}
                 </Button>
               </TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>TT Học tập</TableHead>
+              <TableHead>TT Tốt nghiệp</TableHead>
+              <TableHead>TT Thực tập</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -647,7 +671,12 @@ export function StudentManagementTable() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
-                <TableCell>{student.email}</TableCell>
+                <TableCell>
+                    <Badge variant={student.graduationStatus === 'achieved' ? 'default' : 'outline'}>{completionStatusLabel[student.graduationStatus || 'not_achieved']}</Badge>
+                </TableCell>
+                <TableCell>
+                    <Badge variant={student.internshipStatus === 'achieved' ? 'default' : 'outline'}>{completionStatusLabel[student.internshipStatus || 'not_achieved']}</Badge>
+                </TableCell>
                 <TableCell className="hidden md:table-cell">
                     {student.createdAt?.toDate && format(student.createdAt.toDate(), 'PPP')}
                 </TableCell>
@@ -662,7 +691,7 @@ export function StudentManagementTable() {
                       <DropdownMenuItem onClick={() => handleEditClick(student)}>Sửa</DropdownMenuItem>
                        <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
-                          <span>Thay đổi trạng thái</span>
+                          <span>Thay đổi trạng thái học tập</span>
                         </DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
@@ -679,6 +708,23 @@ export function StudentManagementTable() {
                               {statusLabel.graduated}
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <span>Cập nhật hoàn thành</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleCompletionStatusChange(student.id, 'graduationStatus', student.graduationStatus === 'achieved' ? 'not_achieved' : 'achieved')}>
+                                    <GraduationCap className="mr-2 h-4 w-4"/>
+                                    <span>{student.graduationStatus === 'achieved' ? 'Hủy đạt TN' : 'Xác nhận đạt TN'}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleCompletionStatusChange(student.id, 'internshipStatus', student.internshipStatus === 'achieved' ? 'not_achieved' : 'achieved')}>
+                                    <Briefcase className="mr-2 h-4 w-4"/>
+                                    <span>{student.internshipStatus === 'achieved' ? 'Hủy đạt TT' : 'Xác nhận đạt TT'}</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
                       <DropdownMenuSeparator />
@@ -736,3 +782,6 @@ export function StudentManagementTable() {
   );
 }
 
+
+
+    

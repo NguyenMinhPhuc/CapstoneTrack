@@ -59,6 +59,8 @@ export type Student = {
     CCCD?: string;
     createdAt: any;
     status: 'studying' | 'reserved' | 'dropped_out' | 'graduated';
+    graduationStatus: 'achieved' | 'not_achieved';
+    internshipStatus: 'achieved' | 'not_achieved';
 }
 
 export type Supervisor = {
@@ -294,6 +296,8 @@ export type EarlyInternshipWeeklyReport = {
     reviewDate: any;
     status: 'pending_review' | 'approved' | 'rejected';
 };
+
+    
 
     
 
