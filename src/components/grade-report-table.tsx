@@ -431,15 +431,15 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     onCheckedChange={handleSelectAll}
                 />
             </TableHead>
-            <TableHead><Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0">MSSV {getSortIcon('studentId')}</Button></TableHead>
-            <TableHead><Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0">Họ và Tên {getSortIcon('studentName')}</Button></TableHead>
-            <TableHead><Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0">Tiểu ban {getSortIcon('subCommitteeName')}</Button></TableHead>
-            <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('supervisorGradScore')} className="px-0">Điểm GVHD {getSortIcon('supervisorGradScore')}</Button></TableHead>
+            <TableHead><Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0 hover:bg-transparent">MSSV {getSortIcon('studentId')}</Button></TableHead>
+            <TableHead><Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">Họ và Tên {getSortIcon('studentName')}</Button></TableHead>
+            <TableHead><Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0 hover:bg-transparent">Tiểu ban {getSortIcon('subCommitteeName')}</Button></TableHead>
+            <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('supervisorGradScore')} className="px-0 hover:bg-transparent">Điểm GVHD {getSortIcon('supervisorGradScore')}</Button></TableHead>
             {COUNCIL_ROLES.map(role => (
                 <TableHead key={role} className="text-center">Điểm {roleDisplayNames[role]}</TableHead>
             ))}
-            <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('councilGradAvg')} className="px-0">Điểm TB HĐ {getSortIcon('councilGradAvg')}</Button></TableHead>
-            <TableHead className="text-center font-bold"><Button variant="ghost" onClick={() => requestSort('finalGradScore')} className="px-0">Điểm Tổng kết {getSortIcon('finalGradScore')}</Button></TableHead>
+            <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('councilGradAvg')} className="px-0 hover:bg-transparent">Điểm TB HĐ {getSortIcon('councilGradAvg')}</Button></TableHead>
+            <TableHead className="text-center font-bold"><Button variant="ghost" onClick={() => requestSort('finalGradScore')} className="px-0 hover:bg-transparent">Điểm Tổng kết {getSortIcon('finalGradScore')}</Button></TableHead>
             <TableHead>Ghi chú</TableHead>
             <TableHead className="text-center">Hành động</TableHead>
         </TableRow>
@@ -503,16 +503,16 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                           onCheckedChange={handleSelectAll}
                       />
                   </TableHead>
-                  <TableHead><Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0">MSSV {getSortIcon('studentId')}</Button></TableHead>
-                  <TableHead><Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0">Họ và Tên {getSortIcon('studentName')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0 hover:bg-transparent">MSSV {getSortIcon('studentId')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">Họ và Tên {getSortIcon('studentName')}</Button></TableHead>
                   <TableHead>Công ty Thực tập</TableHead>
-                  <TableHead><Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0">Tiểu ban {getSortIcon('subCommitteeName')}</Button></TableHead>
-                  <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('companySupervisorScore')} className="px-0">Điểm ĐVTT {getSortIcon('companySupervisorScore')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0 hover:bg-transparent">Tiểu ban {getSortIcon('subCommitteeName')}</Button></TableHead>
+                  <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('companySupervisorScore')} className="px-0 hover:bg-transparent">Điểm ĐVTT {getSortIcon('companySupervisorScore')}</Button></TableHead>
                   {COUNCIL_ROLES.map(role => (
                     <TableHead key={role} className="text-center">Điểm {roleDisplayNames[role]}</TableHead>
                   ))}
-                  <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('councilInternAvg')} className="px-0">Điểm TB HĐ {getSortIcon('councilInternAvg')}</Button></TableHead>
-                  <TableHead className="text-center font-bold"><Button variant="ghost" onClick={() => requestSort('finalInternScore')} className="px-0">Điểm Tổng kết {getSortIcon('finalInternScore')}</Button></TableHead>
+                  <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('councilInternAvg')} className="px-0 hover:bg-transparent">Điểm TB HĐ {getSortIcon('councilInternAvg')}</Button></TableHead>
+                  <TableHead className="text-center font-bold"><Button variant="ghost" onClick={() => requestSort('finalInternScore')} className="px-0 hover:bg-transparent">Điểm Tổng kết {getSortIcon('finalInternScore')}</Button></TableHead>
                    <TableHead>Ghi chú</TableHead>
                    <TableHead className="text-center">Hành động</TableHead>
               </TableRow>
