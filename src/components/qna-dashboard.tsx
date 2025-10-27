@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -25,9 +26,9 @@ export function QnaDashboard({ currentUser }: QnaDashboardProps) {
   const [isNewConvoDialogOpen, setIsNewConvoDialogOpen] = useState(false);
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] h-full border rounded-lg overflow-hidden">
+    <div className="grid grid-cols-1 lg:grid-cols-[350px_1fr] h-full border rounded-lg">
       {/* Left Column: Conversation List */}
-      <div className="flex flex-col border-r h-full">
+      <div className="flex flex-col border-r h-full overflow-y-auto">
         <div className="p-4 border-b">
            <Dialog open={isNewConvoDialogOpen} onOpenChange={setIsNewConvoDialogOpen}>
               <DialogTrigger asChild>
@@ -58,7 +59,7 @@ export function QnaDashboard({ currentUser }: QnaDashboardProps) {
       </div>
 
       {/* Right Column: Message Feed */}
-      <div className="flex flex-col h-full">
+      <div className="flex flex-col h-full overflow-hidden">
         <MessageFeed
           currentUser={currentUser}
           conversationId={selectedConversationId}

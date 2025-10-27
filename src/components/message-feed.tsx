@@ -126,7 +126,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
   return (
     <div className="flex flex-col h-full">
       {/* Messages Area */}
-      <ScrollArea className="flex-1 p-4" ref={scrollAreaRef}>
+      <ScrollArea className="flex-1 p-4 min-h-0" ref={scrollAreaRef}>
         {isLoading && (
             <div className="space-y-4">
                 <Skeleton className="h-16 w-3/4" />
@@ -206,3 +206,4 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
     </div>
   );
 }
+
