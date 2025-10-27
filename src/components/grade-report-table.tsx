@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
 import {
@@ -40,6 +40,7 @@ interface CouncilScore {
 interface ProcessedGraduationData {
   id: string;
   studentId: string;
+  studentDocId: string;
   studentName: string;
   projectTitle?: string;
   subCommitteeName: string;
@@ -54,6 +55,7 @@ interface ProcessedGraduationData {
 interface ProcessedInternshipData {
     id: string;
     studentId: string;
+    studentDocId: string;
     studentName: string;
     companyName?: string;
     subCommitteeName: string;
@@ -95,35 +97,45 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
   const firestore = useFirestore();
   const { toast } = useToast();
 
-  const handleBatchStatusUpdate = async (registrationIds: string[], status: 'completed' | 'withdrawn') => {
-      if (registrationIds.length === 0) return;
-      
-      const batch = writeBatch(firestore);
-      const statusKey = reportType === 'graduation' ? 'graduationStatus' : 'internshipStatus';
-      
-      registrationIds.forEach(id => {
-          const docRef = doc(firestore, 'defenseRegistrations', id);
-          batch.update(docRef, { [statusKey]: status });
-      });
+    const handleBatchStatusUpdate = async (registrationIds: string[], status: 'completed' | 'withdrawn') => {
+        if (registrationIds.length === 0) return;
 
-      try {
-          await batch.commit();
-          toast({
-              title: 'Thành công',
-              description: `Đã cập nhật trạng thái cho ${registrationIds.length} sinh viên.`,
-          });
-          setSelectedRowIds([]);
-      } catch (error) {
-          console.error("Error updating statuses:", error);
-           const contextualError = new FirestorePermissionError({
-              path: 'batch update defenseRegistrations',
-              operation: 'update',
-              requestResourceData: { [statusKey]: status },
-          });
-          errorEmitter.emit('permission-error', contextualError);
-          toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể cập nhật trạng thái.'});
-      }
-  }
+        const batch = writeBatch(firestore);
+
+        const registrationStatusKey = reportType === 'graduation' ? 'graduationStatus' : 'internshipStatus';
+        const studentStatusKey = reportType === 'graduation' ? 'graduationStatus' : 'internshipStatus';
+        const newStudentStatus = status === 'completed' ? 'achieved' : 'not_achieved';
+
+        registrationIds.forEach(id => {
+            const regDocRef = doc(firestore, 'defenseRegistrations', id);
+            batch.update(regDocRef, { [registrationStatusKey]: status });
+            
+            // Also update the main student record
+            const registration = registrations.find(r => r.id === id);
+            if (registration) {
+                 const studentDocRef = doc(firestore, 'students', registration.studentDocId);
+                 batch.update(studentDocRef, { [studentStatusKey]: newStudentStatus });
+            }
+        });
+
+        try {
+            await batch.commit();
+            toast({
+                title: 'Thành công',
+                description: `Đã cập nhật trạng thái cho ${registrationIds.length} sinh viên.`,
+            });
+            setSelectedRowIds([]);
+        } catch (error) {
+            console.error("Error updating statuses:", error);
+            const contextualError = new FirestorePermissionError({
+                path: 'batch update defenseRegistrations/students',
+                operation: 'update',
+                requestResourceData: { [registrationStatusKey]: status },
+            });
+            errorEmitter.emit('permission-error', contextualError);
+            toast({ variant: 'destructive', title: 'Lỗi', description: 'Không thể cập nhật trạng thái.'});
+        }
+    }
 
 
   const processedData = useMemo(() => {
@@ -148,7 +160,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
             if (reg.graduationStatus === 'withdrawn') {
                  return {
-                    id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
+                    id: reg.id, studentId: reg.studentId, studentDocId: reg.studentDocId, studentName: reg.studentName,
                     projectTitle: reg.projectTitle, 
                     subCommitteeId: reg.subCommitteeId,
                     subCommitteeName: 'N/A',
@@ -193,6 +205,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             return {
                 id: reg.id,
                 studentId: reg.studentId,
+                studentDocId: reg.studentDocId,
                 studentName: reg.studentName,
                 projectTitle: reg.projectTitle,
                 subCommitteeId: reg.subCommitteeId,
@@ -220,7 +233,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
             if (reg.internshipStatus === 'withdrawn') {
                 return {
-                    id: reg.id, studentId: reg.studentId, studentName: reg.studentName,
+                    id: reg.id, studentId: reg.studentId, studentDocId: reg.studentDocId, studentName: reg.studentName,
                     companyName: reg.internship_companyName, 
                     subCommitteeId: reg.subCommitteeId,
                     subCommitteeName: 'N/A',
@@ -265,6 +278,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
             return {
                 id: reg.id,
                 studentId: reg.studentId,
+                studentDocId: reg.studentDocId,
                 studentName: reg.studentName,
                 companyName: reg.internship_companyName,
                 subCommitteeId: reg.subCommitteeId,
