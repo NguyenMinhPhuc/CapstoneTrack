@@ -94,7 +94,7 @@ export function DashboardStats() {
     fetchCouncilData();
   }, [allSessions, user, firestore]);
 
-  const isLoading = isLoadingSessions || isLoadingGradRegs || isLoadingTopics || isLoadingInternships || isLoadingCouncilCount || isLoadingAllSessions || isLoadingInternRegs;
+  const isLoading = isLoadingSessions || isLoadingGradRegs || isLoadingTopics || isLoadingEarlyInternships || isLoadingCouncilCount || isLoadingAllSessions || isLoadingInternRegs;
   
   const totalInternshipStudents = (internRegistrations?.length || 0) + (earlyInternships?.length || 0);
 
