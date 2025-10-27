@@ -76,7 +76,7 @@ export function GradeReportDashboard() {
   const councilGradRubricDocRef = useMemoFirebase(() => (selectedSession?.councilGraduationRubricId ? doc(firestore, 'rubrics', selectedSession.councilGraduationRubricId) : null), [firestore, selectedSession]);
   const councilInternRubricDocRef = useMemoFirebase(() => (selectedSession?.councilInternshipRubricId ? doc(firestore, 'rubrics', selectedSession.councilInternshipRubricId) : null), [firestore, selectedSession]);
   const supervisorGradRubricDocRef = useMemoFirebase(() => (selectedSession?.supervisorGraduationRubricId ? doc(firestore, 'rubrics', selectedSession.supervisorGraduationRubricId) : null), [firestore, selectedSession]);
-  const companyInternRubricDocRef = useMemoFirebase(() => (selectedSession?.companyInternshipRubricId ? doc(firestore, 'rubrics', selectedSession.companyInternshipRubricId) : null), [firestore, selectedSession]);
+  const companyInternshipRubricDocRef = useMemoFirebase(() => (selectedSession?.companyInternshipRubricId ? doc(firestore, 'rubrics', selectedSession.companyInternshipRubricId) : null), [firestore, selectedSession]);
 
   const { data: councilGraduationRubric, isLoading: isLoadingCouncilGradRubric } = useDoc<Rubric>(councilGradRubricDocRef);
   const { data: councilInternshipRubric, isLoading: isLoadingCouncilInternRubric } = useDoc<Rubric>(councilInternRubricDocRef);
