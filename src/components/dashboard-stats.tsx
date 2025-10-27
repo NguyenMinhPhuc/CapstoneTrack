@@ -26,12 +26,19 @@ export function DashboardStats() {
   const { data: ongoingSessions, isLoading: isLoadingSessions } = useCollection<DefenseSession>(ongoingSessionsQuery);
   const ongoingSessionIds = useMemo(() => ongoingSessions?.map(s => s.id) || [], [ongoingSessions]);
 
-  // Fetch data related to the current supervisor
+  // Fetch data related to the current supervisor FOR ONGOING SESSIONS
   const gradRegistrationsQuery = useMemoFirebase(
     () => user && ongoingSessionIds.length > 0 ? query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', user.uid), where('sessionId', 'in', ongoingSessionIds)) : null,
     [user, ongoingSessionIds]
   );
   const { data: gradRegistrations, isLoading: isLoadingGradRegs } = useCollection<DefenseRegistration>(gradRegistrationsQuery);
+  
+  const internRegistrationsQuery = useMemoFirebase(
+    () => user && ongoingSessionIds.length > 0 ? query(collection(firestore, 'defenseRegistrations'), where('internshipSupervisorId', '==', user.uid), where('sessionId', 'in', ongoingSessionIds)) : null,
+    [user, ongoingSessionIds]
+  );
+  const { data: internRegistrations, isLoading: isLoadingInternRegs } = useCollection<DefenseRegistration>(internRegistrationsQuery);
+
 
   const topicsQuery = useMemoFirebase(
       () => user && ongoingSessionIds.length > 0 ? query(collection(firestore, 'projectTopics'), where('supervisorId', '==', user.uid), where('sessionId', 'in', ongoingSessionIds)) : null,
@@ -39,13 +46,13 @@ export function DashboardStats() {
   );
   const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
 
-  const internshipQuery = useMemoFirebase(
+  const earlyInternshipQuery = useMemoFirebase(
     () => user ? query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', user.uid), where('status', '==', 'ongoing')) : null,
     [user]
   );
-  const { data: internships, isLoading: isLoadingInternships } = useCollection<EarlyInternship>(internshipQuery);
+  const { data: earlyInternships, isLoading: isLoadingEarlyInternships } = useCollection<EarlyInternship>(earlyInternshipQuery);
   
-  // Fetch all sessions to count council participations across all time
+  // Fetch ALL sessions to count council participations across all time
   const allSessionsQuery = useMemoFirebase(() => collection(firestore, 'defenseSessions'), [firestore]);
   const { data: allSessions, isLoading: isLoadingAllSessions } = useCollection<DefenseSession>(allSessionsQuery);
 
@@ -53,29 +60,32 @@ export function DashboardStats() {
   const [isLoadingCouncilCount, setIsLoadingCouncilCount] = useState(true);
 
   // This effect is complex and needs to run once allSessions and user are available
-  // It fetches sub-collections for each session, which is not ideal but necessary for this stat.
   useEffect(() => {
     const fetchCouncilData = async () => {
       if (!allSessions || !user) return;
       setIsLoadingCouncilCount(true);
       let count = 0;
       for (const session of allSessions) {
-        const councilQuery = query(collection(firestore, `defenseSessions/${session.id}/council`), where('supervisorId', '==', user.uid));
-        const subCommitteeQuery = query(collection(firestore, `defenseSessions/${session.id}/subCommittees`));
-        
-        const [councilSnapshot, subCommitteeSnapshot] = await Promise.all([
-            getDocs(councilQuery),
-            getDocs(subCommitteeQuery)
-        ]);
+        try {
+          const councilQuery = query(collection(firestore, `defenseSessions/${session.id}/council`), where('supervisorId', '==', user.uid));
+          const subCommitteeQuery = query(collection(firestore, `defenseSessions/${session.id}/subCommittees`));
+          
+          const [councilSnapshot, subCommitteeSnapshot] = await Promise.all([
+              getDocs(councilQuery),
+              getDocs(subCommitteeQuery)
+          ]);
 
-        count += councilSnapshot.size;
-        
-        subCommitteeSnapshot.forEach(doc => {
-            const subCommittee = doc.data() as DefenseSubCommittee;
-            if (subCommittee.members.some(member => member.supervisorId === user.uid)) {
-                count++;
-            }
-        });
+          count += councilSnapshot.size;
+          
+          subCommitteeSnapshot.forEach(doc => {
+              const subCommittee = doc.data() as DefenseSubCommittee;
+              if (subCommittee.members?.some(member => member.supervisorId === user.uid)) {
+                  count++;
+              }
+          });
+        } catch(e) {
+          console.error(`Could not fetch council data for session ${session.id}`, e);
+        }
       }
       setCouncilCount(count);
       setIsLoadingCouncilCount(false);
@@ -84,7 +94,9 @@ export function DashboardStats() {
     fetchCouncilData();
   }, [allSessions, user, firestore]);
 
-  const isLoading = isLoadingSessions || isLoadingGradRegs || isLoadingTopics || isLoadingInternships || isLoadingCouncilCount || isLoadingAllSessions;
+  const isLoading = isLoadingSessions || isLoadingGradRegs || isLoadingTopics || isLoadingInternships || isLoadingCouncilCount || isLoadingAllSessions || isLoadingInternRegs;
+  
+  const totalInternshipStudents = (internRegistrations?.length || 0) + (earlyInternships?.length || 0);
 
   if (isLoading) {
     return <DashboardStats.Skeleton />;
@@ -105,9 +117,9 @@ export function DashboardStats() {
     },
     {
       title: "SV Hướng dẫn TT",
-      value: internships?.length ?? 0,
+      value: totalInternshipStudents,
       icon: <Briefcase className="h-6 w-6 text-muted-foreground" />,
-      change: "Chương trình thực tập sớm",
+      change: "Đợt chính thức & thực tập sớm",
     },
     {
       title: "Hội đồng đã tham gia",
