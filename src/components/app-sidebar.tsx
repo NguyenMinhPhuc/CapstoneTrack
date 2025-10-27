@@ -160,6 +160,11 @@ export function AppSidebar() {
                                         <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/post-defense-submission")} tooltip="Nộp sau HĐ">
+                                        <Link href="/post-defense-submission"><FileUp /><span>Nộp sau Hội đồng</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
                             </SidebarMenu>
                          </CollapsibleContent>
                     </SidebarGroup>
