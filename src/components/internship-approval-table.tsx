@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -66,6 +65,7 @@ const reportStatusLabel: Record<ReportStatus, string> = {
     exempted: 'Đặc cách',
     withdrawn: 'Bỏ báo cáo',
     not_reporting: 'Chưa ĐK',
+    completed: 'Hoàn thành',
 };
 
 const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -73,6 +73,7 @@ const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destr
     exempted: 'secondary',
     withdrawn: 'destructive',
     not_reporting: 'outline',
+    completed: 'default',
 };
 
 export function InternshipApprovalTable() {
