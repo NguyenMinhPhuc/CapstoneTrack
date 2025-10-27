@@ -50,7 +50,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
@@ -143,7 +143,7 @@ export function StudentManagementTable() {
   const classStatsByCourse = useMemo(() => {
     if (!students || !isStatsOpen) return [];
 
-    const statsByClass: Record<string, { total: number; studying: number; reserved: number; dropped_out: number; graduated: number; }> = {};
+    const statsByClass: Record<string, { total: number; studying: number; reserved: number; dropped_out: number; graduated: number; gradAchieved: number; gradNotAchieved: number; internAchieved: number; internNotAchieved: number; }> = {};
 
     students.forEach(student => {
         const className = student.className || 'Chưa xếp lớp';
@@ -152,11 +152,23 @@ export function StudentManagementTable() {
         }
 
         if (!statsByClass[className]) {
-            statsByClass[className] = { total: 0, studying: 0, reserved: 0, dropped_out: 0, graduated: 0 };
+            statsByClass[className] = { total: 0, studying: 0, reserved: 0, dropped_out: 0, graduated: 0, gradAchieved: 0, gradNotAchieved: 0, internAchieved: 0, internNotAchieved: 0 };
         }
         statsByClass[className].total++;
         if (statsByClass[className][student.status] !== undefined) {
             statsByClass[className][student.status]++;
+        }
+        
+        if (student.graduationStatus === 'achieved') {
+          statsByClass[className].gradAchieved++;
+        } else {
+          statsByClass[className].gradNotAchieved++;
+        }
+
+        if (student.internshipStatus === 'achieved') {
+          statsByClass[className].internAchieved++;
+        } else {
+          statsByClass[className].internNotAchieved++;
         }
     });
 
@@ -424,34 +436,61 @@ export function StudentManagementTable() {
                                                     <CardTitle className="text-base">{stat.className}</CardTitle>
                                                     <CardDescription>{stat.total} sinh viên</CardDescription>
                                                 </CardHeader>
-                                                <CardContent className="text-xs space-y-1">
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
-                                                            {statusLabel.studying}
-                                                        </span>
-                                                        <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
+                                                <CardContent className="text-xs space-y-2">
+                                                    <div>
+                                                        <p className="font-semibold mb-1">Trạng thái học tập</p>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
+                                                                {statusLabel.studying}
+                                                            </span>
+                                                            <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
+                                                                {statusLabel.reserved}
+                                                            </span>
+                                                            <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
+                                                                {statusLabel.dropped_out}
+                                                            </span>
+                                                            <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
+                                                                {statusLabel.graduated}
+                                                            </span>
+                                                            <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
-                                                            {statusLabel.reserved}
-                                                        </span>
-                                                        <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
+                                                    <Separator />
+                                                    <div>
+                                                        <p className="font-semibold mb-1">Hoàn thành TN</p>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-green-600"><Check className="h-3 w-3"/> Đã đạt</span>
+                                                            <span>{stat.gradAchieved} <span className="text-muted-foreground">({getPercentage(stat.gradAchieved, stat.total)})</span></span>
+                                                         </div>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-red-600"><X className="h-3 w-3"/> Chưa đạt</span>
+                                                            <span>{stat.gradNotAchieved} <span className="text-muted-foreground">({getPercentage(stat.gradNotAchieved, stat.total)})</span></span>
+                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
-                                                            {statusLabel.dropped_out}
-                                                        </span>
-                                                        <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
-                                                            {statusLabel.graduated}
-                                                        </span>
-                                                        <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
+                                                     <Separator />
+                                                     <div>
+                                                        <p className="font-semibold mb-1">Hoàn thành TT</p>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-green-600"><Check className="h-3 w-3"/> Đã đạt</span>
+                                                            <span>{stat.internAchieved} <span className="text-muted-foreground">({getPercentage(stat.internAchieved, stat.total)})</span></span>
+                                                         </div>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-red-600"><X className="h-3 w-3"/> Chưa đạt</span>
+                                                            <span>{stat.internNotAchieved} <span className="text-muted-foreground">({getPercentage(stat.internNotAchieved, stat.total)})</span></span>
+                                                         </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
