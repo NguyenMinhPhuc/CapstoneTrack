@@ -67,7 +67,7 @@ type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
 type SessionType = 'graduation' | 'internship' | 'combined';
 
-type SortKey = 'name' | 'startDate' | 'registrationDeadline' | 'status';
+type SortKey = 'name' | 'startDate' | 'registrationDeadline' | 'expectedReportDate' | 'status';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -172,7 +172,7 @@ export function DefenseSessionsTable() {
         let aValue: any;
         let bValue: any;
 
-        if (sortConfig.key === 'startDate' || sortConfig.key === 'registrationDeadline') {
+        if (sortConfig.key === 'startDate' || sortConfig.key === 'registrationDeadline' || sortConfig.key === 'expectedReportDate') {
             aValue = toDate(a[sortConfig.key])?.getTime() || 0;
             bValue = toDate(b[sortConfig.key])?.getTime() || 0;
         } else {
@@ -407,6 +407,12 @@ export function DefenseSessionsTable() {
                                 checked={statusFilter === 'ongoing'}
                                 onCheckedChange={() => setStatusFilter('ongoing')}
                             >
+                                {statusLabel.ongoing}
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuCheckboxItem
+                                checked={statusFilter === 'completed'}
+                                onCheckedChange={() => setStatusFilter('completed')}
+                            >
                                 {statusLabel.completed}
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
@@ -458,6 +464,11 @@ export function DefenseSessionsTable() {
                     </Button>
                 </TableHead>
                 <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('expectedReportDate')} className="px-0 hover:bg-transparent">
+                        Ngày báo cáo {getSortIcon('expectedReportDate')}
+                    </Button>
+                </TableHead>
+                <TableHead>
                      <Button variant="ghost" onClick={() => requestSort('status')} className="px-0 hover:bg-transparent">
                         Trạng thái {getSortIcon('status')}
                     </Button>
@@ -480,10 +491,13 @@ export function DefenseSessionsTable() {
                       </div>
                     </TableCell>
                     <TableCell>
-                      {session.startDate?.toDate && format(session.startDate.toDate(), 'dd/MM/yyyy')}
+                      {toDate(session.startDate) ? format(toDate(session.startDate)!, 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {session.registrationDeadline?.toDate && format(session.registrationDeadline.toDate(), 'dd/MM/yyyy')}
+                      {toDate(session.registrationDeadline) ? format(toDate(session.registrationDeadline)!, 'dd/MM/yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {toDate(session.expectedReportDate) ? format(toDate(session.expectedReportDate)!, 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       {session.status && (
@@ -563,3 +577,4 @@ export function DefenseSessionsTable() {
     </div>
   );
 }
+
