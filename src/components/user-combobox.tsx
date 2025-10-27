@@ -1,3 +1,4 @@
+
 'use client';
 
 import * as React from 'react';
@@ -97,7 +98,10 @@ export function UserCombobox({
                         selectedUserIds.includes(user.id) ? 'opacity-100' : 'opacity-0'
                       )}
                     />
-                    <span>{user.displayName || user.email}</span>
+                    <div className="flex items-center justify-between w-full">
+                        <span>{user.displayName || user.email}</span>
+                        <Badge variant="outline" className="ml-2 capitalize">{user.role}</Badge>
+                    </div>
                   </CommandItem>
                 ))
               )}
