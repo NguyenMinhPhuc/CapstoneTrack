@@ -20,12 +20,12 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, FileDown, Copy, MoreHorizontal, CheckCircle, RefreshCw, XCircle } from 'lucide-react';
+import { Search, FileDown, Copy, MoreHorizontal, CheckCircle, RefreshCw, XCircle, ArrowUpDown } from 'lucide-react';
 import type { GraduationDefenseSession, DefenseRegistration, Evaluation, DefenseSubCommittee, SubCommitteeMember } from '@/lib/types';
 import { ScrollArea } from './ui/scroll-area';
 import { Dialog, DialogContent } from './ui/dialog';
 import { CopyEvaluationDialog } from './copy-evaluation-dialog';
-import { doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { doc, writeBatch } from 'firebase/firestore';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { useToast } from '@/hooks/use-toast';
 import { Checkbox } from './ui/checkbox';
@@ -65,6 +65,9 @@ interface ProcessedInternshipData {
     notes: string;
 }
 
+type SortKey = 'studentName' | 'studentId' | 'subCommitteeName' | 'supervisorGradScore' | 'companySupervisorScore' | 'councilGradAvg' | 'councilInternAvg' | 'finalGradScore' | 'finalInternScore';
+type SortDirection = 'asc' | 'desc';
+
 
 interface GradeReportTableProps {
   reportType: 'graduation' | 'internship';
@@ -88,6 +91,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -275,11 +279,11 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     }
   }, [session, registrations, evaluations, subCommittees, reportType]);
 
-  const filteredData = useMemo(() => {
-      if (!processedData) return [];
-      const term = searchTerm.toLowerCase();
-      
-      return processedData.filter(item => {
+  const sortedAndFilteredData = useMemo(() => {
+    if (!processedData) return [];
+
+    let filtered = processedData.filter(item => {
+        const term = searchTerm.toLowerCase();
         const searchMatch = item.studentName.toLowerCase().includes(term) ||
           item.studentId.toLowerCase().includes(term) ||
           (reportType === 'graduation' && (item as ProcessedGraduationData).projectTitle?.toLowerCase().includes(term)) ||
@@ -288,13 +292,49 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         const subcommitteeMatch = subcommitteeFilter === 'all' || item.subCommitteeId === subcommitteeFilter;
 
         return searchMatch && subcommitteeMatch;
-      });
+    });
 
-  }, [processedData, searchTerm, reportType, subcommitteeFilter]);
+    if (sortConfig !== null) {
+        filtered.sort((a, b) => {
+            const aValue = a[sortConfig.key] ?? null;
+            const bValue = b[sortConfig.key] ?? null;
+
+            if (aValue === null) return 1;
+            if (bValue === null) return -1;
+            
+            if (typeof aValue === 'number' && typeof bValue === 'number') {
+                if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+            } else {
+                 if (String(aValue) < String(bValue)) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (String(aValue) > String(bValue)) return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+            return 0;
+        });
+    }
+
+    return filtered;
+
+  }, [processedData, searchTerm, subcommitteeFilter, sortConfig, reportType]);
+
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
 
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     if (checked === true) {
-        setSelectedRowIds(filteredData?.map(s => s.id) || []);
+        setSelectedRowIds(sortedAndFilteredData?.map(s => s.id) || []);
     } else {
         setSelectedRowIds([]);
     }
@@ -308,8 +348,8 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
     }
   };
 
-  const isAllSelected = filteredData && selectedRowIds.length > 0 && selectedRowIds.length === filteredData.length;
-  const isSomeSelected = selectedRowIds.length > 0 && (!filteredData || selectedRowIds.length < filteredData.length);
+  const isAllSelected = sortedAndFilteredData && selectedRowIds.length > 0 && selectedRowIds.length === sortedAndFilteredData.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!sortedAndFilteredData || selectedRowIds.length < sortedAndFilteredData.length);
 
 
   const exportToExcel = () => {
@@ -318,7 +358,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
 
     if (reportType === 'graduation') {
         fileName = `BangDiem_TotNghiep_${session?.name.replace(/\s+/g, '_') || 'report'}.xlsx`;
-        dataToExport = (filteredData as ProcessedGraduationData[]).map(item => {
+        dataToExport = (sortedAndFilteredData as ProcessedGraduationData[]).map(item => {
             const row: {[key: string]: any} = {
                 'MSSV': item.studentId,
                 'Họ và Tên': item.studentName,
@@ -337,7 +377,7 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
         });
     } else {
         fileName = `BangDiem_ThucTap_${session?.name.replace(/\s+/g, '_') || 'report'}.xlsx`;
-        dataToExport = (filteredData as ProcessedInternshipData[]).map(item => {
+        dataToExport = (sortedAndFilteredData as ProcessedInternshipData[]).map(item => {
              const row: {[key: string]: any} = {
                 'MSSV': item.studentId,
                 'Họ và Tên': item.studentName,
@@ -391,22 +431,22 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                     onCheckedChange={handleSelectAll}
                 />
             </TableHead>
-            <TableHead>MSSV</TableHead>
-            <TableHead>Họ và Tên</TableHead>
-            <TableHead>Tiểu ban</TableHead>
-            <TableHead className="text-center">Điểm GVHD</TableHead>
+            <TableHead><Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0">MSSV {getSortIcon('studentId')}</Button></TableHead>
+            <TableHead><Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0">Họ và Tên {getSortIcon('studentName')}</Button></TableHead>
+            <TableHead><Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0">Tiểu ban {getSortIcon('subCommitteeName')}</Button></TableHead>
+            <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('supervisorGradScore')} className="px-0">Điểm GVHD {getSortIcon('supervisorGradScore')}</Button></TableHead>
             {COUNCIL_ROLES.map(role => (
                 <TableHead key={role} className="text-center">Điểm {roleDisplayNames[role]}</TableHead>
             ))}
-            <TableHead className="text-center">Điểm TB HĐ</TableHead>
-            <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
+            <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('councilGradAvg')} className="px-0">Điểm TB HĐ {getSortIcon('councilGradAvg')}</Button></TableHead>
+            <TableHead className="text-center font-bold"><Button variant="ghost" onClick={() => requestSort('finalGradScore')} className="px-0">Điểm Tổng kết {getSortIcon('finalGradScore')}</Button></TableHead>
             <TableHead>Ghi chú</TableHead>
             <TableHead className="text-center">Hành động</TableHead>
         </TableRow>
         </TableHeader>
         <TableBody>
-        {(filteredData as ProcessedGraduationData[]).length > 0 ? (
-            (filteredData as ProcessedGraduationData[]).map((item) => (
+        {(sortedAndFilteredData as ProcessedGraduationData[]).length > 0 ? (
+            (sortedAndFilteredData as ProcessedGraduationData[]).map((item) => (
             <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) && "selected"}>
                  <TableCell>
                     <Checkbox
@@ -463,23 +503,23 @@ export function GradeReportTable({ reportType, session, registrations, evaluatio
                           onCheckedChange={handleSelectAll}
                       />
                   </TableHead>
-                  <TableHead>MSSV</TableHead>
-                  <TableHead>Họ và Tên</TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0">MSSV {getSortIcon('studentId')}</Button></TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0">Họ và Tên {getSortIcon('studentName')}</Button></TableHead>
                   <TableHead>Công ty Thực tập</TableHead>
-                  <TableHead>Tiểu ban</TableHead>
-                  <TableHead className="text-center">Điểm ĐVTT</TableHead>
+                  <TableHead><Button variant="ghost" onClick={() => requestSort('subCommitteeName')} className="px-0">Tiểu ban {getSortIcon('subCommitteeName')}</Button></TableHead>
+                  <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('companySupervisorScore')} className="px-0">Điểm ĐVTT {getSortIcon('companySupervisorScore')}</Button></TableHead>
                   {COUNCIL_ROLES.map(role => (
                     <TableHead key={role} className="text-center">Điểm {roleDisplayNames[role]}</TableHead>
                   ))}
-                  <TableHead className="text-center">Điểm TB HĐ</TableHead>
-                  <TableHead className="text-center font-bold">Điểm Tổng kết</TableHead>
+                  <TableHead className="text-center"><Button variant="ghost" onClick={() => requestSort('councilInternAvg')} className="px-0">Điểm TB HĐ {getSortIcon('councilInternAvg')}</Button></TableHead>
+                  <TableHead className="text-center font-bold"><Button variant="ghost" onClick={() => requestSort('finalInternScore')} className="px-0">Điểm Tổng kết {getSortIcon('finalInternScore')}</Button></TableHead>
                    <TableHead>Ghi chú</TableHead>
                    <TableHead className="text-center">Hành động</TableHead>
               </TableRow>
           </TableHeader>
           <TableBody>
-              {(filteredData as ProcessedInternshipData[]).length > 0 ? (
-                  (filteredData as ProcessedInternshipData[]).map((item) => (
+              {(sortedAndFilteredData as ProcessedInternshipData[]).length > 0 ? (
+                  (sortedAndFilteredData as ProcessedInternshipData[]).map((item) => (
                       <TableRow key={item.id} data-state={selectedRowIds.includes(item.id) && "selected"}>
                           <TableCell>
                               <Checkbox
