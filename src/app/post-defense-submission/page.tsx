@@ -35,17 +35,29 @@ export default function PostDefenseSubmissionPage() {
     () => (user ? doc(firestore, 'users', user.uid) : null),
     [user, firestore]
   );
-  const { data: userData } = useDoc<SystemUser>(userDocRef);
+  const { data: userData, isLoading: isUserDataLoading } = useDoc<SystemUser>(userDocRef);
 
   const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
   const { data: settings, isLoading: isLoadingSettings } = useDoc<SystemSettings>(settingsDocRef);
   const isFeatureEnabled = settings?.enablePostDefenseSubmission ?? false;
 
   useEffect(() => {
-    if (!isUserLoading && !user) router.push('/login');
-    if (userData && userData.role !== 'student') router.push('/');
-    if (settings !== undefined && !isFeatureEnabled) router.push('/');
-  }, [user, userData, isUserLoading, router, settings, isFeatureEnabled]);
+    if (isUserLoading || isUserDataLoading || isLoadingSettings) {
+      return; // Wait for all data to load
+    }
+    if (!user) {
+      router.push('/login');
+      return;
+    }
+    if (userData && userData.role !== 'student') {
+      router.push('/');
+      return;
+    }
+    if (settings !== undefined && !isFeatureEnabled) {
+      router.push('/');
+      return;
+    }
+  }, [user, userData, isUserLoading, isUserDataLoading, router, settings, isFeatureEnabled, isLoadingSettings]);
 
   useEffect(() => {
     if (!user || !firestore) return;
