@@ -36,6 +36,8 @@ export type DefenseSession = {
   registrationDeadline: any;
   description?: string;
   zaloGroupLink?: string;
+  postDefenseSubmissionLink?: string;
+  postDefenseSubmissionDescription?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
   companyIds?: string[];
@@ -65,19 +67,6 @@ export type Student = {
     internshipStatus: 'achieved' | 'not_achieved';
 }
 
-export type Supervisor = {
-    id: string;
-    userId: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    department?: string;
-    facultyRank?: string;
-    canGuideGraduation?: boolean;
-    canGuideInternship?: boolean;
-    createdAt: any;
-}
-
 export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting' | 'completed';
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
@@ -98,6 +87,7 @@ export type DefenseRegistration = {
   expectedResults?: string;
   implementationPlan?: string;
   reportLink?: string;
+  postDefenseReportLink?: string;
   projectRegistrationStatus?: ProjectRegistrationStatus;
   proposalStatus?: ProposalStatus;
   proposalLink?: string;
@@ -222,6 +212,7 @@ export type SystemSettings = {
     allowStudentRegistration?: boolean;
     allowEditingApprovedProposal?: boolean;
     forceOpenReportSubmission?: boolean;
+    enablePostDefenseSubmission?: boolean;
     requireReportApproval?: boolean;
     earlyInternshipGoalHours?: number;
     themePrimary?: string;

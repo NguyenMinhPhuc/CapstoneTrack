@@ -47,6 +47,8 @@ const formSchema = z.object({
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
   zaloGroupLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
   description: z.string().optional(),
+  postDefenseSubmissionLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
+  postDefenseSubmissionDescription: z.string().optional(),
   companyIds: z.array(z.string()).optional(),
   councilGraduationRubricId: z.string().optional(),
   councilInternshipRubricId: z.string().optional(),
@@ -89,6 +91,8 @@ export function AddDefenseSessionForm({ onFinished, sessionToCopy }: AddDefenseS
       sessionType: sessionToCopy?.sessionType || 'combined',
       description: sessionToCopy?.description || '',
       zaloGroupLink: sessionToCopy?.zaloGroupLink || '',
+      postDefenseSubmissionLink: sessionToCopy?.postDefenseSubmissionLink || '',
+      postDefenseSubmissionDescription: sessionToCopy?.postDefenseSubmissionDescription || '',
       companyIds: sessionToCopy?.companyIds || [],
       councilGraduationRubricId: sessionToCopy?.councilGraduationRubricId || '',
       councilInternshipRubricId: sessionToCopy?.councilInternshipRubricId || '',
@@ -507,6 +511,40 @@ export function AddDefenseSessionForm({ onFinished, sessionToCopy }: AddDefenseS
                         />
                     </>
                  )}
+
+
+                <Separator />
+                <p className="text-sm font-medium">Nộp báo cáo sau Hội đồng</p>
+                <FormField
+                control={form.control}
+                name="postDefenseSubmissionLink"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Link nộp bài</FormLabel>
+                    <FormControl>
+                        <Input placeholder="https://forms.gle/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                control={form.control}
+                name="postDefenseSubmissionDescription"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Mô tả/Yêu cầu</FormLabel>
+                    <FormControl>
+                        <Textarea
+                        placeholder="Nhập các yêu cầu khi nộp bài: thành phần, định dạng,..."
+                        className="resize-y"
+                        {...field}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
 
 
                 <Separator />

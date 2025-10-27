@@ -279,6 +279,22 @@ export function AdminSettings() {
                     <Separator />
                      <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
                         <div className="space-y-0.5">
+                            <Label htmlFor="post-defense-submission-switch" className="text-base">
+                                Mở cổng nộp báo cáo sau Hội đồng
+                            </Label>
+                             <p className="text-sm text-muted-foreground">
+                                Nếu bật, sinh viên sẽ có thể nộp phiên bản cuối cùng của báo cáo sau khi bảo vệ.
+                            </p>
+                        </div>
+                        <Switch
+                            id="post-defense-submission-switch"
+                            checked={settings?.enablePostDefenseSubmission ?? false}
+                            onCheckedChange={(checked) => handleFeatureToggle('enablePostDefenseSubmission', checked)}
+                        />
+                    </div>
+                    <Separator />
+                     <div className="flex items-center justify-between space-x-2 rounded-lg border p-4">
+                        <div className="space-y-0.5">
                             <Label htmlFor="require-report-approval-switch" className="text-base">
                                 Yêu cầu GVHD duyệt báo cáo cuối kỳ
                             </Label>
