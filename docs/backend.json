@@ -804,6 +804,22 @@
         "readBy": { "type": "array", "items": { "type": "string" }}
       },
       "required": ["id", "subject", "participantIds", "createdAt", "lastMessageAt"]
+    },
+    "Message": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Message",
+      "type": "object",
+      "description": "Represents a single message within a conversation.",
+      "properties": {
+        "id": { "type": "string" },
+        "conversationId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "mentionedUserIds": { "type": "array", "items": { "type": "string" }}
+      },
+      "required": ["id", "conversationId", "senderId", "senderName", "content", "createdAt"]
     }
   },
   "auth": {
@@ -909,6 +925,12 @@
         "$ref": "#/entities/Conversation"
       },
       "description": "Stores a Q&A conversation thread."
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+        "schema": {
+            "$ref": "#/entities/Message"
+        },
+        "description": "Stores messages within a conversation."
     }
   }
 }
