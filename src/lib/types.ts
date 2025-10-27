@@ -71,6 +71,8 @@ export type Supervisor = {
     email: string;
     department?: string;
     facultyRank?: string;
+    canGuideGraduation?: boolean;
+    canGuideInternship?: boolean;
     createdAt: any;
 }
 
@@ -296,8 +298,6 @@ export type EarlyInternshipWeeklyReport = {
     reviewDate: any;
     status: 'pending_review' | 'approved' | 'rejected';
 };
-
-    
 
     
 

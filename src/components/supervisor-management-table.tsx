@@ -39,8 +39,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuCheckboxItem,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, Briefcase, GraduationCap } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Supervisor, SystemUser } from '@/lib/types';
@@ -73,6 +76,7 @@ export function SupervisorManagementTable() {
   const [supervisorToDisable, setSupervisorToDisable] = useState<Supervisor | null>(null);
   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [guidanceFilter, setGuidanceFilter] = useState('all');
 
   const supervisorsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'supervisors'),
@@ -105,9 +109,15 @@ export function SupervisorManagementTable() {
       const emailMatch = supervisor.email?.toLowerCase().includes(term);
       const departmentMatch = supervisor.department?.toLowerCase().includes(term);
       
-      return nameMatch || emailMatch || departmentMatch;
+      const guidanceMatch = guidanceFilter === 'all' ||
+        (guidanceFilter === 'graduation' && supervisor.canGuideGraduation) ||
+        (guidanceFilter === 'internship' && supervisor.canGuideInternship) ||
+        (guidanceFilter === 'both' && supervisor.canGuideGraduation && supervisor.canGuideInternship) ||
+        (guidanceFilter === 'none' && !supervisor.canGuideGraduation && !supervisor.canGuideInternship);
+
+      return (nameMatch || emailMatch || departmentMatch) && guidanceMatch;
     });
-  }, [supervisorsWithStatus, searchTerm]);
+  }, [supervisorsWithStatus, searchTerm, guidanceFilter]);
   
   const handleEditClick = (supervisor: Supervisor) => {
     setSelectedSupervisor(supervisor);
@@ -163,6 +173,20 @@ export function SupervisorManagementTable() {
     )
   }
 
+  const getGuidanceBadges = (supervisor: Supervisor) => {
+    const badges = [];
+    if (supervisor.canGuideGraduation) {
+      badges.push(<Badge key="grad" variant="outline" className="text-primary border-primary">TN</Badge>);
+    }
+    if (supervisor.canGuideInternship) {
+      badges.push(<Badge key="intern" variant="outline" className="text-secondary-foreground border-secondary-foreground">TT</Badge>);
+    }
+    if (badges.length === 0) {
+      return <span className="text-xs text-muted-foreground">Chưa có</span>
+    }
+    return <div className="flex items-center gap-1">{badges}</div>;
+  };
+
   return (
     <div className="space-y-4">
     <Card>
@@ -178,23 +202,67 @@ export function SupervisorManagementTable() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Thêm Giáo viên
+            <div className="flex w-full sm:w-auto items-center gap-2">
+                 <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="outline" size="sm" className="h-9 gap-1 text-sm w-full sm:w-auto">
+                      <ListFilter className="h-3.5 w-3.5" />
+                      <span className="sr-only sm:not-sr-only">Lọc</span>
                     </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                    <DialogHeader>
-                    <DialogTitle>Thêm Giáo viên Hướng dẫn mới</DialogTitle>
-                    <DialogDescription>
-                        Điền thông tin chi tiết để tạo một hồ sơ giáo viên mới. Một tài khoản sẽ được tự động tạo.
-                    </DialogDescription>
-                    </DialogHeader>
-                    <AddSupervisorForm onFinished={() => setIsAddDialogOpen(false)} />
-                </DialogContent>
-            </Dialog>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuLabel>Phạm vi hướng dẫn</DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuCheckboxItem
+                      checked={guidanceFilter === 'all'}
+                      onCheckedChange={() => setGuidanceFilter('all')}
+                    >
+                      Tất cả
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={guidanceFilter === 'graduation'}
+                      onCheckedChange={() => setGuidanceFilter('graduation')}
+                    >
+                      Tốt nghiệp
+                    </DropdownMenuCheckboxItem>
+                    <DropdownMenuCheckboxItem
+                      checked={guidanceFilter === 'internship'}
+                      onCheckedChange={() => setGuidanceFilter('internship')}
+                    >
+                      Thực tập
+                    </DropdownMenuCheckboxItem>
+                     <DropdownMenuCheckboxItem
+                      checked={guidanceFilter === 'both'}
+                      onCheckedChange={() => setGuidanceFilter('both')}
+                    >
+                      Cả hai
+                    </DropdownMenuCheckboxItem>
+                     <DropdownMenuCheckboxItem
+                      checked={guidanceFilter === 'none'}
+                      onCheckedChange={() => setGuidanceFilter('none')}
+                    >
+                      Không hướng dẫn
+                    </DropdownMenuCheckboxItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="w-full sm:w-auto">
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Thêm Giáo viên
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-md">
+                        <DialogHeader>
+                        <DialogTitle>Thêm Giáo viên Hướng dẫn mới</DialogTitle>
+                        <DialogDescription>
+                            Điền thông tin chi tiết để tạo một hồ sơ giáo viên mới. Một tài khoản sẽ được tự động tạo.
+                        </DialogDescription>
+                        </DialogHeader>
+                        <AddSupervisorForm onFinished={() => setIsAddDialogOpen(false)} />
+                    </DialogContent>
+                </Dialog>
+            </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -205,7 +273,7 @@ export function SupervisorManagementTable() {
               <TableHead>Họ và Tên</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Khoa</TableHead>
-              <TableHead>Chức vụ</TableHead>
+              <TableHead>Phạm vi HD</TableHead>
               <TableHead>Trạng thái</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
@@ -218,7 +286,7 @@ export function SupervisorManagementTable() {
                 <TableCell className="font-medium">{`${supervisor.firstName} ${supervisor.lastName}`}</TableCell>
                 <TableCell>{supervisor.email}</TableCell>
                 <TableCell>{supervisor.department}</TableCell>
-                <TableCell>{supervisor.facultyRank}</TableCell>
+                <TableCell>{getGuidanceBadges(supervisor)}</TableCell>
                 <TableCell>
                   <Badge variant={statusVariant[supervisor.status]}>{statusLabel[supervisor.status]}</Badge>
                 </TableCell>

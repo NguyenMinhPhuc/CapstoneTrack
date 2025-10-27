@@ -97,6 +97,16 @@
             "type": "string",
             "description": "The academic status of the student.",
             "enum": ["studying", "reserved", "dropped_out", "graduated"]
+        },
+        "graduationStatus": {
+            "type": "string",
+            "description": "The graduation completion status for the student.",
+            "enum": ["achieved", "not_achieved"]
+        },
+        "internshipStatus": {
+            "type": "string",
+            "description": "The internship completion status for the student.",
+            "enum": ["achieved", "not_achieved"]
         }
       },
       "required": [
@@ -134,6 +144,14 @@
         "facultyRank": {
           "type": "string",
           "description": "The faculty rank of the supervisor."
+        },
+        "canGuideGraduation": {
+          "type": "boolean",
+          "description": "Whether the supervisor can guide graduation projects."
+        },
+        "canGuideInternship": {
+          "type": "boolean",
+          "description": "Whether the supervisor can guide internships."
         }
       },
       "required": [
@@ -331,7 +349,7 @@
         "graduationStatus": {
           "type": "string",
           "description": "The registration status for the graduation defense.",
-          "enum": ["reporting", "exempted", "withdrawn", "not_reporting"]
+          "enum": ["reporting", "exempted", "withdrawn", "not_reporting", "completed"]
         },
         "graduationStatusNote": {
             "type": "string",
@@ -354,7 +372,7 @@
         "internshipStatus": {
           "type": "string",
           "description": "The registration status for the internship report.",
-          "enum": ["reporting", "exempted", "withdrawn", "not_reporting"]
+          "enum": ["reporting", "exempted", "withdrawn", "not_reporting", "completed"]
         },
         "internshipStatusNote": {
             "type": "string",
@@ -552,6 +570,11 @@
                 "description": "The type of evaluation (e.g., graduation or internship).",
                 "enum": ["graduation", "internship"]
             },
+            "attendance": {
+                "type": "string",
+                "enum": ["present", "absent"],
+                "description": "The attendance status of the student for this evaluation."
+            },
             "scores": {
                 "type": "array",
                 "description": "The scores given for each criterion.",
@@ -653,6 +676,10 @@
         "requireReportApproval": {
           "type": "boolean",
           "description": "If true, final reports submitted by students must be approved by their supervisor."
+        },
+        "earlyInternshipGoalHours": {
+          "type": "number",
+          "description": "The target number of hours for the early internship program."
         }
       }
     },
@@ -721,9 +748,22 @@
         "weekNumber": { "type": "number" },
         "hours": { "type": "number", "description": "Number of hours completed for the week." },
         "supervisorComments": { "type": "string", "description": "Comments from the supervisor." },
-        "reviewDate": { "type": "string", "format": "date-time" }
+        "reviewDate": { "type": "string", "format": "date-time" },
+        "status": {
+            "type": "string",
+            "enum": ["pending_review", "approved", "rejected"],
+            "description": "The review status of the report."
+        },
+        "workDone": {
+            "type": "string",
+            "description": "The work done by the student for the week."
+        },
+        "nextWeekPlan": {
+            "type": "string",
+            "description": "The student's plan for the next week."
+        }
       },
-      "required": ["id", "earlyInternshipId", "studentId", "supervisorId", "weekNumber", "hours", "reviewDate"]
+      "required": ["id", "earlyInternshipId", "studentId", "supervisorId", "weekNumber", "hours", "reviewDate", "status"]
     }
   },
   "auth": {
@@ -826,5 +866,3 @@
     }
   }
 }
-
-    

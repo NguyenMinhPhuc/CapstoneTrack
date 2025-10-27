@@ -21,6 +21,7 @@ import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmai
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
+import { Checkbox } from './ui/checkbox';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -28,6 +29,8 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Email không hợp lệ.' }),
   department: z.string().min(1, { message: 'Khoa/Bộ môn là bắt buộc.' }),
   facultyRank: z.string().optional(),
+  canGuideGraduation: z.boolean().default(true),
+  canGuideInternship: z.boolean().default(false),
 });
 
 interface AddSupervisorFormProps {
@@ -52,6 +55,8 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
       email: '',
       department: '',
       facultyRank: '',
+      canGuideGraduation: true,
+      canGuideInternship: false,
     },
   });
 
@@ -212,6 +217,49 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
                 </FormItem>
             )}
         />
+        <div className="space-y-2">
+            <FormLabel>Phạm vi hướng dẫn</FormLabel>
+            <div className="flex items-center space-x-4">
+                 <FormField
+                    control={form.control}
+                    name="canGuideGraduation"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                Hướng dẫn Đồ án Tốt nghiệp
+                                </FormLabel>
+                            </div>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="canGuideInternship"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                Hướng dẫn Thực tập
+                                </FormLabel>
+                            </div>
+                        </FormItem>
+                    )}
+                 />
+            </div>
+        </div>
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Đang tạo..." : "Tạo Giáo viên"}
         </Button>
