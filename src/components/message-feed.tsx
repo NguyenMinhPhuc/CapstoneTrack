@@ -3,7 +3,7 @@
 import type { User } from 'firebase/auth';
 import { MessageSquare, Send } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, arrayUnion, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { Message, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
@@ -14,6 +14,8 @@ import { Textarea } from './ui/textarea';
 import React, { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 interface MessageFeedProps {
   currentUser: User;
@@ -47,7 +49,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
   
   // Mark conversation as read
   useEffect(() => {
-    if (conversationId && currentUser) {
+    if (conversationId && currentUser && messages && messages.length > 0) {
       const convoRef = doc(firestore, 'conversations', conversationId);
       updateDoc(convoRef, {
         readBy: arrayUnion(currentUser.uid)
@@ -148,7 +150,15 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
                                 : "bg-muted"
                         )}>
                             {!isCurrentUser && <p className="font-semibold mb-1">{msg.senderName}</p>}
-                            <p className="whitespace-pre-wrap">{msg.content}</p>
+                             <div className={cn(
+                                "prose prose-sm max-w-none text-inherit prose-p:my-0",
+                                isCurrentUser && "prose-invert", // Basic styling for links in dark background
+                                "prose-a:text-blue-300 hover:prose-a:underline"
+                             )}>
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {msg.content}
+                                </ReactMarkdown>
+                            </div>
                             <p className={cn(
                                 "text-xs mt-1",
                                 isCurrentUser ? "text-primary-foreground/70" : "text-muted-foreground"
