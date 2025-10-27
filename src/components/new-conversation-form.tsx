@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -67,6 +68,7 @@ export function NewConversationForm({ currentUser, onFinished }: NewConversation
 
 
     const conversationData = {
+      id: conversationRef.id,
       subject: values.subject,
       participantIds: Array.from(new Set(participantIds)),
       participantNames: Array.from(new Set(participantNames)),
@@ -77,9 +79,10 @@ export function NewConversationForm({ currentUser, onFinished }: NewConversation
     };
 
     const messageData = {
+      id: messageRef.id,
       conversationId: conversationRef.id,
       senderId: currentUser.uid,
-      senderName: currentUserData.displayName || currentUserData.email,
+      senderName: currentUserData.displayName || currentUserData.email || 'N/A',
       content: values.message,
       createdAt: serverTimestamp(),
     };
