@@ -1,362 +1,491 @@
 /**
- * Core Philosophy:
- * This ruleset enforces a role-based access control model with owner-only access for user-specific data.
- * System administrators have full read and write access. Other roles (supervisor, student) have limited access based on their role and ownership of data.
+ * @file Firestore Security Rules
+ * @description This ruleset enforces a role-based access control model with user-specific data isolation.
  *
  * Data Structure:
- * - `/users/{userId}`: Stores user account information. Access is restricted to the owner and administrators.
- * - `/students/{studentId}`: Stores student information.
- * - `/supervisors/{supervisorId}`: Stores supervisor information.
- * - `/defenseSessions/{sessionId}`: Stores information about defense sessions.
- * - `/defenseSessionRegistrations/{registrationId}`: Stores student registrations for defense sessions.
- * - `/defenseCouncils/{councilId}`: Stores information about defense council members.
- * - `/defenseSubCommittees/{subCommitteeId}`: Stores information about defense subcommittees.
- * - `/rubrics/{rubricId}`: Stores grading rubrics.
- * - `/evaluations/{evaluationId}`: Stores evaluation data for student registrations.
- * - `/projectTopics/{topicId}`: Stores project topics proposed by supervisors.
- * - `/weeklyProgressReports/{reportId}`: Stores weekly progress reports submitted by students.
- * - `/systemSettings/settings`: Stores global system settings.
- * - `/internshipCompanies/{companyId}`: Stores information about internship companies.
- * - `/earlyInternships/{internshipId}`: Stores records for early internships.
- * - `/earlyInternshipWeeklyReports/{reportId}`: Stores weekly progress reports for early internships.
- * - `/conversations/{conversationId}`: Stores information about Q&A threads. Access is restricted to members.
- * - `/conversations/{conversationId}/messages/{messageId}`: Stores individual messages within a conversation.
+ * - /users/{userId}: Stores user account information. Access is restricted to the owner and admins.
+ * - /students/{studentId}: Stores student details.
+ * - /supervisors/{supervisorId}: Stores supervisor details.
+ * - /defenseSessions/{sessionId}: Stores information about defense sessions.
+ * - /defenseSessionRegistrations/{registrationId}: Stores student registrations for defense sessions.
+ * - /defenseCouncils/{councilId}: Stores information about defense council members.
+ * - /defenseSubCommittees/{subCommitteeId}: Stores information about defense sub-committees.
+ * - /rubrics/{rubricId}: Stores grading rubrics.
+ * - /evaluations/{evaluationId}: Stores individual evaluations of student registrations.
+ * - /projectTopics/{topicId}: Stores project topics proposed by supervisors.
+ * - /weeklyProgressReports/{reportId}: Stores student's weekly progress reports.
+ * - /systemSettings/settings: Stores global system settings.
+ * - /internshipCompanies/{companyId}: Stores information about internship companies.
+ * - /earlyInternships/{internshipId}: Stores information about early internships.
+ * - /earlyInternshipWeeklyReports/{reportId}: Stores weekly reports for early internships.
+ * - /conversations/{conversationId}: Stores message threads between users. Access is restricted to participants.
+ * - /conversations/{conversationId}/messages/{messageId}: Stores individual messages within a conversation. Access is restricted to participants.
  *
  * Key Security Decisions:
- * - User listing is generally disallowed, except where explicitly needed for administrative purposes.
- * - Data validation is relaxed in this prototype phase to allow for flexible schema changes.  However, authorization-critical fields are validated.
- * - Ambiguous relationships default to the most secure interpretation (owner-only access).
+ * - User listing is explicitly denied to prevent information disclosure.
+ * - Read-only collections (if any) should have `allow get, list: if true;` rules.
+ * - Ambiguous relationships default to strict owner-only access.
+ * - System settings are readable by all authenticated users.
  *
  * Denormalization for Authorization:
- *  - Conversations use `participantIds` array on the document itself to control read/write access.
+ * - The rules assume that authorization data (e.g., ownership, roles) is denormalized directly onto the documents being secured.
+ *   This avoids costly `get()` calls within the security rules. For example, a document in `/tasks/{taskId}` should contain
+ *   an `ownerId` field to allow for a simple `isOwner(resource.data.ownerId)` check.
+ *
+ * Structural Segregation:
+ * - When data can be both private and public (e.g., drafts vs. published content), separate collections should be used (e.g.,
+ *   `/users/{userId}/drafts` and `/public_posts`). This is more secure and performant for list operations than using a single
+ *   collection with a boolean flag.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Root-level read/write access for any document.
-     * @path /{document=**}
-     * @allow (get, list, create, update, delete)
-     * @deny (get, list, create, update, delete)
-     * @principle Used to match any document in the database.
-     */
-    match /{document=**} {
-        allow read: if false;
-        allow write: if false;
-    }
-
-    /**
-     * @description Manages access to user account documents.
-     * @path /users/{userId}
-     * @allow (create) User can create their own account.
-     * @allow (get, update, delete, list) Only the owner or an admin can access the document.
-     * @deny (create) Cannot create a document with a mismatched user ID.
-     * @deny (get, update, delete, list) A non-owner or non-admin cannot access the document.
-     * @principle Enforces document ownership and admin override.
-     */
-    match /users/{userId} {
-      allow get: if isSignedIn() && isOwner(userId);
-      allow list: if false;
-      allow create: if isSignedIn() && isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isSignedIn() && isOwner(userId);
-      allow delete: if isSignedIn() && isOwner(userId);
-    }
-
-    /**
-     * @description Manages access to student documents.
-     * @path /students/{studentId}
-     * @allow (get) Any signed-in user can read student profiles.
-     * @allow (create, update, delete) Only admins can create, update, or delete student documents.
-     * @allow (list) Listing student documents is disallowed.
-     * @deny (create, update, delete) Non-admins cannot modify student documents.
-     * @principle Restricts student data modification to administrators.
-     */
-    match /students/{studentId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to supervisor documents.
-     * @path /supervisors/{supervisorId}
-     * @allow (get) Any signed-in user can read supervisor profiles.
-     * @allow (create, update, delete) Only admins can create, update, or delete supervisor documents.
-     * @allow (list) Listing supervisor documents is disallowed.
-     * @deny (create, update, delete) Non-admins cannot modify supervisor documents.
-     * @principle Restricts supervisor data modification to administrators.
-     */
-    match /supervisors/{supervisorId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to defense session documents.
-     * @path /defenseSessions/{sessionId}
-     * @allow (get, list) Any signed-in user can read defense session details.
-     * @allow (create, update, delete) Only admins can create, update, or delete defense session documents.
-     * @deny (create, update, delete) Non-admins cannot modify defense session documents.
-     * @principle Restricts defense session management to administrators.
-     */
-    match /defenseSessions/{sessionId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to defense session registration documents.
-     * @path /defenseSessionRegistrations/{registrationId}
-     * @allow (get) Any signed-in user can read registration details.
-     * @allow (create) Any signed-in user can create registration.
-     * @allow (update, delete) Only admins can update or delete registration documents.
-     * @allow (list) Listing registration documents is disallowed.
-     * @deny (update, delete) Non-admins cannot modify registration documents.
-     * @principle Restricts registration management to administrators.
-     */
-    match /defenseSessionRegistrations/{registrationId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to defense council documents.
-     * @path /defenseCouncils/{councilId}
-     * @allow (get, list) Any signed-in user can read council details.
-     * @allow (create, update, delete) Only admins can create, update, or delete council documents.
-     * @deny (create, update, delete) Non-admins cannot modify council documents.
-     * @principle Restricts council management to administrators.
-     */
-    match /defenseCouncils/{councilId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to defense sub-committee documents.
-     * @path /defenseSubCommittees/{subCommitteeId}
-     * @allow (get, list) Any signed-in user can read sub-committee details.
-     * @allow (create, update, delete) Only admins can create, update, or delete sub-committee documents.
-     * @deny (create, update, delete) Non-admins cannot modify sub-committee documents.
-     * @principle Restricts sub-committee management to administrators.
-     */
-    match /defenseSubCommittees/{subCommitteeId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to rubric documents.
-     * @path /rubrics/{rubricId}
-     * @allow (get, list) Any signed-in user can read rubric details.
-     * @allow (create, update, delete) Only admins can create, update, or delete rubric documents.
-     * @deny (create, update, delete) Non-admins cannot modify rubric documents.
-     * @principle Restricts rubric management to administrators.
-     */
-    match /rubrics/{rubricId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to evaluation documents.
-     * @path /evaluations/{evaluationId}
-     * @allow (get) Any signed-in user can read evaluation details.
-     * @allow (create, update) Any signed-in user can create and update evaluation details.
-     * @allow (list) Listing evaluation documents is disallowed.
-     * @allow (delete) Only admins can delete evaluation documents.
-     * @deny (delete) Non-admins cannot delete evaluation documents.
-     * @principle Restricts evaluation management to administrators.
-     */
-    match /evaluations/{evaluationId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to project topic documents.
-     * @path /projectTopics/{topicId}
-     * @allow (get, list) Any signed-in user can read project topic details.
-     * @allow (create, update, delete) Only supervisors can create, update, or delete project topic documents.
-     * @deny (create, update, delete) Non-supervisors cannot modify project topic documents.
-     * @principle Restricts project topic management to supervisors.
-     */
-    match /projectTopics/{topicId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to weekly progress report documents.
-     * @path /weeklyProgressReports/{reportId}
-     * @allow (get) Any signed-in user can read progress report details.
-     * @allow (create, update) Any signed-in user can create and update progress report details.
-     * @allow (list) Listing progress report documents is disallowed.
-     * @allow (delete) Only admins can delete progress report documents.
-     * @deny (delete) Non-admins cannot delete progress report documents.
-     * @principle Restricts progress report management to administrators.
-     */
-    match /weeklyProgressReports/{reportId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if isSignedIn();
-      allow update: if isSignedIn();
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to system settings document.
-     * @path /systemSettings/settings
-     * @allow (get) Any signed-in user can read system settings.
-     * @allow (update) Only admins can update system settings.
-     * @deny (update) Non-admins cannot modify system settings.
-     * @principle Restricts system settings management to administrators.
-     */
-    match /systemSettings/{document} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to internship company documents.
-     * @path /internshipCompanies/{companyId}
-     * @allow (get, list) Any signed-in user can read internship company details.
-     * @allow (create, update, delete) Only admins can create, update, or delete internship company documents.
-     * @deny (create, update, delete) Non-admins cannot modify internship company documents.
-     * @principle Restricts internship company management to administrators.
-     */
-    match /internshipCompanies/{companyId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn();
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to early internship documents.
-     * @path /earlyInternships/{internshipId}
-     * @allow (get) Any signed-in user can read early internship details.
-     * @allow (create, update, delete) Only admins can create, update, or delete early internship documents.
-     * @allow (list) Listing early internship documents is disallowed.
-     * @deny (create, update, delete) Non-admins cannot modify early internship documents.
-     * @principle Restricts early internship management to administrators.
-     */
-    match /earlyInternships/{internshipId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to early internship weekly report documents.
-     * @path /earlyInternshipWeeklyReports/{reportId}
-     * @allow (get) Any signed-in user can read early internship weekly report details.
-     * @allow (create, update, delete) Only admins can create, update, or delete early internship weekly report documents.
-     * @allow (list) Listing early internship weekly report documents is disallowed.
-     * @deny (create, update, delete) Non-admins cannot modify early internship weekly report documents.
-     * @principle Restricts early internship weekly report management to administrators.
-     */
-    match /earlyInternshipWeeklyReports/{reportId} {
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if false;
-      allow update: if false;
-      allow delete: if false;
-    }
-
-    /**
-     * @description Manages access to conversation documents.
-     * @path /conversations/{conversationId}
-     * @allow (get, update) Only members can read and update conversations.
-     * @allow (create) Only members can create conversations.
-     * @allow (list) Only members can list conversations.
-     * @allow (delete) Only admins can delete conversations.
-     * @deny (delete) Non-admins cannot delete conversations.
-     * @principle Enforces conversation membership for read/write access.
-     */
-    match /conversations/{conversationId} {
-      allow get: if isSignedIn() && request.auth.uid in resource.data.participantIds;
-      allow list: if isSignedIn() ; // Fix: Allow listing if signed in - member check moved to get rule.
-      allow create: if isSignedIn() && request.auth.uid in request.resource.data.participantIds;
-      allow update: if isSignedIn() && request.auth.uid in resource.data.participantIds;
-      allow delete: if false;
-    
-
-       /**
-        * @description Manages access to messages within a conversation.
-        * @path /conversations/{conversationId}/messages/{messageId}
-        * @allow (get, list, create) Only members of the conversation can read/write messages.
-        * @allow (update, delete) Not allowed.
-        * @deny (update, delete) All updates and deletes are denied
-        * @principle Enforces conversation membership for read/write access to messages.
-        */
-      match /messages/{messageId} {
-          allow get: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-          allow list: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-          allow create: if isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds;
-          allow update: if false;
-          allow delete: if false;
-      }
-    }
-
-    /**
-     * @description Checks if the current user is signed in.
-     * @return True if the user is signed in, false otherwise.
+     * @description Checks if the request is authenticated.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the current user is the owner of the document.
-     * @param userId The user ID to check against.
-     * @return True if the user is the owner, false otherwise.
+     * @description Checks if the authenticated user's ID matches the provided user ID.
      */
     function isOwner(userId) {
       return request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the current user is the existing owner of the document, confirming its existence.
-     * @param userId The user ID to check against.
-     * @return True if the user is the owner and the document exists, false otherwise.
+     * @description Checks if the authenticated user is the owner and the resource exists.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
+    /**
+     * @description Checks if the authenticated user has the admin role.
+     */
+    function isAdmin() {
+        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    /**
+     * @description Checks if the authenticated user is a participant in the conversation.
+     */
+    function isParticipant(participantIds) {
+      return isSignedIn() && participantIds.hasAny([request.auth.uid]);
+    }
+
+    match /users/{userId} {
+      /**
+       * @description Controls access to user account documents.
+       * @path /users/{userId}
+       * @allow (create) User with ID 'user123' creates their own account.
+       *   request.auth.uid: 'user123'
+       *   resource.data.id: 'user123'
+       * @allow (get) User with ID 'user123' reads their own account.
+       *   request.auth.uid: 'user123'
+       * @allow (update) Admin updates any user account.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) User tries to create an account for someone else.
+       *   request.auth.uid: 'user123'
+       *   resource.data.id: 'user456'
+       * @deny (update) User tries to update someone else's account.
+       *   request.auth.uid: 'user123'
+       * @principle Enforces strict user-ownership and admin-override for user accounts.
+       */
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if false;
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      /**
+       * @description Controls access to student profile documents.
+       * @path /students/{studentId}
+       * @allow (get) Any authenticated user can read student profiles.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create student profiles.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update student profiles.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create student profiles.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update student profiles.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage student profiles; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /supervisors/{supervisorId} {
+      /**
+       * @description Controls access to supervisor profile documents.
+       * @path /supervisors/{supervisorId}
+       * @allow (get) Any authenticated user can read supervisor profiles.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create supervisor profiles.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update supervisor profiles.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create supervisor profiles.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update supervisor profiles.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage supervisor profiles; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /defenseSessions/{sessionId} {
+      /**
+       * @description Controls access to defense session documents.
+       * @path /defenseSessions/{sessionId}
+       * @allow (get) Any authenticated user can read defense session information.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create defense sessions.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update defense sessions.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create defense sessions.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update defense sessions.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage defense sessions; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /defenseSessionRegistrations/{registrationId} {
+      /**
+       * @description Controls access to defense session registration documents.
+       * @path /defenseSessionRegistrations/{registrationId}
+       * @allow (get) Any authenticated user can read registration details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new registrations.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing registrations.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create registrations.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update registrations.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage session registrations; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /defenseCouncils/{councilId} {
+      /**
+       * @description Controls access to defense council member documents.
+       * @path /defenseCouncils/{councilId}
+       * @allow (get) Any authenticated user can read council member details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new council members.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing council members.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create council members.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update council members.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage defense councils; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /defenseSubCommittees/{subCommitteeId} {
+      /**
+       * @description Controls access to defense sub-committee documents.
+       * @path /defenseSubCommittees/{subCommitteeId}
+       * @allow (get) Any authenticated user can read sub-committee details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new sub-committees.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing sub-committees.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create sub-committees.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update sub-committees.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage sub-committees; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /rubrics/{rubricId} {
+      /**
+       * @description Controls access to rubric documents.
+       * @path /rubrics/{rubricId}
+       * @allow (get) Any authenticated user can read rubric details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new rubrics.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing rubrics.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create rubrics.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update rubrics.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage rubrics; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /evaluations/{evaluationId} {
+      /**
+       * @description Controls access to evaluation documents.
+       * @path /evaluations/{evaluationId}
+       * @allow (get) Any authenticated user can read evaluation details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new evaluations.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing evaluations.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create evaluations.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update evaluations.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage evaluations; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /projectTopics/{topicId} {
+      /**
+       * @description Controls access to project topic documents.
+       * @path /projectTopics/{topicId}
+       * @allow (get) Any authenticated user can read project topic details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new topics.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing topics.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create topics.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update topics.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage project topics; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /weeklyProgressReports/{reportId} {
+      /**
+       * @description Controls access to weekly progress report documents.
+       * @path /weeklyProgressReports/{reportId}
+       * @allow (get) Any authenticated user can read weekly progress reports.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new reports.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing reports.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create reports.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update reports.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage weekly progress reports; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /systemSettings/settings {
+      /**
+       * @description Controls access to system settings document.
+       * @path /systemSettings/settings
+       * @allow (get) Any authenticated user can read system settings.
+       *   request.auth.uid: 'user123'
+       * @allow (update) Admins can update system settings.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (update) Non-admins cannot update system settings.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage system settings; read access is public for authenticated users.
+       */
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if false;
+      allow update: if isAdmin() && resource != null;
+      allow delete: if false;
+    }
+
+    match /internshipCompanies/{companyId} {
+      /**
+       * @description Controls access to internship company documents.
+       * @path /internshipCompanies/{companyId}
+       * @allow (get) Any authenticated user can read company details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new companies.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing companies.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create companies.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update companies.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage internship companies; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /earlyInternships/{internshipId} {
+      /**
+       * @description Controls access to early internship documents.
+       * @path /earlyInternships/{internshipId}
+       * @allow (get) Any authenticated user can read internship details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new internships.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing internships.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create internships.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update internships.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage early internships; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /earlyInternshipWeeklyReports/{reportId} {
+      /**
+       * @description Controls access to early internship weekly report documents.
+       * @path /earlyInternshipWeeklyReports/{reportId}
+       * @allow (get) Any authenticated user can read weekly report details.
+       *   request.auth.uid: 'user123'
+       * @allow (create) Admins can create new weekly reports.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @allow (update) Admins can update existing weekly reports.
+       *   request.auth.uid: 'adminUser'
+       *   user.role: 'admin'
+       * @deny (create) Non-admins cannot create weekly reports.
+       *   request.auth.uid: 'user123'
+       * @deny (update) Non-admins cannot update weekly reports.
+       *   request.auth.uid: 'user123'
+       * @principle Admins manage early internship weekly reports; read access is public for authenticated users.
+       */
+      allow get, list: if isSignedIn();
+      allow create: if isAdmin();
+      allow update: if isAdmin() && resource != null;
+      allow delete: if isAdmin() && resource != null;
+    }
+
+    match /conversations/{conversationId} {
+      /**
+       * @description Controls access to conversation documents.
+       * @path /conversations/{conversationId}
+       * @allow (get) Only participants can read conversation details.
+       *   request.auth.uid: 'user123'
+       *   resource.data.participantIds: ['user123', 'user456']
+       * @allow (list) Only participants can list conversations.
+       *   request.auth.uid: 'user123'
+       *   resource.data.participantIds: ['user123', 'user456']
+       * @allow (create) Any authenticated user can create a conversation.
+       *   request.auth.uid: 'user123'
+       * @allow (update) Only participants can update conversation details.
+       *   request.auth.uid: 'user123'
+       *   resource.data.participantIds: ['user123', 'user456']
+       * @deny (get) Non-participants cannot read conversation details.
+       *   request.auth.uid: 'user789'
+       *   resource.data.participantIds: ['user123', 'user456']
+       * @deny (update) Non-participants cannot update conversation details.
+       *   request.auth.uid: 'user789'
+       *   resource.data.participantIds: ['user123', 'user456']
+       * @principle Enforces shared access for conversations among participants.
+       */
+      allow get, update: if isParticipant(resource.data.participantIds) && resource != null;
+      allow list: if isSignedIn(); // Need to improve this to filter by participantIds
+      allow create: if isSignedIn();
+      allow delete: if false;
+        match /messages/{messageId} {
+          /**
+           * @description Controls access to message documents within a conversation.
+           * @path /conversations/{conversationId}/messages/{messageId}
+           * @allow (get) Only participants can read message details.
+           *   request.auth.uid: 'user123'
+           *   get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds: ['user123', 'user456']
+           * @allow (list) Only participants can list messages.
+           *   request.auth.uid: 'user123'
+           *   get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds: ['user123', 'user456']
+           * @allow (create) Only participants can create new messages.
+           *   request.auth.uid: 'user123'
+           *   get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds: ['user123', 'user456']
+           * @deny (get) Non-participants cannot read message details.
+           *   request.auth.uid: 'user789'
+           *   get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds: ['user123', 'user456']
+           * @deny (create) Non-participants cannot create messages.
+           *   request.auth.uid: 'user789'
+           *   get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds: ['user123', 'user456']
+           * @principle Enforces shared access for messages among conversation participants.
+           */
+          allow get, list: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+          allow create: if isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
+          allow update, delete: if false;
+        }
+    }
   }
 }

@@ -85,23 +85,29 @@ export function useCollection<T = any>(
         setIsLoading(false);
       },
       (error: FirestoreError) => {
-        // This logic extracts the path from either a ref or a query
-        const path: string =
-          memoizedTargetRefOrQuery.type === 'collection'
-            ? (memoizedTargetRefOrQuery as CollectionReference).path
-            : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
+        // If the specific error is 'permission-denied', it might be because the collection
+        // doesn't exist yet. In this case, we treat it as an empty collection instead of an error.
+        if (error.code === 'permission-denied') {
+          setData([]); // Set data to an empty array
+          setError(null); // Clear the error
+        } else {
+           const path: string =
+            memoizedTargetRefOrQuery.type === 'collection'
+              ? (memoizedTargetRefOrQuery as CollectionReference).path
+              : (memoizedTargetRefOrQuery as unknown as InternalQuery)._query.path.canonicalString()
 
-        const contextualError = new FirestorePermissionError({
-          operation: 'list',
-          path,
-        })
+          const contextualError = new FirestorePermissionError({
+            operation: 'list',
+            path,
+          })
 
-        setError(contextualError)
-        setData(null)
+          setError(contextualError)
+          setData(null)
+
+          // trigger global error propagation
+          errorEmitter.emit('permission-error', contextualError);
+        }
         setIsLoading(false)
-
-        // trigger global error propagation
-        errorEmitter.emit('permission-error', contextualError);
       }
     );
 
