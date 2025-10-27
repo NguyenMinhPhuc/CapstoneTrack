@@ -1,9 +1,10 @@
+
 'use client';
 
 import type { User } from 'firebase/auth';
 import { MessageSquare, Send } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
-import { collection, query, orderBy, doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, query, orderBy, doc, updateDoc, writeBatch, arrayUnion } from 'firebase/firestore';
 import type { Message, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { ScrollArea } from './ui/scroll-area';
