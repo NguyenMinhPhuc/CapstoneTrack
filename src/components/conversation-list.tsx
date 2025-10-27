@@ -47,11 +47,20 @@ export function ConversationList({
     );
   }
 
+  // Handle case where collection doesn't exist or is empty
+  if (!conversations || conversations.length === 0) {
+    return (
+        <div className="flex flex-col items-center justify-center h-full text-center p-4">
+            <p className="text-sm text-muted-foreground">Chưa có hội thoại nào.</p>
+        </div>
+    );
+  }
+
+
   return (
     <ScrollArea className="flex-1">
       <div className="p-2 space-y-1">
-        {conversations && conversations.length > 0 ? (
-          conversations.map(convo => {
+        {conversations.map(convo => {
             const isUnread = convo.readBy && !convo.readBy.includes(currentUser.uid);
             return (
               <button
@@ -79,11 +88,7 @@ export function ConversationList({
               </button>
             );
           })
-        ) : (
-          <div className="text-center text-sm text-muted-foreground p-8">
-            Chưa có hội thoại nào.
-          </div>
-        )}
+        }
       </div>
     </ScrollArea>
   );
