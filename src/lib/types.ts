@@ -225,6 +225,10 @@ export type SystemSettings = {
     earlyInternshipGoalHours?: number;
     themePrimary?: string;
     themePrimaryForeground?: string;
+    themeBackground?: string;
+    themeForeground?: string;
+    themeAccent?: string;
+    themeAccentForeground?: string;
 }
 
 export type ProjectTopic = {

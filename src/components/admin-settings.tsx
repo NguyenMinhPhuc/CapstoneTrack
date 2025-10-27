@@ -6,7 +6,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Skeleton } from '@/components/ui/skeleton';
 import { useDoc, useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
 import { doc, setDoc } from 'firebase/firestore';
-import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import type { SystemSettings } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -19,10 +18,13 @@ import { useForm } from 'react-hook-form';
 import * as z from 'zod';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from './ui/form';
 
-
 const themeFormSchema = z.object({
   themePrimary: z.string().optional(),
   themePrimaryForeground: z.string().optional(),
+  themeBackground: z.string().optional(),
+  themeForeground: z.string().optional(),
+  themeAccent: z.string().optional(),
+  themeAccentForeground: z.string().optional(),
 });
 
 type ThemeFormData = z.infer<typeof themeFormSchema>;
@@ -38,8 +40,12 @@ export function AdminSettings() {
     const themeForm = useForm<ThemeFormData>({
       resolver: zodResolver(themeFormSchema),
       defaultValues: {
-        themePrimary: '',
-        themePrimaryForeground: '',
+        themePrimary: '#dc2626',
+        themePrimaryForeground: '#ffffff',
+        themeBackground: '#f9fafb',
+        themeForeground: '#0f172a',
+        themeAccent: '#facc15',
+        themeAccentForeground: '#1e293b',
       },
     });
 
@@ -49,8 +55,12 @@ export function AdminSettings() {
                 setGoalHours(settings.earlyInternshipGoalHours);
             }
             themeForm.reset({
-              themePrimary: settings.themePrimary || '',
-              themePrimaryForeground: settings.themePrimaryForeground || '',
+              themePrimary: settings.themePrimary || '#dc2626',
+              themePrimaryForeground: settings.themePrimaryForeground || '#ffffff',
+              themeBackground: settings.themeBackground || '#f9fafb',
+              themeForeground: settings.themeForeground || '#0f172a',
+              themeAccent: settings.themeAccent || '#facc15',
+              themeAccentForeground: settings.themeAccentForeground || '#1e293b',
             })
         }
     }, [settings, themeForm]);
@@ -97,6 +107,10 @@ export function AdminSettings() {
       const updateData = {
         themePrimary: values.themePrimary,
         themePrimaryForeground: values.themePrimaryForeground,
+        themeBackground: values.themeBackground,
+        themeForeground: values.themeForeground,
+        themeAccent: values.themeAccent,
+        themeAccentForeground: values.themeAccentForeground,
       };
 
       setDoc(settingsDocRef, updateData, { merge: true })
@@ -115,6 +129,31 @@ export function AdminSettings() {
           errorEmitter.emit('permission-error', contextualError);
         });
     };
+    
+    const ColorPickerField = ({ name, label }: { name: keyof ThemeFormData, label: string }) => (
+      <FormField
+        control={themeForm.control}
+        name={name}
+        render={({ field }) => (
+          <FormItem>
+            <FormLabel>{label}</FormLabel>
+            <FormControl>
+              <div className="flex items-center gap-2">
+                <Input type="color" {...field} className="p-1 h-10 w-14" />
+                <Input
+                  type="text"
+                  value={field.value}
+                  onChange={field.onChange}
+                  className="w-full"
+                />
+              </div>
+            </FormControl>
+            <FormMessage />
+          </FormItem>
+        )}
+      />
+    );
+
 
     if (isLoading) {
         return (
@@ -137,39 +176,28 @@ export function AdminSettings() {
                 <CardHeader>
                     <CardTitle>Cài đặt Giao diện</CardTitle>
                     <CardDescription>
-                        Tùy chỉnh màu sắc chủ đạo của ứng dụng. Nhập giá trị HSL (ví dụ: 231 48% 48%).
+                        Tùy chỉnh màu sắc chủ đạo của ứng dụng.
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Form {...themeForm}>
-                    <form onSubmit={themeForm.handleSubmit(onThemeSubmit)} className="space-y-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                           <FormField
-                              control={themeForm.control}
-                              name="themePrimary"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Màu chủ đạo (Primary)</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="ví dụ: 231 48% 48%" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
-                            <FormField
-                              control={themeForm.control}
-                              name="themePrimaryForeground"
-                              render={({ field }) => (
-                                <FormItem>
-                                  <FormLabel>Màu chữ trên màu chủ đạo</FormLabel>
-                                  <FormControl>
-                                    <Input placeholder="ví dụ: 0 0% 98%" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                                </FormItem>
-                              )}
-                            />
+                    <form onSubmit={themeForm.handleSubmit(onThemeSubmit)} className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-4 p-4 border rounded-lg">
+                                <h3 className="font-semibold">Màu Chủ đạo</h3>
+                                <ColorPickerField name="themePrimary" label="Màu chính" />
+                                <ColorPickerField name="themePrimaryForeground" label="Màu chữ" />
+                            </div>
+                            <div className="space-y-4 p-4 border rounded-lg">
+                                <h3 className="font-semibold">Màu Nền</h3>
+                                <ColorPickerField name="themeBackground" label="Màu chính" />
+                                <ColorPickerField name="themeForeground" label="Màu chữ" />
+                            </div>
+                            <div className="space-y-4 p-4 border rounded-lg">
+                                <h3 className="font-semibold">Màu Nhấn</h3>
+                                <ColorPickerField name="themeAccent" label="Màu chính" />
+                                <ColorPickerField name="themeAccentForeground" label="Màu chữ" />
+                            </div>
                         </div>
                         <Button type="submit" disabled={themeForm.formState.isSubmitting}>Lưu Giao diện</Button>
                     </form>

@@ -688,6 +688,22 @@
         "themePrimaryForeground": {
             "type": "string",
             "description": "The HSL value for the primary theme's foreground text color."
+        },
+        "themeBackground": {
+            "type": "string",
+            "description": "The HSL value for the background theme color."
+        },
+        "themeForeground": {
+            "type": "string",
+            "description": "The HSL value for the theme's foreground text color."
+        },
+        "themeAccent": {
+            "type": "string",
+            "description": "The HSL value for the accent theme color."
+        },
+        "themeAccentForeground": {
+            "type": "string",
+            "description": "The HSL value for the theme's accent foreground text color."
         }
       }
     },
