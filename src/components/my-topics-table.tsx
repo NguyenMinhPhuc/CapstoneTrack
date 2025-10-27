@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,15 +18,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuPortal,
-  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle, Move } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
-import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration, WeeklyProgressReport } from '@/lib/types';
+import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddTopicForm } from './add-topic-form';
@@ -40,7 +35,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from './ui/select';
-import { Input } from './ui/input';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -73,6 +67,8 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Checkbox } from './ui/checkbox';
+import { MoveTopicsDialog } from './move-topics-dialog';
 
 
 interface MyTopicsTableProps {
@@ -144,10 +140,13 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
+  const [isMoveDialogOpen, setIsMoveDialogOpen] = useState(false);
 
   const [selectedTopic, setSelectedTopic] = useState<ProjectTopic | null>(null);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [sessionFilter, setSessionFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
 
   const topicsQuery = useMemoFirebase(
     () => query(collection(firestore, 'projectTopics'), where('supervisorId', '==', supervisorId)),
@@ -166,6 +165,10 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     [firestore, supervisorId]
   );
   const { data: allRegistrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
+  
+  useEffect(() => {
+    setSelectedRowIds([]);
+  }, [topics, sessionFilter, statusFilter]);
 
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
@@ -191,10 +194,34 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
 
   const filteredTopics = useMemo(() => {
     if (!topics) return [];
-    if (sessionFilter === 'all') return topics;
-    return topics.filter(topic => topic.sessionId === sessionFilter);
-  }, [topics, sessionFilter]);
+    
+    return topics.filter(topic => {
+      const sessionMatch = sessionFilter === 'all' || topic.sessionId === sessionFilter;
+      const statusMatch = statusFilter === 'all' || topic.status === statusFilter;
+      return sessionMatch && statusMatch;
+    });
+  }, [topics, sessionFilter, statusFilter]);
 
+  const handleSelectAll = (checked: boolean | 'indeterminate') => {
+    if (checked === true) {
+        setSelectedRowIds(filteredTopics?.map(t => t.id) || []);
+    } else {
+        setSelectedRowIds([]);
+    }
+  };
+
+  const handleRowSelect = (id: string, checked: boolean) => {
+    if (checked) {
+        setSelectedRowIds(prev => [...prev, id]);
+    } else {
+        setSelectedRowIds(prev => prev.filter(rowId => rowId !== id));
+    }
+  };
+  
+  const handleMoveFinished = () => {
+    setIsMoveDialogOpen(false);
+    setSelectedRowIds([]);
+  }
 
   const handleEditClick = (topic: ProjectTopic) => {
     setSelectedTopic(topic);
@@ -333,6 +360,9 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   
   const isLoading = isLoadingTopics || isLoadingSessions || isLoadingRegs;
 
+  const isAllSelected = filteredTopics && selectedRowIds.length > 0 && selectedRowIds.length === filteredTopics.length;
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredTopics || selectedRowIds.length < filteredTopics.length);
+
   if (isLoading) {
     return (
       <Card>
@@ -356,6 +386,17 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
               <CardDescription>Các đề tài bạn đã đề xuất. Nhấp vào số lượng ở cột "SL SV" để xác nhận đăng ký của sinh viên.</CardDescription>
             </div>
              <div className="flex items-center gap-2">
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="w-[180px]">
+                        <SelectValue placeholder="Lọc theo trạng thái" />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                        {Object.entries(statusLabel).map(([key, label]) => (
+                            <SelectItem key={key} value={key}>{label}</SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
                 <Select value={sessionFilter} onValueChange={setSessionFilter}>
                     <SelectTrigger className="w-[250px]">
                         <SelectValue placeholder="Lọc theo đợt báo cáo" />
@@ -385,11 +426,33 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                 </Dialog>
             </div>
           </div>
+          {selectedRowIds.length > 0 && (
+            <div className="flex items-center gap-2 mt-4">
+                <Dialog open={isMoveDialogOpen} onOpenChange={setIsMoveDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button variant="outline" size="sm">
+                            <Move className="mr-2 h-4 w-4" />
+                            Chuyển sang đợt khác ({selectedRowIds.length})
+                        </Button>
+                    </DialogTrigger>
+                    <MoveTopicsDialog 
+                        sessions={sessions || []}
+                        topicIds={selectedRowIds}
+                        onFinished={handleMoveFinished}
+                    />
+                </Dialog>
+            </div>
+          )}
         </CardHeader>
         <CardContent>
            <div className="border rounded-md">
                 <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
-                    <div className="col-span-1 text-center">STT</div>
+                    <div className="col-span-1 text-center">
+                         <Checkbox
+                            checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
+                            onCheckedChange={handleSelectAll}
+                        />
+                    </div>
                     <div className="col-span-4">Tên Đề tài</div>
                     <div className="col-span-2">Đợt báo cáo</div>
                     <div className="col-span-2">Lĩnh vực</div>
@@ -407,7 +470,13 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             <div className="flex items-center px-4 hover:bg-muted/50">
                                 <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
                                     <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
-                                        <div className="col-span-1 text-center">{index + 1}</div>
+                                        <div className="col-span-1 text-center">
+                                            <Checkbox
+                                                checked={selectedRowIds.includes(topic.id)}
+                                                onCheckedChange={(checked) => handleRowSelect(topic.id, !!checked)}
+                                                onClick={(e) => e.stopPropagation()}
+                                            />
+                                        </div>
                                         <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
                                         <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
                                         <div className="col-span-2 truncate">{topic.field}</div>
