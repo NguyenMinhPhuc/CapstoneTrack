@@ -695,7 +695,7 @@
         },
         "themeForeground": {
             "type": "string",
-            "description": "The theme's foreground text color."
+            "description": "The HSL value for the theme's foreground text color."
         },
         "themeAccent": {
             "type": "string",
@@ -703,7 +703,7 @@
         },
         "themeAccentForeground": {
             "type": "string",
-            "description": "The theme's accent foreground text color."
+            "description": "The HSL value for the theme's accent foreground text color."
         }
       }
     },
@@ -958,3 +958,5 @@
     }
   }
 }
+
+    
