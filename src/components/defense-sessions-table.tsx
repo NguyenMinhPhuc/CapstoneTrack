@@ -50,7 +50,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown, Copy } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { DefenseSession } from '@/lib/types';
@@ -108,6 +108,7 @@ export function DefenseSessionsTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<DefenseSession | null>(null);
+  const [sessionToCopy, setSessionToCopy] = useState<DefenseSession | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<DefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
@@ -218,6 +219,11 @@ export function DefenseSessionsTable() {
   const handleEditClick = (session: DefenseSession) => {
     setSelectedSession(session);
     setIsEditDialogOpen(true);
+  };
+
+  const handleCopyClick = (session: DefenseSession) => {
+    setSessionToCopy(session);
+    setIsAddDialogOpen(true);
   };
   
   const handleDeleteClick = (session: DefenseSession) => {
@@ -401,18 +407,17 @@ export function DefenseSessionsTable() {
                                 checked={statusFilter === 'ongoing'}
                                 onCheckedChange={() => setStatusFilter('ongoing')}
                             >
-                                {statusLabel.ongoing}
-                            </DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem
-                                checked={statusFilter === 'completed'}
-                                onCheckedChange={() => setStatusFilter('completed')}
-                            >
                                 {statusLabel.completed}
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
+                    setIsAddDialogOpen(isOpen);
+                    if (!isOpen) {
+                        setSessionToCopy(null); // Clear copy data when dialog closes
+                    }
+                }}>
                 <DialogTrigger asChild>
                     <Button className="w-full sm:w-auto">
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -420,7 +425,13 @@ export function DefenseSessionsTable() {
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
-                    <AddDefenseSessionForm onFinished={() => setIsAddDialogOpen(false)} />
+                    <AddDefenseSessionForm
+                        onFinished={() => {
+                            setIsAddDialogOpen(false);
+                            setSessionToCopy(null);
+                        }}
+                        sessionToCopy={sessionToCopy}
+                     />
                 </DialogContent>
                 </Dialog>
             </div>
@@ -490,6 +501,10 @@ export function DefenseSessionsTable() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditClick(session)}>Sửa</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopyClick(session)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Sao chép
+                          </DropdownMenuItem>
                            <DropdownMenuSub>
                             <DropdownMenuSubTrigger>
                               <span>Thay đổi trạng thái</span>

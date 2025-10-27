@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,12 +20,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirestore, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { CalendarIcon, GraduationCap, Briefcase, UserCheck, Building, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, addMonths, startOfMonth, getDay, addDays } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Rubric, InternshipCompany } from '@/lib/types';
+import type { Rubric, InternshipCompany, DefenseSession } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
@@ -57,9 +58,10 @@ const formSchema = z.object({
 
 interface AddDefenseSessionFormProps {
   onFinished: () => void;
+  sessionToCopy?: DefenseSession | null;
 }
 
-export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps) {
+export function AddDefenseSessionForm({ onFinished, sessionToCopy }: AddDefenseSessionFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -68,22 +70,35 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
 
   const companiesCollectionRef = useMemoFirebase(() => collection(firestore, 'internshipCompanies'), [firestore]);
   const { data: companies, isLoading: isLoadingCompanies } = useCollection<InternshipCompany>(companiesCollectionRef);
+  
+  const toDate = (timestamp: any): Date | undefined => {
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toDate();
+    }
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
 
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      sessionType: 'combined',
-      description: '',
-      zaloGroupLink: '',
-      companyIds: [],
-      councilGraduationRubricId: '',
-      councilInternshipRubricId: '',
-      supervisorGraduationRubricId: '',
-      companyInternshipRubricId: '',
-      graduationCouncilWeight: 80, // Default to 80%
-      internshipCouncilWeight: 50, // Default to 50%
+      name: sessionToCopy ? `${sessionToCopy.name} (Copy)` : '',
+      sessionType: sessionToCopy?.sessionType || 'combined',
+      description: sessionToCopy?.description || '',
+      zaloGroupLink: sessionToCopy?.zaloGroupLink || '',
+      companyIds: sessionToCopy?.companyIds || [],
+      councilGraduationRubricId: sessionToCopy?.councilGraduationRubricId || '',
+      councilInternshipRubricId: sessionToCopy?.councilInternshipRubricId || '',
+      supervisorGraduationRubricId: sessionToCopy?.supervisorGraduationRubricId || '',
+      companyInternshipRubricId: sessionToCopy?.companyInternshipRubricId || '',
+      graduationCouncilWeight: sessionToCopy?.graduationCouncilWeight ?? 80,
+      internshipCouncilWeight: sessionToCopy?.internshipCouncilWeight ?? 50,
+      startDate: sessionToCopy ? undefined : new Date(),
+      registrationDeadline: undefined,
+      expectedReportDate: undefined,
     },
   });
 
@@ -156,7 +171,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
         render={({ field }) => (
             <FormItem>
             <FormLabel className="flex items-center gap-2">{icon}{label}</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
+            <Select onValueChange={field.onChange} value={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
                 <FormControl>
                 <SelectTrigger>
                     <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
@@ -182,9 +197,9 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Tạo Đợt báo cáo mới</DialogTitle>
+        <DialogTitle>{sessionToCopy ? 'Sao chép Đợt báo cáo' : 'Tạo Đợt báo cáo mới'}</DialogTitle>
         <DialogDescription>
-            Điền thông tin chi tiết để tạo một đợt báo cáo mới.
+            {sessionToCopy ? `Tạo một bản sao của "${sessionToCopy.name}". Vui lòng cập nhật lại thời gian.` : 'Điền thông tin chi tiết để tạo một đợt báo cáo mới.'}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
