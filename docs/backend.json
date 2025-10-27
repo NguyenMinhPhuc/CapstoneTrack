@@ -695,7 +695,7 @@
         },
         "themeForeground": {
             "type": "string",
-            "description": "The HSL value for the theme's foreground text color."
+            "description": "The theme's foreground text color."
         },
         "themeAccent": {
             "type": "string",
@@ -703,7 +703,7 @@
         },
         "themeAccentForeground": {
             "type": "string",
-            "description": "The HSL value for the theme's accent foreground text color."
+            "description": "The theme's accent foreground text color."
         }
       }
     },
@@ -847,7 +847,7 @@
     ]
   },
   "firestore": {
-    "rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    match /{document=**} {\n      allow read, write: if request.auth != null;\n    }\n  }\n}\n\n",
+    "rules": "rules_version = '2';\nservice cloud.firestore {\n  match /databases/{database}/documents {\n    \n    /**\n     * =====================================\n     * 🚀 DEVELOPMENT MODE - FULL ACCESS\n     * =====================================\n     * ⚠️ CHỈ DÙNG KHI ĐANG PHÁT TRIỂN\n     * Toàn quyền cho mọi người (bao gồm cả anonymous).\n     * Khi lên production, PHẢI khóa lại!\n     */\n\n    match /{document=**} {\n      allow read, write: if true;\n    }\n  }\n}\n",
     "/users/{userId}": {
       "schema": {
         "$ref": "#/entities/UserAccount"
@@ -958,5 +958,3 @@
     }
   }
 }
-
-    
