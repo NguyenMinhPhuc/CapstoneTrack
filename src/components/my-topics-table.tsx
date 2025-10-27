@@ -20,7 +20,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle, Move } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle, Move, ChevronsUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
@@ -32,9 +32,7 @@ import { Badge } from './ui/badge';
 import {
   Select,
   SelectContent,
-  SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
@@ -72,6 +70,8 @@ import {
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Checkbox } from './ui/checkbox';
 import { MoveTopicsDialog } from './move-topics-dialog';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
 
 interface MyTopicsTableProps {
@@ -150,6 +150,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   const [sessionFilter, setSessionFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [isSessionPopoverOpen, setIsSessionPopoverOpen] = useState(false);
+
 
   const topicsQuery = useMemoFirebase(
     () => query(collection(firestore, 'projectTopics'), where('supervisorId', '==', supervisorId)),
@@ -410,38 +412,61 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         ))}
                     </SelectContent>
                 </Select>
-                <Select value={sessionFilter} onValueChange={setSessionFilter}>
-                    <SelectTrigger className="w-[250px]">
-                        <SelectValue placeholder="Lọc theo đợt báo cáo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tất cả các đợt</SelectItem>
-                        {groupedSessions.ongoing?.length > 0 && (
-                            <SelectGroup>
-                                <SelectLabel>Đang hoạt động</SelectLabel>
-                                {groupedSessions.ongoing.map(session => (
-                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        )}
-                         {groupedSessions.upcoming?.length > 0 && (
-                            <SelectGroup>
-                                <SelectLabel>Sắp diễn ra</SelectLabel>
-                                {groupedSessions.upcoming.map(session => (
-                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        )}
-                         {groupedSessions.completed?.length > 0 && (
-                            <SelectGroup>
-                                <SelectLabel>Đã hoàn thành</SelectLabel>
-                                {groupedSessions.completed.map(session => (
-                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        )}
-                    </SelectContent>
-                </Select>
+                 <Popover open={isSessionPopoverOpen} onOpenChange={setIsSessionPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isSessionPopoverOpen}
+                            className="w-[250px] justify-between"
+                        >
+                            {sessionFilter === 'all'
+                                ? "Tất cả các đợt"
+                                : sessionMap.get(sessionFilter) || "Chọn đợt..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[250px] p-0">
+                        <Command>
+                            <CommandInput placeholder="Tìm đợt báo cáo..." />
+                            <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                            <CommandList>
+                                <CommandGroup>
+                                    <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                            setSessionFilter('all');
+                                            setIsSessionPopoverOpen(false);
+                                        }}
+                                    >
+                                        <Check className={cn("mr-2 h-4 w-4", sessionFilter === 'all' ? "opacity-100" : "opacity-0")} />
+                                        Tất cả các đợt
+                                    </CommandItem>
+                                    {Object.entries(groupedSessions).map(([status, sessionList]) => (
+                                        sessionList.length > 0 && (
+                                            <CommandGroup key={status} heading={statusLabel[status as keyof typeof statusLabel] || status}>
+                                                {sessionList.map(session => (
+                                                    <CommandItem
+                                                        key={session.id}
+                                                        value={session.name}
+                                                        onSelect={() => {
+                                                            setSessionFilter(session.id);
+                                                            setIsSessionPopoverOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", sessionFilter === session.id ? "opacity-100" : "opacity-0")} />
+                                                        {session.name}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
+
                 <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                 <DialogTrigger asChild>
                     <Button>

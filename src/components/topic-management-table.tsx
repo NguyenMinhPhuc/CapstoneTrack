@@ -24,7 +24,7 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Book, Target, CheckCircle, AlertTriangle } from 'lucide-react';
+import { MoreHorizontal, Search, Book, Target, CheckCircle, AlertTriangle, ChevronsUpDown, Check } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc, query } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession } from '@/lib/types';
@@ -37,8 +37,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  SelectGroup,
-  SelectLabel,
 } from '@/components/ui/select';
 import { Input } from './ui/input';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
@@ -46,8 +44,11 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from './ui/card';
 import { RejectTopicDialog } from './reject-topic-dialog';
-import { Dialog } from './ui/dialog';
+import { Dialog, DialogContent } from './ui/dialog';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { cn } from '@/lib/utils';
 
 const statusLabel: Record<ProjectTopic['status'], string> = {
   pending: 'Chờ duyệt',
@@ -71,6 +72,7 @@ export function TopicManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [topicToReject, setTopicToReject] = useState<ProjectTopic | null>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isSessionPopoverOpen, setIsSessionPopoverOpen] = useState(false);
 
   const topicsQuery = useMemoFirebase(
     () => query(collection(firestore, 'projectTopics')),
@@ -194,38 +196,60 @@ export function TopicManagementTable() {
                         ))}
                     </SelectContent>
                 </Select>
-                <Select value={sessionFilter} onValueChange={setSessionFilter}>
-                    <SelectTrigger className="w-[250px]">
-                        <SelectValue placeholder="Lọc theo đợt báo cáo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="all">Tất cả các đợt</SelectItem>
-                        {groupedSessions.ongoing?.length > 0 && (
-                            <SelectGroup>
-                                <SelectLabel>Đang hoạt động</SelectLabel>
-                                {groupedSessions.ongoing.map(session => (
-                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        )}
-                         {groupedSessions.upcoming?.length > 0 && (
-                            <SelectGroup>
-                                <SelectLabel>Sắp diễn ra</SelectLabel>
-                                {groupedSessions.upcoming.map(session => (
-                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        )}
-                         {groupedSessions.completed?.length > 0 && (
-                            <SelectGroup>
-                                <SelectLabel>Đã hoàn thành</SelectLabel>
-                                {groupedSessions.completed.map(session => (
-                                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                                ))}
-                            </SelectGroup>
-                        )}
-                    </SelectContent>
-                </Select>
+                 <Popover open={isSessionPopoverOpen} onOpenChange={setIsSessionPopoverOpen}>
+                    <PopoverTrigger asChild>
+                        <Button
+                            variant="outline"
+                            role="combobox"
+                            aria-expanded={isSessionPopoverOpen}
+                            className="w-[250px] justify-between"
+                        >
+                            {sessionFilter === 'all'
+                                ? "Tất cả các đợt"
+                                : sessionMap.get(sessionFilter) || "Chọn đợt..."}
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[250px] p-0">
+                        <Command>
+                            <CommandInput placeholder="Tìm đợt báo cáo..." />
+                            <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                            <CommandList>
+                                <CommandGroup>
+                                    <CommandItem
+                                        value="all"
+                                        onSelect={() => {
+                                            setSessionFilter('all');
+                                            setIsSessionPopoverOpen(false);
+                                        }}
+                                    >
+                                        <Check className={cn("mr-2 h-4 w-4", sessionFilter === 'all' ? "opacity-100" : "opacity-0")} />
+                                        Tất cả các đợt
+                                    </CommandItem>
+                                    {Object.entries(groupedSessions).map(([status, sessionList]) => (
+                                        sessionList.length > 0 && (
+                                            <CommandGroup key={status} heading={statusLabel[status as keyof typeof statusLabel] || status}>
+                                                {sessionList.map(session => (
+                                                    <CommandItem
+                                                        key={session.id}
+                                                        value={session.name}
+                                                        onSelect={() => {
+                                                            setSessionFilter(session.id);
+                                                            setIsSessionPopoverOpen(false);
+                                                        }}
+                                                    >
+                                                        <Check className={cn("mr-2 h-4 w-4", sessionFilter === session.id ? "opacity-100" : "opacity-0")} />
+                                                        {session.name}
+                                                    </CommandItem>
+                                                ))}
+                                            </CommandGroup>
+                                        )
+                                    ))}
+                                </CommandGroup>
+                            </CommandList>
+                        </Command>
+                    </PopoverContent>
+                </Popover>
             </div>
           </div>
         </CardHeader>
@@ -333,20 +357,22 @@ export function TopicManagementTable() {
       </Card>
       
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
-        {topicToReject && (
-          <RejectTopicDialog
-            topic={topicToReject}
-            onConfirm={(reason) => {
-              handleStatusChange(topicToReject.id, 'rejected', reason);
-              setIsRejectDialogOpen(false);
-              setTopicToReject(null);
-            }}
-            onCancel={() => {
-              setIsRejectDialogOpen(false);
-              setTopicToReject(null);
-            }}
-          />
-        )}
+        <DialogContent>
+            {topicToReject && (
+            <RejectTopicDialog
+                topic={topicToReject}
+                onConfirm={(reason) => {
+                handleStatusChange(topicToReject.id, 'rejected', reason);
+                setIsRejectDialogOpen(false);
+                setTopicToReject(null);
+                }}
+                onCancel={() => {
+                setIsRejectDialogOpen(false);
+                setTopicToReject(null);
+                }}
+            />
+            )}
+        </DialogContent>
       </Dialog>
     </div>
   );
