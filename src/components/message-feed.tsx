@@ -96,7 +96,7 @@ export function MessageFeed({ currentUser, conversationId }: MessageFeedProps) {
             id: messageRef.id,
             conversationId: conversationId,
             senderId: currentUser.uid,
-            senderName: currentUserData.displayName || currentUser.email || 'N/A',
+            senderName: currentUserData.displayName || currentUserData.email || 'N/A',
             content: newMessage,
             createdAt: new Date(),
         };

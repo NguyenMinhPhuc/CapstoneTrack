@@ -20,11 +20,11 @@ export type StudentProgress = {
 export type SystemUser = {
   id: string;
   email: string;
+  displayName?: string;
   role: 'admin' | 'supervisor' | 'student';
   status: 'active' | 'pending' | 'disabled';
   passwordInitialized?: boolean;
   createdAt: any; 
-  displayName?: string;
 };
 
 export type DefenseSession = {

@@ -154,7 +154,7 @@ export function UserManagementTable() {
     }
 
     filtered = filtered.filter(user => {
-      const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
+      const searchMatch = user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || (user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false);
       const roleMatch = roleFilter === 'all' || user.role === roleFilter;
       const statusMatch = statusFilter === 'all' || user.status === statusFilter;
       return searchMatch && roleMatch && statusMatch;

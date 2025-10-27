@@ -17,12 +17,12 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Student } from '@/lib/types';
+import type { Student, SystemUser } from '@/lib/types';
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -87,6 +87,9 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
       // 1. Create Auth user
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
       const user = userCredential.user;
+      
+      const displayName = `${values.firstName} ${values.lastName}`.trim();
+      await updateProfile(user, { displayName });
 
       // 2. Send password reset email
       await sendPasswordResetEmail(tempAuth, values.email);
@@ -95,9 +98,10 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
 
       // 3. Create 'users' collection document
       const userDocRef = doc(firestore, 'users', user.uid);
-      const userData = {
+      const userData: Partial<SystemUser> = {
         id: user.uid,
         email: values.email,
+        displayName: displayName,
         role: 'student' as const,
         status: 'active' as const,
         createdAt: serverTimestamp(),
@@ -107,7 +111,7 @@ export function AddStudentForm({ onFinished }: AddStudentFormProps) {
 
       // 4. Create 'students' collection document
       const studentDocRef = doc(firestore, 'students', user.uid);
-      const studentData = {
+      const studentData: Partial<Student> = {
         ...values,
         id: user.uid,
         userId: user.uid,

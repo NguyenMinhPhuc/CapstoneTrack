@@ -81,7 +81,7 @@ export function NewConversationForm({ currentUser, onFinished }: NewConversation
       id: messageRef.id,
       conversationId: conversationRef.id,
       senderId: currentUser.uid,
-      senderName: currentUserData.displayName || currentUser.email || 'N/A',
+      senderName: currentUserData.displayName || currentUserData.email || 'N/A',
       content: values.message,
       createdAt: new Date(),
     };

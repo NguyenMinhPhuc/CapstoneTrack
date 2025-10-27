@@ -45,7 +45,7 @@ export default function ProfilePage() {
           <CardHeader>
             <CardTitle>Hồ sơ cá nhân</CardTitle>
             <CardDescription>
-              Quản lý thông tin cá nhân của bạn. Email không thể thay đổi tại đây.
+              Quản lý thông tin cá nhân và tên hiển thị của bạn.
             </CardDescription>
           </CardHeader>
           <CardContent>

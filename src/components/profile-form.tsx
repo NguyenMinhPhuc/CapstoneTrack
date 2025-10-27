@@ -23,8 +23,7 @@ import { Skeleton } from './ui/skeleton';
 import { updateProfile } from 'firebase/auth';
 
 const formSchema = z.object({
-  firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
-  lastName: z.string().min(1, { message: 'Tên là bắt buộc.' }),
+  displayName: z.string().min(3, { message: 'Tên hiển thị phải có ít nhất 3 ký tự.' }),
 });
 
 interface ProfileFormProps {
@@ -47,8 +46,7 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      displayName: '',
     },
   });
   
@@ -86,41 +84,24 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
 
 
   useEffect(() => {
-    if (profileData) {
+    if (userData) {
       form.reset({
-        firstName: profileData.firstName || '',
-        lastName: profileData.lastName || '',
+        displayName: userData.displayName || '',
       });
     }
-  }, [profileData, form]);
+  }, [userData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!profileDocRef) {
-        toast({
-            variant: 'destructive',
-            title: 'Lỗi',
-            description: 'Không thể cập nhật hồ sơ cho vai trò admin.',
-        });
-        return;
-    }
-    
-    const displayName = `${values.firstName} ${values.lastName}`.trim();
     
     try {
         const batch = writeBatch(firestore);
         
-        // Update the profile document (student/supervisor)
-        batch.update(profileDocRef, {
-            firstName: values.firstName,
-            lastName: values.lastName,
-        });
-
         // Update the users document
         const userDocRef = doc(firestore, 'users', user.uid);
-        batch.update(userDocRef, { displayName: displayName });
+        batch.update(userDocRef, { displayName: values.displayName });
 
         // Update the auth user profile
-        await updateProfile(user, { displayName: displayName });
+        await updateProfile(user, { displayName: values.displayName });
 
         await batch.commit();
 
@@ -151,40 +132,21 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {userData.role !== 'admin' ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Họ</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Nguyễn" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Tên</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Văn A" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-        ) : (
-             <p className="text-sm text-muted-foreground">Không có thông tin hồ sơ (Họ, Tên) cho tài khoản Quản trị viên.</p>
-        )}
+        <FormField
+          control={form.control}
+          name="displayName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên hiển thị</FormLabel>
+              <FormControl>
+                <Input placeholder="Nhập tên bạn muốn hiển thị" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
        
-        <Button type="submit" disabled={form.formState.isSubmitting || userData.role === 'admin'}>
+        <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
         </Button>
       </form>
