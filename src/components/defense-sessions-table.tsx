@@ -49,7 +49,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { DefenseSession } from '@/lib/types';
@@ -63,6 +63,10 @@ import { EditDefenseSessionForm } from './edit-defense-session-form';
 
 type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
+
+type SortKey = 'name' | 'startDate' | 'registrationDeadline' | 'status';
+type SortDirection = 'asc' | 'desc';
+
 
 const statusLabel: Record<SessionStatus, SessionStatusLabel> = {
   upcoming: 'Sắp diễn ra',
@@ -87,6 +91,8 @@ export function DefenseSessionsTable() {
   const [sessionToDelete, setSessionToDelete] = useState<DefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'startDate', direction: 'desc' });
+
 
   const sessionsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -113,14 +119,63 @@ export function DefenseSessionsTable() {
     }, stats);
   }, [sessions]);
 
+    const toDate = (timestamp: any): Date | undefined => {
+        if (!timestamp) return undefined;
+        if (timestamp && typeof timestamp.toDate === 'function') {
+            return timestamp.toDate();
+        }
+        return timestamp;
+    };
+
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
-    return sessions.filter(session => {
+    let sortableSessions = [...sessions];
+    
+    // Sorting logic
+    if (sortConfig !== null) {
+      sortableSessions.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === 'startDate' || sortConfig.key === 'registrationDeadline') {
+            aValue = toDate(a[sortConfig.key])?.getTime() || 0;
+            bValue = toDate(b[sortConfig.key])?.getTime() || 0;
+        } else {
+            aValue = a[sortConfig.key] ?? '';
+            bValue = b[sortConfig.key] ?? '';
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableSessions.filter(session => {
         const searchMatch = session.name.toLowerCase().includes(searchTerm.toLowerCase());
         const statusMatch = statusFilter === 'all' || session.status === statusFilter;
         return searchMatch && statusMatch;
     });
-  }, [sessions, searchTerm, statusFilter]);
+  }, [sessions, searchTerm, statusFilter, sortConfig]);
+
+    const requestSort = (key: SortKey) => {
+        let direction: SortDirection = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key: SortKey) => {
+        if (!sortConfig || sortConfig.key !== key) {
+            return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+        }
+        return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+    };
   
   const handleEditClick = (session: DefenseSession) => {
     setSelectedSession(session);
@@ -325,10 +380,26 @@ export function DefenseSessionsTable() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">STT</TableHead>
-                <TableHead>Tên đợt</TableHead>
-                <TableHead>Ngày bắt đầu</TableHead>
-                <TableHead>Hạn đăng ký</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('name')} className="px-0 hover:bg-transparent">
+                        Tên đợt {getSortIcon('name')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('startDate')} className="px-0 hover:bg-transparent">
+                        Ngày bắt đầu {getSortIcon('startDate')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('registrationDeadline')} className="px-0 hover:bg-transparent">
+                        Hạn đăng ký {getSortIcon('registrationDeadline')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('status')} className="px-0 hover:bg-transparent">
+                        Trạng thái {getSortIcon('status')}
+                    </Button>
+                </TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
@@ -422,5 +493,3 @@ export function DefenseSessionsTable() {
     </div>
   );
 }
-
-    
