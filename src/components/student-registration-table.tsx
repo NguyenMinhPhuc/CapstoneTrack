@@ -50,7 +50,7 @@ import {
 import { MoreHorizontal, PlusCircle, Search, Users, Move, Edit, Star, XCircle, RefreshCw, GitMerge, UserCheck, Briefcase, GraduationCap, Trash2, FileDown, ArrowUpDown } from 'lucide-react';
 import { useFirestore, errorEmitter, FirestorePermissionError, useCollection, useMemoFirebase } from '@/firebase';
 import { collection, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, StudentWithRegistrationDetails, DefenseSubCommittee } from '@/lib/types';
+import type { DefenseRegistration, StudentWithRegistrationDetails, DefenseSubCommittee, DefenseSession } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { useToast } from '@/hooks/use-toast';
 import { AddStudentRegistrationForm } from './add-student-registration-form';
@@ -84,6 +84,7 @@ import { cn } from '@/lib/utils';
 
 interface StudentRegistrationTableProps {
   sessionId: string;
+  sessionType: DefenseSession['sessionType'];
   initialData: StudentWithRegistrationDetails[] | null;
   isLoading: boolean;
 }
@@ -113,7 +114,7 @@ const registrationStatusVariant: Record<DefenseRegistration['graduationStatus'],
 const UNASSIGNED_VALUE = "__UNASSIGNED__";
 
 
-export function StudentRegistrationTable({ sessionId, initialData, isLoading }: StudentRegistrationTableProps) {
+export function StudentRegistrationTable({ sessionId, sessionType, initialData, isLoading }: StudentRegistrationTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -611,7 +612,7 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                             Thêm theo lớp
                         </Button>
                     </DialogTrigger>
-                    <AddStudentsByClassDialog sessionId={sessionId} existingRegistrations={initialData || []} onFinished={() => setIsAddByClassDialogOpen(false)} />
+                    <AddStudentsByClassDialog sessionId={sessionId} sessionType={sessionType} existingRegistrations={initialData || []} onFinished={() => setIsAddByClassDialogOpen(false)} />
                 </Dialog>
                   <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                   <DialogTrigger asChild>
@@ -628,8 +629,9 @@ export function StudentRegistrationTable({ sessionId, initialData, isLoading }: 
                       </DialogDescription>
                       </DialogHeader>
                       <AddStudentRegistrationForm
-                      sessionId={sessionId}
-                      onFinished={() => setIsAddDialogOpen(false)}
+                        sessionId={sessionId}
+                        sessionType={sessionType}
+                        onFinished={() => setIsAddDialogOpen(false)}
                       />
                   </DialogContent>
                   </Dialog>

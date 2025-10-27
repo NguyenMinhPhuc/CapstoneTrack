@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -22,7 +23,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, writeBatch, serverTimestamp, doc } from 'firebase/firestore';
-import type { Student, DefenseRegistration } from '@/lib/types';
+import type { Student, DefenseRegistration, DefenseSession } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 import { Info } from 'lucide-react';
@@ -32,6 +33,7 @@ import { cn } from '@/lib/utils';
 
 interface AddStudentsByClassDialogProps {
   sessionId: string;
+  sessionType: DefenseSession['sessionType'];
   existingRegistrations: DefenseRegistration[];
   onFinished: () => void;
 }
@@ -53,6 +55,7 @@ const statusColorClass: Record<Student['status'], string> = {
 
 export function AddStudentsByClassDialog({
   sessionId,
+  sessionType,
   existingRegistrations,
   onFinished,
 }: AddStudentsByClassDialogProps) {
@@ -125,7 +128,8 @@ export function AddStudentsByClassDialog({
         const studentData = allStudents?.find(s => s.id === studentDocId);
         if (studentData) {
             const newRegistrationRef = doc(registrationsCollectionRef);
-            batch.set(newRegistrationRef, {
+            
+            const newRegistrationData: any = {
                 sessionId: sessionId,
                 studentDocId: studentData.id,
                 studentId: studentData.studentId,
@@ -133,9 +137,20 @@ export function AddStudentsByClassDialog({
                 projectTitle: '',
                 supervisorName: '',
                 registrationDate: serverTimestamp(),
-                graduationStatus: 'not_reporting',
-                internshipStatus: 'not_reporting',
-            });
+            };
+
+            if (sessionType === 'graduation') {
+                newRegistrationData.graduationStatus = 'reporting';
+                newRegistrationData.internshipStatus = 'not_reporting';
+            } else if (sessionType === 'internship') {
+                newRegistrationData.graduationStatus = 'not_reporting';
+                newRegistrationData.internshipStatus = 'reporting';
+            } else { // combined
+                newRegistrationData.graduationStatus = 'reporting';
+                newRegistrationData.internshipStatus = 'reporting';
+            }
+
+            batch.set(newRegistrationRef, newRegistrationData);
         }
     });
 

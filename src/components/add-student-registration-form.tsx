@@ -18,7 +18,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
-import type { Student, Supervisor } from '@/lib/types';
+import type { Student, Supervisor, DefenseSession } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { SupervisorCombobox } from './supervisor-combobox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -37,10 +37,11 @@ const formSchema = z.object({
 
 interface AddStudentRegistrationFormProps {
   sessionId: string;
+  sessionType: DefenseSession['sessionType'];
   onFinished: () => void;
 }
 
-export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudentRegistrationFormProps) {
+export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished }: AddStudentRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [students, setStudents] = useState<Student[]>([]);
@@ -110,7 +111,7 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
     const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
     
-    const newRegistrationData = {
+    const newRegistrationData: any = {
       sessionId: sessionId,
       studentDocId: selectedStudent.id,
       studentId: selectedStudent.studentId,
@@ -119,9 +120,19 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       supervisorId: supervisorIdValue,
       supervisorName: supervisorNameValue,
       registrationDate: serverTimestamp(),
-      graduationStatus: 'reporting' as const,
-      internshipStatus: 'not_reporting' as const, // Default to not reporting for internship
     };
+    
+    if (sessionType === 'graduation') {
+        newRegistrationData.graduationStatus = 'reporting';
+        newRegistrationData.internshipStatus = 'not_reporting';
+    } else if (sessionType === 'internship') {
+        newRegistrationData.graduationStatus = 'not_reporting';
+        newRegistrationData.internshipStatus = 'reporting';
+    } else { // combined
+        newRegistrationData.graduationStatus = 'reporting';
+        newRegistrationData.internshipStatus = 'reporting';
+    }
+
 
     try {
         await addDoc(registrationsCollectionRef, newRegistrationData);
