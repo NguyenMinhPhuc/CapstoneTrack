@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Table,
   TableBody,
@@ -31,6 +31,13 @@ import type { DefenseRegistration, GraduationDefenseSession } from "@/lib/types"
 import { Skeleton } from './ui/skeleton';
 import Link from 'next/link';
 import { Button } from './ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
   not_submitted: 'outline',
@@ -49,6 +56,7 @@ const proposalStatusLabel: Record<string, string> = {
 export function SupervisorDashboardTable() {
   const { user } = useUser();
   const firestore = useFirestore();
+  const [selectedSessionId, setSelectedSessionId] = useState('all');
 
   const sessionsQuery = useMemoFirebase(
     () => query(collection(firestore, 'graduationDefenseSessions'), where('status', '==', 'ongoing')),
@@ -58,31 +66,48 @@ export function SupervisorDashboardTable() {
 
   const registrationsQuery = useMemoFirebase(() => {
     if (!user || !ongoingSessions || ongoingSessions.length === 0) return null;
+    
     const ongoingSessionIds = ongoingSessions.map(s => s.id);
-    return query(
+    let q = query(
       collection(firestore, 'defenseRegistrations'),
       where('supervisorId', '==', user.uid),
       where('sessionId', 'in', ongoingSessionIds),
       where('graduationStatus', '==', 'reporting')
     );
-  }, [firestore, user, ongoingSessions]);
+
+    if (selectedSessionId !== 'all') {
+        q = query(q, where('sessionId', '==', selectedSessionId));
+    }
+
+    return q;
+  }, [firestore, user, ongoingSessions, selectedSessionId]);
   
   const { data: registrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
   
   const isLoading = isLoadingSessions || isLoadingRegs;
 
-  const sessionMap = useMemo(() => {
-    if (!ongoingSessions) return new Map();
-    return new Map(ongoingSessions.map(session => [session.id, session.name]));
-  }, [ongoingSessions]);
-
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Sinh viên đang hướng dẫn tốt nghiệp</CardTitle>
-        <CardDescription>
-          Danh sách sinh viên bạn đang hướng dẫn đồ án tốt nghiệp trong các đợt đang diễn ra.
-        </CardDescription>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+            <div>
+                <CardTitle>Sinh viên đang hướng dẫn tốt nghiệp</CardTitle>
+                <CardDescription>
+                Danh sách sinh viên bạn đang hướng dẫn đồ án tốt nghiệp trong các đợt đang diễn ra.
+                </CardDescription>
+            </div>
+            <Select value={selectedSessionId} onValueChange={setSelectedSessionId} disabled={isLoadingSessions}>
+              <SelectTrigger className="w-full sm:w-[250px]">
+                <SelectValue placeholder="Lọc theo đợt báo cáo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả đợt đang diễn ra</SelectItem>
+                {ongoingSessions?.map(session => (
+                  <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+        </div>
       </CardHeader>
       <CardContent>
         {isLoading ? (
@@ -101,7 +126,6 @@ export function SupervisorDashboardTable() {
               <TableRow>
                 <TableHead>Sinh viên</TableHead>
                 <TableHead>Đề tài</TableHead>
-                <TableHead>Đợt báo cáo</TableHead>
                 <TableHead>Trạng thái thuyết minh</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
@@ -115,7 +139,6 @@ export function SupervisorDashboardTable() {
                       <div className="text-sm text-muted-foreground">{reg.studentId}</div>
                     </TableCell>
                     <TableCell className="max-w-xs truncate">{reg.projectTitle}</TableCell>
-                    <TableCell>{sessionMap.get(reg.sessionId)}</TableCell>
                     <TableCell>
                       <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
                         {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
@@ -142,7 +165,7 @@ export function SupervisorDashboardTable() {
                 ))
               ) : (
                 <TableRow>
-                    <TableCell colSpan={5} className="text-center h-24">
+                    <TableCell colSpan={4} className="text-center h-24">
                         Bạn hiện không hướng dẫn sinh viên tốt nghiệp nào trong các đợt đang diễn ra.
                     </TableCell>
                 </TableRow>
