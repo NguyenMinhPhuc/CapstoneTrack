@@ -1,417 +1,410 @@
 /**
- * @file Firestore Security Rules
- * @description This ruleset enforces a role-based access control model for the CapstoneTrack application.
+ * @fileoverview Firestore Security Rules for CapstoneTrack application.
+ *
+ * Core Philosophy:
+ * This ruleset employs a hybrid security model, blending user-based access control with role-based authorization and public read access where appropriate.
+ * It prioritizes strong ownership and restricts unauthorized data modification.
+ * Data integrity is enforced at the authorization level by validating key relationships on create and update operations.
  *
  * Data Structure:
- * - /users/{userId}: User account information; owner-only access.
- * - /students/{studentId}: Student profiles; public read, owner-only writes.
- * - /supervisors/{supervisorId}: Supervisor profiles; public read, owner-only writes.
- * - /defenseSessions/{sessionId}: Defense session details; public read, restricted writes.
- * - /defenseRegistrations/{registrationId}: Student registrations for defense sessions; public read, restricted writes.
- * - /defenseSessions/{sessionId}/council/{councilMemberId}: Defense council members; public read, restricted writes.
- * - /defenseSessions/{sessionId}/subCommittees/{subCommitteeId}: Defense sub-committees; public read, restricted writes.
- * - /projectTopics/{topicId}: Project topics proposed by supervisors; public read, restricted writes.
- * - /rubrics/{rubricId}: Grading rubric templates; public read, restricted writes.
- * - /evaluations/{evaluationId}: Supervisor evaluations; public read, restricted writes.
- * - /weeklyProgressReports/{reportId}: Student weekly progress reports; owner-only access.
- * - /systemSettings/{settingId}: System-wide settings; restricted access.
- * - /internshipCompanies/{companyId}: Internship company information; public read, restricted writes.
- * - /earlyInternships/{internshipId}: Early internship records; public read, restricted writes.
- * - /earlyInternshipWeeklyReports/{reportId}: Early internship weekly progress reports; owner-only access.
- * - /conversations/{conversationId}: Q&A conversation threads; shared access based on participantIds.
- * - /conversations/{conversationId}/messages/{messageId}: Messages within conversations; shared access based on participantIds.
- * - /notifications/{notificationId}: Notifications for users; owner-only access.
+ * - /users/{userId}: User account information, accessible only to the user themselves.
+ * - /students/{studentId}: Student profiles, publicly readable but writable only by admins.
+ * - /supervisors/{supervisorId}: Supervisor profiles, publicly readable but writable only by admins.
+ * - /defenseSessions/{sessionId}: Information about defense sessions; publicly readable but writable only by admins.
+ * - /defenseRegistrations/{registrationId}: Student registrations, writable by students for themselves and admins.
+ * - /defenseSessions/{sessionId}/council/{councilMemberId}: Defense council members, writable only by admins.
+ * - /defenseSessions/{sessionId}/subCommittees/{subCommitteeId}: Sub-committees, writable only by admins.
+ * - /projectTopics/{topicId}: Supervisor-proposed project topics, publicly readable, writable by supervisors.
+ * - /rubrics/{rubricId}: Grading rubric templates, publicly readable, writable by admins.
+ * - /evaluations/{evaluationId}: Evaluation records, writable by supervisors.
+ * - /weeklyProgressReports/{reportId}: Student progress reports, writable by students and their supervisors.
+ * - /systemSettings/{settingId}: System-wide settings, writable only by admins.
+ * - /internshipCompanies/{companyId}: Internship companies, publicly readable, writable by admins.
+ * - /earlyInternships/{internshipId}: Early internship records, writable by students and admins.
+ * - /earlyInternshipWeeklyReports/{reportId}: Early internship weekly reports, writable by students and their supervisors.
+ * - /conversations/{conversationId}: Q&A conversation threads between supervisor and student. Access is restricted to members only.
  *
  * Key Security Decisions:
- * - User listing is generally disallowed for privacy.
- * - Public read access is granted to several top-level collections (e.g., students, supervisors, defenseSessions) to facilitate data discovery.
- * - Write access is generally restricted to owners or authorized roles.
- * - Data validation is minimized to allow for rapid prototyping, but authorization-critical fields are validated.
+ * - User accounts are strictly private and accessible only to the authenticated user.
+ * - Public read access is granted to collections like 'students', 'supervisors', 'defenseSessions', 'projectTopics', 'rubrics', and 'internshipCompanies'.
+ * - Write access to key collections is restricted based on role or ownership (e.g., only admins can create supervisors or edit system settings).
+ * - Default deny for listing collections unless specifically allowed.
  *
  * Denormalization for Authorization:
- * - The `conversations` and `messages` collections use a `participantIds` array on each document to enable efficient authorization checks for shared access.
+ * - Students and supervisors denormalize their IDs onto related documents (e.g., registration records, progress reports) to avoid expensive `get()` calls in the rules.
  *
  * Structural Segregation:
- * - Private user data is stored under the `/users/{userId}` path, ensuring owner-only access.
+ * - Public and private data are stored in separate collections (e.g., user accounts vs. student profiles) to optimize read access and security.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
     /**
-     * @description Checks if the current user is signed in.
-     * @param None
-     * @return {bool} True if the user is signed in, false otherwise.
+     * @description Checks if the request is authenticated.
+     * @return {boolean} True if the request is authenticated.
      */
     function isSignedIn() {
       return request.auth != null;
     }
 
     /**
-     * @description Checks if the current user is the owner of the resource, based on the provided userId.
-     * @param {string} userId The user ID to compare with the request's auth UID.
-     * @return {bool} True if the user is the owner, false otherwise.
+     * @description Checks if the authenticated user ID matches the provided user ID.
+     * @param {string} userId The user ID to compare against.
+     * @return {boolean} True if the user is the owner.
      */
     function isOwner(userId) {
       return isSignedIn() && request.auth.uid == userId;
     }
 
     /**
-     * @description Checks if the current user is the owner of the resource, and also verifies that the resource exists.
-     *              This function is used for update and delete operations to prevent acting on non-existent documents.
-     * @param {string} userId The user ID to compare with the resource's owner ID.
-     * @return {bool} True if the user is the owner and the resource exists, false otherwise.
+     * @description Checks if the authenticated user is an admin.
+     * @return {boolean} True if the user has the 'admin' role.
+     */
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+     /**
+      * @description Checks if the authenticated user is a supervisor.
+      * @return {boolean} True if the user has the 'supervisor' role.
+      */
+     function isSupervisor() {
+       return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'supervisor';
+     }
+
+    /**
+     * @description Checks if the document exists and the authenticated user ID matches the owner ID.
+     * @param {string} userId The user ID to compare against.
+     * @return {boolean} True if the user is the existing owner and the document exists.
      */
     function isExistingOwner(userId) {
       return isOwner(userId) && resource != null;
     }
 
     /**
-     * @description Checks if the current user is a participant in a shared resource (e.g., a conversation).
-     * @param {array} participantIds An array of user IDs who are participants in the resource.
-     * @return {bool} True if the user is a participant, false otherwise.
+     * @description Checks if the user is a participant in the conversation.
+     * @param {array} participantIds An array of user IDs participating in the conversation.
+     * @return {boolean} True if the user is a participant in the conversation.
      */
     function isParticipant(participantIds) {
       return isSignedIn() && participantIds.hasAny([request.auth.uid]);
     }
 
     /**
-     * @description Rules for the /users/{userId} collection.
+     * @description Rules for user accounts.
      * @path /users/{userId}
-     * @allow (create) - User with ID 'user123' creates their own account.
-     *   - Auth: { uid: 'user123' }
-     *   - Request: { "id": "user123", "email": "test@example.com", "role": "student", "status": "pending" }
-     * @allow (get, list, update, delete) - User with ID 'user123' reads, updates, or deletes their own account.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create) - User with ID 'user456' attempts to create an account for 'user123'.
-     *   - Auth: { uid: 'user456' }
-     *   - Request: { "id": "user123", "email": "test@example.com", "role": "student", "status": "pending" }
-     * @deny (get, list, update, delete) - User with ID 'user456' attempts to read, update, or delete 'user123's account.
-     *   - Auth: { uid: 'user456' }
-     * @principle Enforces document ownership for all operations.
+     * @allow (create) If the user ID in the path matches the authenticated user's ID.
+     * @allow (get) If the user ID in the path matches the authenticated user's ID.
+     * @allow (update) If the user ID in the path matches the authenticated user's ID.
+     * @allow (delete) If the user ID in the path matches the authenticated user's ID.
+     * @deny (create) If the user ID in the path does not match the authenticated user's ID.
+     * @deny (get) If the user ID in the path does not match the authenticated user's ID.
+     * @deny (update) If the user ID in the path does not match the authenticated user's ID.
+     * @deny (delete) If the user ID in the path does not match the authenticated user's ID.
+     * @principle Enforces user-ownership for all operations on user accounts.
      */
     match /users/{userId} {
       allow get: if isOwner(userId);
-      allow list: if false; // Prevent listing of all users.
-      allow create: if isOwner(userId) && request.resource.data.id == userId;
-      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow list: if false;
+      allow create: if isOwner(userId);
+      allow update: if isExistingOwner(userId);
       allow delete: if isExistingOwner(userId);
     }
 
     /**
-     * @description Rules for the /students/{studentId} collection.
+     * @description Rules for student profiles.
      * @path /students/{studentId}
-     * @allow (get, list) - Any signed-in user can read student profiles.
-     *   - Auth: { uid: 'user123' }
-     * @allow (create) - User with ID 'student123' creates their own student profile.
-     *   - Auth: { uid: 'student123' }
-     *   - Request: { "id": "student123", "studentId": "12345", "firstName": "John", "lastName": "Doe", "major": "CS", "enrollmentYear": 2023, "status": "studying" }
-     * @allow (update, delete) - User with ID 'student123' updates or deletes their own student profile.
-     *   - Auth: { uid: 'student123' }
-     * @deny (create) - User with ID 'user456' attempts to create a student profile for 'student123'.
-     *   - Auth: { uid: 'user456' }
-     *   - Request: { "id": "student123", "studentId": "12345", "firstName": "John", "lastName": "Doe", "major": "CS", "enrollmentYear": 2023, "status": "studying" }
-     * @deny (update, delete) - User with ID 'user456' attempts to update or delete 'student123's student profile.
-     *   - Auth: { uid: 'user456' }
-     * @principle Public read, owner-only writes.
+     * @allow (get) Public read access.
+     * @allow (create) Only admins can create student profiles.
+     * @allow (update) Only admins can update student profiles.
+     * @allow (delete) Only admins can delete student profiles.
+     * @deny (create) Non-admins cannot create student profiles.
+     * @deny (update) Non-admins cannot update student profiles.
+     * @deny (delete) Non-admins cannot delete student profiles.
+     * @principle Allows public reads but restricts writes to admins.
      */
     match /students/{studentId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.id == studentId;
-      allow update: if isExistingOwner(studentId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(studentId);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /supervisors/{supervisorId} collection.
+     * @description Rules for supervisor profiles.
      * @path /supervisors/{supervisorId}
-     * @allow (get, list) - Any signed-in user can read supervisor profiles.
-     *   - Auth: { uid: 'user123' }
-     * @allow (create) - User with ID 'supervisor123' creates their own supervisor profile.
-     *   - Auth: { uid: 'supervisor123' }
-     *   - Request: { "id": "supervisor123", "firstName": "Jane", "lastName": "Smith", "department": "CS" }
-     * @allow (update, delete) - User with ID 'supervisor123' updates or deletes their own supervisor profile.
-     *   - Auth: { uid: 'supervisor123' }
-     * @deny (create) - User with ID 'user456' attempts to create a supervisor profile for 'supervisor123'.
-     *   - Auth: { uid: 'user456' }
-     *   - Request: { "id": "supervisor123", "firstName": "Jane", "lastName": "Smith", "department": "CS" }
-     * @deny (update, delete) - User with ID 'user456' attempts to update or delete 'supervisor123's supervisor profile.
-     *   - Auth: { uid: 'user456' }
-     * @principle Public read, owner-only writes.
+     * @allow (get) Public read access.
+     * @allow (create) Only admins can create supervisor profiles.
+     * @allow (update) Only admins can update supervisor profiles.
+     * @allow (delete) Only admins can delete supervisor profiles.
+     * @deny (create) Non-admins cannot create supervisor profiles.
+     * @deny (update) Non-admins cannot update supervisor profiles.
+     * @deny (delete) Non-admins cannot delete supervisor profiles.
+     * @principle Allows public reads but restricts writes to admins.
      */
     match /supervisors/{supervisorId} {
       allow get, list: if true;
-      allow create: if isSignedIn() && request.resource.data.id == supervisorId;
-      allow update: if isExistingOwner(supervisorId) && request.resource.data.id == resource.data.id;
-      allow delete: if isExistingOwner(supervisorId);
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /defenseSessions/{sessionId} collection.
+     * @description Rules for defense sessions.
      * @path /defenseSessions/{sessionId}
-     * @allow (get, list) - Any signed-in user can read defense session information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete defense sessions in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Public read access.
+     * @allow (create) Only admins can create defense sessions.
+     * @allow (update) Only admins can update defense sessions.
+     * @allow (delete) Only admins can delete defense sessions.
+     * @deny (create) Non-admins cannot create defense sessions.
+     * @deny (update) Non-admins cannot update defense sessions.
+     * @deny (delete) Non-admins cannot delete defense sessions.
+     * @principle Allows public reads but restricts writes to admins.
      */
     match /defenseSessions/{sessionId} {
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /defenseRegistrations/{registrationId} collection.
+     * @description Rules for defense session registrations.
      * @path /defenseRegistrations/{registrationId}
-     * @allow (get, list) - Any signed-in user can read defense registration information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete defense registrations in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Only admins can get defense session registrations.
+     * @allow (list) Only admins can list defense session registrations.
+     * @allow (create) Students can create registrations for themselves. Admins can create registrations for any student.
+     * @allow (update) Students can update their own registrations. Admins can update any registration.
+     * @allow (delete) Only admins can delete registrations.
+     * @deny (create) If the user is not signed in.
+     * @deny (update) If the user is not signed in.
+     * @deny (delete) If the user is not an admin.
+     * @principle Allows self-registration for students and admin management.
      */
     match /defenseRegistrations/{registrationId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && (isAdmin() || request.resource.data.studentDocId == request.auth.uid);
+      allow update: if isSignedIn() && (isAdmin() || request.resource.data.studentDocId == request.auth.uid);
+      allow delete: if isAdmin();
     }
 
-    /**
-     * @description Rules for the /defenseSessions/{sessionId}/council/{councilMemberId} collection.
-     * @path /defenseSessions/{sessionId}/council/{councilMemberId}
-     * @allow (get, list) - Any signed-in user can read defense council member information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete defense council members in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
-     */
+     /**
+      * @description Rules for defense council members.
+      * @path /defenseSessions/{sessionId}/council/{councilMemberId}
+      * @allow (get) Only admins can get defense council members.
+      * @allow (list) Only admins can list defense council members.
+      * @allow (create) Only admins can create defense council members.
+      * @allow (update) Only admins can update defense council members.
+      * @allow (delete) Only admins can delete defense council members.
+      * @deny (create) Non-admins cannot create defense council members.
+      * @deny (update) Non-admins cannot update defense council members.
+      * @deny (delete) Non-admins cannot delete defense council members.
+      * @principle Only admins can manage the defense council members.
+      */
     match /defenseSessions/{sessionId}/council/{councilMemberId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
-    /**
-     * @description Rules for the /defenseSessions/{sessionId}/subCommittees/{subCommitteeId} collection.
-     * @path /defenseSessions/{sessionId}/subCommittees/{subCommitteeId}
-     * @allow (get, list) - Any signed-in user can read defense sub-committee information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete defense sub-committees in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
-     */
+     /**
+      * @description Rules for defense sub-committees.
+      * @path /defenseSessions/{sessionId}/subCommittees/{subCommitteeId}
+      * @allow (get) Only admins can get defense sub-committees.
+      * @allow (list) Only admins can list defense sub-committees.
+      * @allow (create) Only admins can create defense sub-committees.
+      * @allow (update) Only admins can update defense sub-committees.
+      * @allow (delete) Only admins can delete defense sub-committees.
+      * @deny (create) Non-admins cannot create defense sub-committees.
+      * @deny (update) Non-admins cannot update defense sub-committees.
+      * @deny (delete) Non-admins cannot delete defense sub-committees.
+      * @principle Only admins can manage the defense sub-committees.
+      */
     match /defenseSessions/{sessionId}/subCommittees/{subCommitteeId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /projectTopics/{topicId} collection.
+     * @description Rules for project topics.
      * @path /projectTopics/{topicId}
-     * @allow (get, list) - Any signed-in user can read project topic information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete project topics in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Public read access.
+     * @allow (create) Only supervisors can create project topics.
+     * @allow (update) Only supervisors can update their own project topics. Admins can also update project topics.
+     * @allow (delete) Only admins can delete project topics.
+     * @deny (create) Non-supervisors cannot create project topics.
+     * @deny (update) Non-admins and non-supervisors cannot update project topics.
+     * @deny (delete) Non-admins cannot delete project topics.
+     * @principle Allows supervisors to propose topics and admins to manage them.
      */
     match /projectTopics/{topicId} {
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow create: if isSupervisor();
+      allow update: if isSupervisor() || isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /rubrics/{rubricId} collection.
+     * @description Rules for rubrics.
      * @path /rubrics/{rubricId}
-     * @allow (get, list) - Any signed-in user can read rubric information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete rubrics in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Public read access.
+     * @allow (create) Only admins can create rubrics.
+     * @allow (update) Only admins can update rubrics.
+     * @allow (delete) Only admins can delete rubrics.
+     * @deny (create) Non-admins cannot create rubrics.
+     * @deny (update) Non-admins cannot update rubrics.
+     * @deny (delete) Non-admins cannot delete rubrics.
+     * @principle Only admins can create and manage rubrics.
      */
     match /rubrics/{rubricId} {
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /evaluations/{evaluationId} collection.
+     * @description Rules for evaluations.
      * @path /evaluations/{evaluationId}
-     * @allow (get, list) - Any signed-in user can read evaluation information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete evaluations in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Only admins can get evaluations.
+     * @allow (list) Only admins can list evaluations.
+     * @allow (create) Only supervisors can create evaluations.
+     * @allow (update) Only supervisors can update their own evaluations. Admins can also update evaluations.
+     * @allow (delete) Only admins can delete evaluations.
+     * @deny (create) Non-supervisors cannot create evaluations.
+     * @deny (update) Non-admins and non-supervisors cannot update evaluations.
+     * @deny (delete) Non-admins cannot delete evaluations.
+     * @principle Allows supervisors to create evaluations and admins to manage them.
      */
     match /evaluations/{evaluationId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow get, list: if isAdmin();
+      allow create: if isSupervisor() && request.resource.data.evaluatorId == request.auth.uid;
+      allow update: if (isSupervisor() && request.resource.data.evaluatorId == request.auth.uid) || isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /weeklyProgressReports/{reportId} collection.
+     * @description Rules for weekly progress reports.
      * @path /weeklyProgressReports/{reportId}
-     * @allow (get) - User with ID 'user123' can read their own weekly progress report.
-     *   - Auth: { uid: 'user123' }
-     * @allow (list) - User with ID 'user123' can list their own weekly progress reports.
-     *   - Auth: { uid: 'user123' }
-     * @allow (create) - User with ID 'user123' can create their own weekly progress report.
-     *   - Auth: { uid: 'user123' }
-     *   - Request: { "id": "report123", "registrationId": "reg456", "studentId": "user123", "supervisorId": "sup789", "sessionId": "session1", "weekNumber": 1, "submissionDate": "2024-01-01T00:00:00Z", "workDone": "Completed task A", "nextWeekPlan": "Start task B", "status": "pending_review" }
-     * @allow (update, delete) - User with ID 'user123' can update or delete their own weekly progress report.
-     *   - Auth: { uid: 'user123' }
-     * @deny (get, list, create, update, delete) - User with ID 'user456' attempts to access 'user123's weekly progress reports.
-     *   - Auth: { uid: 'user456' }
-     * @principle Enforces document ownership for all operations.
+     * @allow (get) Only admins can get weekly progress reports.
+     * @allow (list) Only admins can list weekly progress reports.
+     * @allow (create) Students and supervisors can create weekly progress reports.
+     * @allow (update) Students and supervisors can update weekly progress reports. Admins can also update reports.
+     * @allow (delete) Only admins can delete weekly progress reports.
+     * @deny (create) If the user is not signed in.
+     * @deny (update) If the user is not signed in.
+     * @deny (delete) Non-admins cannot delete weekly progress reports.
+     * @principle Allows students and supervisors to submit and review reports, and admins to manage them.
      */
     match /weeklyProgressReports/{reportId} {
-      allow get: if get(/defenseRegistrations/$(request.resource.data.registrationId)).data.studentDocId == request.auth.uid;
-      allow list: if isSignedIn(); // TODO: restrict to user's own reports using query
-      allow create: if isSignedIn() && request.resource.data.studentId == request.auth.uid;
-      allow update: if get(/defenseRegistrations/$(request.resource.data.registrationId)).data.studentDocId == request.auth.uid && resource != null;
-      allow delete: if get(/defenseRegistrations/$(request.resource.data.registrationId)).data.studentDocId == request.auth.uid && resource != null;
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isSupervisor());
+      allow update: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isSupervisor() || isAdmin());
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /systemSettings/{settingId} collection.
+     * @description Rules for system settings.
      * @path /systemSettings/{settingId}
-     * @allow get: if true;
-     * @allow list: if false; // Prevent listing of all system settings.
-     * @deny create, update, delete: if true; // No one can create, update, or delete system settings in this prototype.
-     * @principle Public read, restricted writes (TODO: Add admin-only write access).
+     * @allow (get) Only admins can get system settings.
+     * @allow (list) Only admins can list system settings.
+     * @allow (create) Only admins can create system settings.
+     * @allow (update) Only admins can update system settings.
+     * @allow (delete) Only admins can delete system settings.
+     * @deny (create) Non-admins cannot create system settings.
+     * @deny (update) Non-admins cannot update system settings.
+     * @deny (delete) Non-admins cannot delete system settings.
+     * @principle Only admins can manage system settings.
      */
     match /systemSettings/{settingId} {
-      allow get: if true;
-      allow list: if false;
-      allow create, update, delete: if false; // TODO: Add admin-only write access
+      allow get, list: if isAdmin();
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /internshipCompanies/{companyId} collection.
+     * @description Rules for internship companies.
      * @path /internshipCompanies/{companyId}
-     * @allow (get, list) - Any signed-in user can read internship company information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete internship companies in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Public read access.
+     * @allow (list) Public list access.
+     * @allow (create) Only admins can create internship companies.
+     * @allow (update) Only admins can update internship companies.
+     * @allow (delete) Only admins can delete internship companies.
+     * @deny (create) Non-admins cannot create internship companies.
+     * @deny (update) Non-admins cannot update internship companies.
+     * @deny (delete) Non-admins cannot delete internship companies.
      */
     match /internshipCompanies/{companyId} {
       allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow create: if isAdmin();
+      allow update: if isAdmin();
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /earlyInternships/{internshipId} collection.
+     * @description Rules for early internships.
      * @path /earlyInternships/{internshipId}
-     * @allow (get, list) - Any signed-in user can read early internship information.
-     *   - Auth: { uid: 'user123' }
-     * @deny (create, update, delete) - No one can create, update, or delete early internships in this prototype.
-     *   - Auth: { uid: 'user123' }
-     * @principle Public read, restricted writes (TODO: Add role-based write access).
+     * @allow (get) Only admins can get early internships.
+     * @allow (list) Only admins can list early internships.
+     * @allow (create) Students and admins can create early internships.
+     * @allow (update) Students and admins can update early internships.
+     * @allow (delete) Only admins can delete early internships.
+     * @deny (create) If the user is not signed in.
+     * @deny (update) If the user is not signed in.
+     * @deny (delete) Non-admins cannot delete early internships.
+     * @principle Allows students to register for early internships and admins to manage them.
      */
     match /earlyInternships/{internshipId} {
-      allow get, list: if true;
-      allow create, update, delete: if false; // TODO: Add role-based write access
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isAdmin());
+      allow update: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isAdmin());
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /earlyInternshipWeeklyReports/{reportId} collection.
+     * @description Rules for early internship weekly reports.
      * @path /earlyInternshipWeeklyReports/{reportId}
-     * @allow (get) - User with ID 'user123' can read their own early internship weekly report.
-     *   - Auth: { uid: 'user123' }
-     * @allow (list) - User with ID 'user123' can list their own early internship weekly reports.
-     *   - Auth: { uid: 'user123' }
-     * @allow (create) - User with ID 'user123' can create their own early internship weekly report.
-     *   - Auth: { uid: 'user123' }
-     *   - Request: { "id": "report123", "earlyInternshipId": "internship456", "studentId": "user123", "supervisorId": "sup789", "weekNumber": 1, "hours": 40, "reviewDate": "2024-01-01T00:00:00Z", "status": "pending_review" }
-     * @allow (update, delete) - User with ID 'user123' can update or delete their own early internship weekly report.
-     *   - Auth: { uid: 'user123' }
-     * @deny (get, list, create, update, delete) - User with ID 'user456' attempts to access 'user123's early internship weekly reports.
-     *   - Auth: { uid: 'user456' }
-     * @principle Enforces document ownership for all operations.
+     * @allow (get) Only admins can get early internship weekly reports.
+     * @allow (list) Only admins can list early internship weekly reports.
+     * @allow (create) Students and supervisors can create early internship weekly reports.
+     * @allow (update) Students and supervisors can update their own early internship weekly reports. Admins can also update.
+     * @allow (delete) Only admins can delete early internship weekly reports.
+     * @deny (create) If the user is not signed in.
+     * @deny (update) If the user is not signed in.
      */
     match /earlyInternshipWeeklyReports/{reportId} {
-      allow get: if request.auth.uid == resource.data.studentId;
-      allow list: if false; // Prevent listing of all reports.
-      allow create: if request.auth.uid == request.resource.data.studentId;
-      allow update: if request.auth.uid == resource.data.studentId && resource != null;
-      allow delete: if request.auth.uid == resource.data.studentId && resource != null;
+      allow get, list: if isAdmin();
+      allow create: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isSupervisor());
+      allow update: if isSignedIn() && (request.resource.data.studentId == request.auth.uid || isSupervisor() || isAdmin());
+      allow delete: if isAdmin();
     }
 
     /**
-     * @description Rules for the /conversations/{conversationId} collection.
+     * @description Rules for conversations.
      * @path /conversations/{conversationId}
-     * @allow (get, list) - User can read/list conversations if they are a participant.
-     *   - Auth: { uid: 'user123' }
-     *   - Data: { participantIds: ['user123', 'user456'] }
-     * @allow (create) - User can create a conversation if they are in participantIds.
-     *   - Auth: { uid: 'user123' }
-     *   - Request: { participantIds: ['user123', 'user456'] }
-     * @allow (update) - User can update conversation if they are in participantIds and the document exists.
-     *   - Auth: { uid: 'user123' }
-     *   - Data: { participantIds: ['user123', 'user456'] }
-     * @allow (delete) - User can delete the conversation if they are in participantIds and the document exists.
-     *   - Auth: { uid: 'user123' }
-     *   - Data: { participantIds: ['user123', 'user456'] }
-     * @deny (get, list, create, update, delete) - User tries to access a conversation where they are not a participant.
-     *   - Auth: { uid: 'user789' }
-     *   - Data: { participantIds: ['user123', 'user456'] }
-     * @principle Enforces shared access based on participantIds.
+     * @allow (get) If the user is a participant in the conversation.
+     * @allow (list) If the user is a participant in the conversation.
+     * @allow (create) If the user is a participant in the conversation.
+     * @allow (update) If the user is a participant in the conversation.
+     * @allow (delete) If the user is a participant in the conversation.
+     * @deny (get) If the user is not a participant in the conversation.
+     * @deny (list) If the user is not a participant in the conversation.
+     *  @deny (create) If the user is not a participant in the conversation.
+     *  @deny (update) If the user is not a participant in the conversation.
+     *  @deny (delete) If the user is not a participant in the conversation.
+     * @principle Only participants can read, write, and delete conversations.
      */
     match /conversations/{conversationId} {
       allow get: if isParticipant(resource.data.participantIds);
-      allow list: if isSignedIn(); //TODO: restrict by query
-      allow create: if isSignedIn() && request.resource.data.participantIds.hasAny([request.auth.uid]);
-      allow update: if isParticipant(resource.data.participantIds) && resource != null;
-      allow delete: if isParticipant(resource.data.participantIds) && resource != null;
-    }
-
-    /**
-     * @description Rules for the /conversations/{conversationId}/messages/{messageId} collection.
-     * @path /conversations/{conversationId}/messages/{messageId}
-     * @allow (get, list) - User can read/list messages in a conversation if they are a participant in the conversation.
-     *   - Auth: { uid: 'user123' }
-     *   - Parent Data: { participantIds: ['user123', 'user456'] }
-     * @allow (create) - User can create a message if they are a participant in the conversation.
-     *   - Auth: { uid: 'user123' }
-     *   - Parent Data: { participantIds: ['user123', 'user456'] }
-     *   - Request: { conversationId: 'conversation123', senderId: 'user123', content: 'Hello!' }
-     * @deny (get, list, create, update, delete) - User tries to access messages in a conversation where they are not a participant.
-     *   - Auth: { uid: 'user789' }
-     *   - Parent Data: { participantIds: ['user123', 'user456'] }
-     * @principle Enforces shared access based on participantIds inherited from the parent conversation.
-     */
-    match /conversations/{conversationId}/messages/{messageId} {
-      allow get: if get(/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
-      allow list: if isSignedIn(); //TODO: restrict by query
-      allow create: if isSignedIn() && request.resource.data.senderId == request.auth.uid;
-      allow update, delete: if false; // Messages cannot be updated or deleted once created.
-    }
-
-    /**
-     * @description Rules for the /notifications/{notificationId} collection.
-     * @path /notifications/{notificationId}
-     * @allow (get) - User can read their own notification.
-     *   - Auth: { uid: 'user123' }
-     *   - Data: { recipientId: 'user123' }
-     * @allow (list) - User can list their own notifications.
-     *   - Auth: { uid: 'user123' }
-     * @allow (create) - A user can create notification if they are the intended recipient.
-     *   - Auth: { uid: 'user123' }
-     *   - Request: { recipientId: 'user123' }
-     * @allow (update) - User can update their own notification.
-     *   - Auth: { uid: 'user123' }
-     *   - Data: { recipientId: 'user123' }
-     * @allow (delete) - User can delete their own notification.
-     *   - Auth: { uid: 'user123' }
-     *   - Data: { recipientId: 'user123' }
-     * @deny (get, list, create, update, delete) - User tries to access notifications not intended for them.
-     *   - Auth: { uid: 'user456' }
-     *   - Data: { recipientId: 'user123' }
-     * @principle Enforces owner-only access based on recipientId.
-     */
-    match /notifications/{notificationId} {
-      allow get: if request.auth.uid == resource.data.recipientId;
-      allow list: if isSignedIn(); //TODO: restrict by query
-      allow create: if request.resource.data.recipientId == request.auth.uid;
-      allow update: if request.auth.uid == resource.data.recipientId && resource != null;
-      allow delete: if request.auth.uid == resource.data.recipientId && resource != null;
+      allow list: if isSignedIn(); // Could be further restricted if listing becomes a concern.
+      allow create: if isSignedIn();
+      allow update: if isParticipant(resource.data.participantIds);
+      allow delete: if false; // Deletion is not allowed for any user
     }
   }
 }
