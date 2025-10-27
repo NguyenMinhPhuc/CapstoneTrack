@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -51,6 +52,12 @@ const earlyInternshipStatusVariant: Record<EarlyInternship['status'], 'secondary
   completed: 'outline',
   rejected: 'destructive',
   cancelled: 'destructive',
+};
+
+const statusLabel: Record<string, string> = {
+  upcoming: 'Sắp diễn ra',
+  ongoing: 'Đang thực hiện',
+  completed: 'Hoàn thành',
 };
 
 export function StudentDashboard({ user }: StudentDashboardProps) {
@@ -238,7 +245,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                       <div key={session.id} className="p-3 border rounded-lg bg-muted/50">
                         <div className="flex justify-between items-center">
                           <p className="font-semibold">{session.name}</p>
-                          <Badge variant={session.status === 'ongoing' ? 'default' : 'secondary'}>{session.status}</Badge>
+                          <Badge variant={session.status === 'ongoing' ? 'default' : 'secondary'}>
+                            {statusLabel[session.status] || session.status}
+                          </Badge>
                         </div>
                         <div className="text-xs text-muted-foreground mt-2 space-y-1">
                           <p>Bắt đầu: {toDate(session.startDate) ? format(toDate(session.startDate)!, 'dd/MM/yyyy') : 'N/A'}</p>

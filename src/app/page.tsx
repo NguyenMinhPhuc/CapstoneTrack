@@ -17,6 +17,12 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { Calendar, CalendarIcon, Link as LinkIcon } from 'lucide-react';
 
+const statusLabel: Record<string, string> = {
+  upcoming: 'Sắp diễn ra',
+  ongoing: 'Đang thực hiện',
+  completed: 'Hoàn thành',
+};
+
 
 function SupervisorDashboard() {
   const firestore = useFirestore();
@@ -57,7 +63,9 @@ function SupervisorDashboard() {
                         <div key={session.id} className="p-3 border rounded-lg bg-muted/50">
                           <div className="flex justify-between items-center">
                             <p className="font-semibold">{session.name}</p>
-                            <Badge variant={session.status === 'ongoing' ? 'default' : 'secondary'}>{session.status}</Badge>
+                            <Badge variant={session.status === 'ongoing' ? 'default' : 'secondary'}>
+                                {statusLabel[session.status] || session.status}
+                            </Badge>
                           </div>
                           <div className="text-xs text-muted-foreground mt-2 space-y-1">
                             <p>Bắt đầu: {toDate(session.startDate) ? format(toDate(session.startDate)!, 'dd/MM/yyyy') : 'N/A'}</p>
