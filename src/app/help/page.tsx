@@ -2,9 +2,15 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat } from "lucide-react";
+import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat, Clock } from "lucide-react";
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
+import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 
 export default function HelpPage() {
+  const [isEarlyInternshipOpen, setIsEarlyInternshipOpen] = useState(true);
+  const [isChangeTopicOpen, setIsChangeTopicOpen] = useState(true);
+
   return (
     <main className="p-4 sm:p-6 lg:p-8">
       <div className="max-w-4xl mx-auto space-y-8">
@@ -120,78 +126,234 @@ export default function HelpPage() {
             </div>
           </CardContent>
         </Card>
+        
+        <Collapsible asChild open={isEarlyInternshipOpen} onOpenChange={setIsEarlyInternshipOpen}>
+            <Card>
+                <CardHeader>
+                    <CollapsibleTrigger className="w-full">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-left">
+                                <Clock className="text-primary" />
+                                Quy trình Thực tập sớm
+                            </CardTitle>
+                            <ChevronDown className={`h-5 w-5 transition-transform ${isEarlyInternshipOpen ? 'rotate-180' : ''}`} />
+                        </div>
+                         <CardDescription className="text-left mt-2">
+                            Các bước từ khi thiết lập, đăng ký, thực hiện, cho đến khi hoàn thành chương trình thực tập sớm.
+                        </CardDescription>
+                    </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                    <CardContent className="space-y-6 pt-0">
+                         <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground [&_h5]:font-semibold [&_h5]:mt-4">
+                            <h4>1. Thiết lập ban đầu (Admin)</h4>
+                            <p>Mục tiêu: Chuẩn bị môi trường và dữ liệu cần thiết để chương trình thực tập sớm có thể vận hành.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Quản lý Phòng ban LHU:</strong>
+                                    <ul>
+                                        <li>Truy cập <strong>Quản lý chung</strong> → <strong>Quản lý Doanh nghiệp</strong>.</li>
+                                        <li>Admin tạo hoặc cập nhật thông tin các phòng ban, trung tâm, viện nghiên cứu... thuộc Trường Đại học Lạc Hồng sẽ tiếp nhận sinh viên thực tập sớm.</li>
+                                        <li><strong>Quan trọng:</strong> Khi tạo hoặc sửa, cần phải tick vào ô <strong>"Đây là phòng ban của LHU?"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Gán Người phụ trách (GVHD):</strong>
+                                    <ul>
+                                        <li>Đối với mỗi phòng ban của LHU, Admin cần chỉ định một giáo viên làm người phụ trách (người hướng dẫn mặc định).</li>
+                                        <li>Thông tin này được thiết lập trong form thêm/sửa doanh nghiệp.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Cài đặt số giờ mục tiêu:</strong>
+                                    <ul>
+                                        <li>Truy cập <strong>Quản lý chung</strong> → <strong>Cài đặt hệ thống</strong>.</li>
+                                        <li>Trong mục "Cài đặt Thực tập sớm", nhập <strong>Số giờ mục tiêu</strong> mà sinh viên cần hoàn thành. Ví dụ: 700 giờ.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            
+                            <hr className="my-6"/>
 
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Repeat className="text-primary" />
-              Quy trình Thay đổi Đề tài hoặc GVHD
-            </CardTitle>
-             <CardDescription>
-                Các bước cần thực hiện khi một sinh viên muốn thay đổi đề tài tốt nghiệp hoặc giáo viên hướng dẫn (GVHD) đã đăng ký.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground">
-                <h4>Kịch bản 1: Sinh viên đã đăng ký nhưng chưa được GVHD duyệt</h4>
-                <p>Đây là trường hợp đơn giản nhất, khi trạng thái đăng ký của sinh viên đang là <strong>"Chờ GVHD xác nhận"</strong>.</p>
-                <ul>
-                    <li><strong>Sinh viên:</strong>
-                        <ol className="list-decimal pl-5 mt-1">
-                            <li>Truy cập mục <strong>"Đăng ký Đề tài"</strong> trên thanh điều hướng.</li>
-                            <li>Tại đề tài đang đăng ký, nhấn vào nút <strong>"Hủy đăng ký"</strong>.</li>
-                            <li>Hệ thống sẽ xác nhận và đưa sinh viên trở lại trạng thái chưa đăng ký.</li>
-                            <li>Sinh viên có thể duyệt và chọn một đề tài mới hoặc một GVHD khác từ danh sách và tiến hành đăng ký lại.</li>
-                        </ol>
-                    </li>
-                    <li><strong>Giáo viên Hướng dẫn (GVHD):</strong> Không cần hành động gì. Yêu cầu đăng ký ban đầu sẽ tự động biến mất khỏi danh sách chờ của họ.</li>
-                    <li><strong>Quản trị viên (Admin):</strong> Không cần hành động gì.</li>
-                </ul>
+                            <h4>2. Sinh viên Đăng ký</h4>
+                             <p>Mục tiêu: Sinh viên gửi đơn đăng ký tham gia thực tập sớm tại một phòng ban đã được thiết lập.</p>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Tạo đơn đăng ký:</strong>
+                                    <ul>
+                                        <li>SV truy cập mục <strong>Thực tập</strong> → <strong>ĐK Thực tập sớm</strong> trên menu.</li>
+                                        <li>Nhấn nút "Tạo Đơn đăng ký mới".</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Điền thông tin:</strong>
+                                     <ul>
+                                        <li>SV chọn phòng ban muốn đăng ký từ danh sách. Thông tin người hướng dẫn sẽ được tự động điền.</li>
+                                        <li>SV chọn ngày bắt đầu và có thể nộp link minh chứng (nếu có).</li>
+                                        <li>Sau khi nộp, đơn đăng ký sẽ ở trạng thái <strong>"Chờ duyệt"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            
+                             <hr className="my-6"/>
 
-                <hr className="my-6"/>
+                            <h4>3. GVHD Duyệt Đăng ký</h4>
+                            <p>Mục tiêu: GVHD xem xét và xác nhận đơn đăng ký của sinh viên.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Xem danh sách chờ duyệt:</strong>
+                                    <ul>
+                                        <li>GVHD truy cập mục <strong>Hướng dẫn TT sớm</strong> trên menu.</li>
+                                        <li>Hệ thống sẽ hiển thị danh sách các sinh viên đã gửi yêu cầu đăng ký với trạng thái <strong>"Chờ duyệt"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Phê duyệt hoặc Từ chối:</strong>
+                                     <ul>
+                                        <li>GVHD nhấn nút <strong>"Duyệt"</strong> để chấp nhận. Trạng thái của sinh viên sẽ chuyển thành <strong>"Đang thực tập"</strong>.</li>
+                                        <li>Hoặc nhấn <strong>"Từ chối"</strong> và nhập lý do. Trạng thái sẽ chuyển thành <strong>"Bị từ chối"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
 
-                <h4>Kịch bản 2: Sinh viên đã được GVHD duyệt đăng ký</h4>
-                <p>Khi trạng thái đăng ký là <strong>"Đã được xác nhận"</strong>, sinh viên không thể tự ý hủy. Việc thay đổi cần có sự can thiệp của GVHD hoặc Admin.</p>
-                
-                <h5 className="font-semibold mt-4">Cách 1: GVHD chủ động hủy đăng ký (Khuyến khích)</h5>
-                <ul>
-                    <li><strong>Sinh viên:</strong> Liên hệ trực tiếp với GVHD hiện tại (qua Zalo, email...) để trình bày nguyện vọng muốn đổi đề tài hoặc GVHD.</li>
-                    <li><strong>Giáo viên Hướng dẫn (GVHD):</strong>
-                        <ol className="list-decimal pl-5 mt-1">
-                            <li>Truy cập mục <strong>"Đề tài của tôi"</strong>.</li>
-                            <li>Tìm đến đề tài có sinh viên cần thay đổi.</li>
-                            <li>Nhấn vào số lượng sinh viên đã đăng ký để mở danh sách chi tiết.</li>
-                            <li>Tại dòng của sinh viên tương ứng, nhấn nút <strong>"Hủy ĐK"</strong>.</li>
-                            <li>Hệ thống sẽ gỡ sinh viên khỏi đề tài. Đề tài sẽ được mở lại một suất đăng ký.</li>
-                        </ol>
-                    </li>
-                    <li><strong>Sinh viên (sau khi GVHD đã hủy):</strong> Tải lại trang <strong>"Đăng ký Đề tài"</strong>. Sinh viên sẽ thấy mình đã có thể đăng ký một đề tài mới.</li>
-                </ul>
+                             <hr className="my-6"/>
 
-                <h5 className="font-semibold mt-4">Cách 2: Admin can thiệp trực tiếp</h5>
-                <p>Trường hợp này được sử dụng khi không thể liên hệ được với GVHD hoặc cần xử lý nhanh.</p>
-                 <ul>
-                    <li><strong>Sinh viên:</strong> Liên hệ với Admin của khoa (thường là giáo vụ) để yêu cầu được gỡ khỏi đề tài hiện tại.</li>
-                    <li><strong>Quản trị viên (Admin):</strong>
-                        <ol className="list-decimal pl-5 mt-1">
-                            <li>Truy cập <strong>"Quản lý chung"</strong> {"->"} <strong>"Quản lý Đợt báo cáo"</strong>.</li>
-                            <li>Nhấn vào đợt báo cáo tương ứng để vào trang chi tiết.</li>
-                            <li>Trong bảng "Danh sách Sinh viên đăng ký", tìm đến sinh viên cần xử lý.</li>
-                            <li>Nhấn vào menu "..." ở cuối hàng và chọn <strong>"Sửa"</strong>.</li>
-                            <li>Trong hộp thoại hiện ra, xóa trống các trường <strong>"Tên đề tài"</strong> và <strong>"Giáo viên hướng dẫn"</strong>, sau đó nhấn "Lưu thay đổi".</li>
-                        </ol>
-                    </li>
-                </ul>
-                <hr className="my-6"/>
-                <h4>Tóm tắt luồng khuyến nghị:</h4>
-                 <ol className="list-decimal pl-5">
-                    <li><strong>Sinh viên tự hủy</strong> nếu đăng ký chưa được duyệt.</li>
-                    <li>Nếu đã được duyệt, <strong>sinh viên liên hệ GVHD</strong> để nhờ hủy đăng ký.</li>
-                    <li>Chỉ trong trường hợp khẩn cấp, <strong>sinh viên mới liên hệ Admin</strong> để can thiệp.</li>
-                </ol>
-            </div>
-          </CardContent>
-        </Card>
+                            <h4>4. Quá trình Thực tập và Báo cáo</h4>
+                            <p>Mục tiêu: Sinh viên báo cáo tiến độ hàng tuần và GVHD theo dõi, ghi nhận.</p>
+                            <h5>Dành cho Sinh viên:</h5>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Nộp báo cáo:</strong>
+                                    <ul>
+                                        <li>SV truy cập mục <strong>Thực tập</strong> → <strong>Báo cáo TT sớm</strong>.</li>
+                                        <li>Chọn tuần cần báo cáo, điền nội dung công việc đã làm, kế hoạch tuần tới và link minh chứng (nếu có).</li>
+                                        <li>Nhấn "Nộp báo cáo". Báo cáo sẽ ở trạng thái <strong>"Chờ duyệt"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            <h5>Dành cho GVHD:</h5>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Theo dõi tiến độ:</strong>
+                                    <ul>
+                                        <li>GVHD truy cập mục <strong>Hướng dẫn TT sớm</strong>.</li>
+                                        <li>Nhấn vào menu "..." ở cuối hàng của sinh viên và chọn <strong>"Xem tiến độ"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Duyệt báo cáo tuần:</strong>
+                                     <ul>
+                                        <li>Trong cửa sổ tiến độ, GVHD sẽ thấy các báo cáo sinh viên đã nộp.</li>
+                                        <li>GVHD xem xét nội dung và nhập <strong>số giờ được duyệt</strong> cho tuần đó.</li>
+                                        <li>Nhấn <strong>"Duyệt"</strong> để xác nhận hoặc <strong>"Yêu cầu sửa"</strong> (kèm nhận xét) nếu báo cáo chưa đạt.</li>
+                                    </ul>
+                                </li>
+                                 <li><strong>Tạo báo cáo thay sinh viên (nếu cần):</strong>
+                                     <ul>
+                                        <li>Trong trường hợp sinh viên không nộp báo cáo, GVHD có thể chủ động tạo báo cáo và ghi nhận số giờ cho tuần đó trong cửa sổ "Tiến độ".</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            
+                             <hr className="my-6"/>
+
+                            <h4>5. Hoàn thành Chương trình</h4>
+                            <p>Mục tiêu: Kết thúc quá trình thực tập sớm và chuyển trạng thái cho sinh viên.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Kiểm tra tổng số giờ:</strong>
+                                    <ul>
+                                        <li>GVHD theo dõi tổng số giờ đã duyệt của sinh viên trong mục <strong>"Hướng dẫn TT sớm"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Đánh dấu Hoàn thành:</strong>
+                                     <ul>
+                                        <li>Khi sinh viên đã tích lũy đủ số giờ mục tiêu, GVHD nhấn vào menu "..." và chọn <strong>"Đánh dấu Hoàn thành"</strong>.</li>
+                                        <li>Trạng thái thực tập sớm của sinh viên sẽ chuyển thành <strong>"Hoàn thành"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Chuyển sang Báo cáo Thực tập chính thức:</strong>
+                                     <ul>
+                                        <li>Khi sinh viên được đánh dấu "Hoàn thành", họ có thể truy cập mục <strong>Đăng ký Thực tập</strong> trong đợt báo cáo chính thức.</li>
+                                        <li>Hệ thống sẽ cho phép họ chọn hình thức <strong>"Đăng ký từ Thực tập sớm"</strong>, tự động điền các thông tin đã có để chuẩn bị cho bước báo cáo trước hội đồng.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+                    </CardContent>
+                </CollapsibleContent>
+            </Card>
+        </Collapsible>
+
+        <Collapsible asChild open={isChangeTopicOpen} onOpenChange={setIsChangeTopicOpen}>
+          <Card>
+            <CardHeader>
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2 text-left">
+                    <Repeat className="text-primary" />
+                    Quy trình Thay đổi Đề tài hoặc GVHD
+                  </CardTitle>
+                  <ChevronDown className={`h-5 w-5 transition-transform ${isChangeTopicOpen ? 'rotate-180' : ''}`} />
+                </div>
+                 <CardDescription className="text-left mt-2">
+                    Các bước cần thực hiện khi một sinh viên muốn thay đổi đề tài tốt nghiệp hoặc giáo viên hướng dẫn (GVHD) đã đăng ký.
+                </CardDescription>
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+                <CardContent className="space-y-6 pt-0">
+                  <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground">
+                      <h4>Kịch bản 1: Sinh viên đã đăng ký nhưng chưa được GVHD duyệt</h4>
+                      <p>Đây là trường hợp đơn giản nhất, khi trạng thái đăng ký của sinh viên đang là <strong>"Chờ GVHD xác nhận"</strong>.</p>
+                      <ul>
+                          <li><strong>Sinh viên:</strong>
+                              <ol className="list-decimal pl-5 mt-1">
+                                  <li>Truy cập mục <strong>"Đăng ký Đề tài"</strong> trên thanh điều hướng.</li>
+                                  <li>Tại đề tài đang đăng ký, nhấn vào nút <strong>"Hủy đăng ký"</strong>.</li>
+                                  <li>Hệ thống sẽ xác nhận và đưa sinh viên trở lại trạng thái chưa đăng ký.</li>
+                                  <li>Sinh viên có thể duyệt và chọn một đề tài mới hoặc một GVHD khác từ danh sách và tiến hành đăng ký lại.</li>
+                              </ol>
+                          </li>
+                          <li><strong>Giáo viên Hướng dẫn (GVHD):</strong> Không cần hành động gì. Yêu cầu đăng ký ban đầu sẽ tự động biến mất khỏi danh sách chờ của họ.</li>
+                          <li><strong>Quản trị viên (Admin):</strong> Không cần hành động gì.</li>
+                      </ul>
+
+                      <hr className="my-6"/>
+
+                      <h4>Kịch bản 2: Sinh viên đã được GVHD duyệt đăng ký</h4>
+                      <p>Khi trạng thái đăng ký là <strong>"Đã được xác nhận"</strong>, sinh viên không thể tự ý hủy. Việc thay đổi cần có sự can thiệp của GVHD hoặc Admin.</p>
+                      
+                      <h5 className="font-semibold mt-4">Cách 1: GVHD chủ động hủy đăng ký (Khuyến khích)</h5>
+                      <ul>
+                          <li><strong>Sinh viên:</strong> Liên hệ trực tiếp với GVHD hiện tại (qua Zalo, email...) để trình bày nguyện vọng muốn đổi đề tài hoặc GVHD.</li>
+                          <li><strong>Giáo viên Hướng dẫn (GVHD):</strong>
+                              <ol className="list-decimal pl-5 mt-1">
+                                  <li>Truy cập mục <strong>"Đề tài của tôi"</strong>.</li>
+                                  <li>Tìm đến đề tài có sinh viên cần thay đổi.</li>
+                                  <li>Nhấn vào số lượng sinh viên đã đăng ký để mở danh sách chi tiết.</li>
+                                  <li>Tại dòng của sinh viên tương ứng, nhấn nút <strong>"Hủy ĐK"</strong>.</li>
+                                  <li>Hệ thống sẽ gỡ sinh viên khỏi đề tài. Đề tài sẽ được mở lại một suất đăng ký.</li>
+                              </ol>
+                          </li>
+                          <li><strong>Sinh viên (sau khi GVHD đã hủy):</strong> Tải lại trang <strong>"Đăng ký Đề tài"</strong>. Sinh viên sẽ thấy mình đã có thể đăng ký một đề tài mới.</li>
+                      </ul>
+
+                      <h5 className="font-semibold mt-4">Cách 2: Admin can thiệp trực tiếp</h5>
+                      <p>Trường hợp này được sử dụng khi không thể liên hệ được với GVHD hoặc cần xử lý nhanh.</p>
+                      <ul>
+                          <li><strong>Sinh viên:</strong> Liên hệ với Admin của khoa (thường là giáo vụ) để yêu cầu được gỡ khỏi đề tài hiện tại.</li>
+                          <li><strong>Quản trị viên (Admin):</strong>
+                              <ol className="list-decimal pl-5 mt-1">
+                                  <li>Truy cập <strong>"Quản lý chung"</strong> {"->"} <strong>"Quản lý Đợt báo cáo"</strong>.</li>
+                                  <li>Nhấn vào đợt báo cáo tương ứng để vào trang chi tiết.</li>
+                                  <li>Trong bảng "Danh sách Sinh viên đăng ký", tìm đến sinh viên cần xử lý.</li>
+                                  <li>Nhấn vào menu "..." ở cuối hàng và chọn <strong>"Sửa"</strong>.</li>
+                                  <li>Trong hộp thoại hiện ra, xóa trống các trường <strong>"Tên đề tài"</strong> và <strong>"Giáo viên hướng dẫn"</strong>, sau đó nhấn "Lưu thay đổi".</li>
+                              </ol>
+                          </li>
+                      </ul>
+                      <hr className="my-6"/>
+                      <h4>Tóm tắt luồng khuyến nghị:</h4>
+                      <ol className="list-decimal pl-5">
+                          <li><strong>Sinh viên tự hủy</strong> nếu đăng ký chưa được duyệt.</li>
+                          <li>Nếu đã được duyệt, <strong>sinh viên liên hệ GVHD</strong> để nhờ hủy đăng ký.</li>
+                          <li>Chỉ trong trường hợp khẩn cấp, <strong>sinh viên mới liên hệ Admin</strong> để can thiệp.</li>
+                      </ol>
+                  </div>
+                </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
 
       </div>
     </main>
