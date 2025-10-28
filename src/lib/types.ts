@@ -319,11 +319,16 @@ export type Message = {
     mentionedUserIds?: string[];
 }
 
+export type ResourceLink = {
+  label: string;
+  url: string;
+}
+
 export type Resource = {
   id: string;
   name: string;
   summary?: string;
   category: 'graduation' | 'internship';
-  link: string;
+  links: ResourceLink[];
   createdAt: any;
 }

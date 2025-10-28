@@ -3,7 +3,7 @@
 
 import { useMemo } from 'react';
 import { Button } from '@/components/ui/button';
-import { Download, GraduationCap, Briefcase } from 'lucide-react';
+import { Download, GraduationCap, Briefcase, Link as LinkIcon } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection } from 'firebase/firestore';
 import type { Resource } from '@/lib/types';
@@ -24,6 +24,12 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
 
 export function ResourceList() {
@@ -69,12 +75,33 @@ export function ResourceList() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    <Button asChild variant="outline" size="sm">
-                      <a href={resource.link} target="_blank" rel="noopener noreferrer">
-                        <Download className="mr-2 h-4 w-4" />
-                        Tải
-                      </a>
-                    </Button>
+                    {resource.links.length === 1 ? (
+                       <Button asChild variant="outline" size="sm">
+                        <a href={resource.links[0].url} target="_blank" rel="noopener noreferrer">
+                          <Download className="mr-2 h-4 w-4" />
+                          {resource.links[0].label || 'Tải'}
+                        </a>
+                      </Button>
+                    ) : (
+                       <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                              <Button variant="outline" size="sm">
+                                  <Download className="mr-2 h-4 w-4" />
+                                  Tải xuống ({resource.links.length})
+                              </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                              {resource.links.map((link, linkIndex) => (
+                                  <DropdownMenuItem key={linkIndex} asChild>
+                                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2">
+                                          <LinkIcon className="h-4 w-4" />
+                                          <span>{link.label || `Link ${linkIndex + 1}`}</span>
+                                      </a>
+                                  </DropdownMenuItem>
+                              ))}
+                          </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
               ))

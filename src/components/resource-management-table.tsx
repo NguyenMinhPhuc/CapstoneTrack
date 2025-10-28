@@ -197,7 +197,7 @@ export function ResourceManagementTable() {
               <TableHead>Tên</TableHead>
               <TableHead>Mô tả</TableHead>
               <TableHead>Phân loại</TableHead>
-              <TableHead>Link</TableHead>
+              <TableHead>Links</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -219,9 +219,14 @@ export function ResourceManagementTable() {
                     </Badge>
                 </TableCell>
                 <TableCell>
-                  <a href={resource.link} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                      <LinkIcon className="h-4 w-4" />
-                  </a>
+                  <div className="flex flex-col gap-1">
+                      {resource.links.map((link, idx) => (
+                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
+                              <LinkIcon className="h-3 w-3"/>
+                              {link.label || `Link ${idx + 1}`}
+                          </a>
+                      ))}
+                  </div>
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>

@@ -43,10 +43,20 @@
         "name": { "type": "string" },
         "summary": { "type": "string" },
         "category": { "type": "string", "enum": ["graduation", "internship"] },
-        "link": { "type": "string", "format": "uri" },
+        "links": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "label": { "type": "string" },
+              "url": { "type": "string", "format": "uri" }
+            },
+            "required": ["label", "url"]
+          }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
-      "required": ["id", "name", "category", "link", "createdAt"]
+      "required": ["id", "name", "category", "links", "createdAt"]
     }
   },
   "auth": {
