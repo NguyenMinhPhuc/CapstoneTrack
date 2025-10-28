@@ -2,7 +2,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon } from "lucide-react";
+import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat } from "lucide-react";
 
 export default function HelpPage() {
   return (
@@ -117,6 +117,78 @@ export default function HelpPage() {
                     <li><strong>Xem báo cáo và thống kê:</strong> Truy cập <strong>Bảng điểm</strong> và <strong>Hồ sơ đã nộp</strong> để xem, lọc và xuất tất cả dữ liệu.</li>
                     <li><strong>Cài đặt hệ thống:</strong> Bật/tắt các tính năng như cho phép sinh viên đăng ký, cho phép sửa thuyết minh đã duyệt, v.v.</li>
                 </ul>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Repeat className="text-primary" />
+              Quy trình Thay đổi Đề tài hoặc GVHD
+            </CardTitle>
+             <CardDescription>
+                Các bước cần thực hiện khi một sinh viên muốn thay đổi đề tài tốt nghiệp hoặc giáo viên hướng dẫn (GVHD) đã đăng ký.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground">
+                <h4>Kịch bản 1: Sinh viên đã đăng ký nhưng chưa được GVHD duyệt</h4>
+                <p>Đây là trường hợp đơn giản nhất, khi trạng thái đăng ký của sinh viên đang là <strong>"Chờ GVHD xác nhận"</strong>.</p>
+                <ul>
+                    <li><strong>Sinh viên:</strong>
+                        <ol className="list-decimal pl-5 mt-1">
+                            <li>Truy cập mục <strong>"Đăng ký Đề tài"</strong> trên thanh điều hướng.</li>
+                            <li>Tại đề tài đang đăng ký, nhấn vào nút <strong>"Hủy đăng ký"</strong>.</li>
+                            <li>Hệ thống sẽ xác nhận và đưa sinh viên trở lại trạng thái chưa đăng ký.</li>
+                            <li>Sinh viên có thể duyệt và chọn một đề tài mới hoặc một GVHD khác từ danh sách và tiến hành đăng ký lại.</li>
+                        </ol>
+                    </li>
+                    <li><strong>Giáo viên Hướng dẫn (GVHD):</strong> Không cần hành động gì. Yêu cầu đăng ký ban đầu sẽ tự động biến mất khỏi danh sách chờ của họ.</li>
+                    <li><strong>Quản trị viên (Admin):</strong> Không cần hành động gì.</li>
+                </ul>
+
+                <hr className="my-6"/>
+
+                <h4>Kịch bản 2: Sinh viên đã được GVHD duyệt đăng ký</h4>
+                <p>Khi trạng thái đăng ký là <strong>"Đã được xác nhận"</strong>, sinh viên không thể tự ý hủy. Việc thay đổi cần có sự can thiệp của GVHD hoặc Admin.</p>
+                
+                <h5 className="font-semibold mt-4">Cách 1: GVHD chủ động hủy đăng ký (Khuyến khích)</h5>
+                <ul>
+                    <li><strong>Sinh viên:</strong> Liên hệ trực tiếp với GVHD hiện tại (qua Zalo, email...) để trình bày nguyện vọng muốn đổi đề tài hoặc GVHD.</li>
+                    <li><strong>Giáo viên Hướng dẫn (GVHD):</strong>
+                        <ol className="list-decimal pl-5 mt-1">
+                            <li>Truy cập mục <strong>"Đề tài của tôi"</strong>.</li>
+                            <li>Tìm đến đề tài có sinh viên cần thay đổi.</li>
+                            <li>Nhấn vào số lượng sinh viên đã đăng ký để mở danh sách chi tiết.</li>
+                            <li>Tại dòng của sinh viên tương ứng, nhấn nút <strong>"Hủy ĐK"</strong>.</li>
+                            <li>Hệ thống sẽ gỡ sinh viên khỏi đề tài. Đề tài sẽ được mở lại một suất đăng ký.</li>
+                        </ol>
+                    </li>
+                    <li><strong>Sinh viên (sau khi GVHD đã hủy):</strong> Tải lại trang <strong>"Đăng ký Đề tài"</strong>. Sinh viên sẽ thấy mình đã có thể đăng ký một đề tài mới.</li>
+                </ul>
+
+                <h5 className="font-semibold mt-4">Cách 2: Admin can thiệp trực tiếp</h5>
+                <p>Trường hợp này được sử dụng khi không thể liên hệ được với GVHD hoặc cần xử lý nhanh.</p>
+                 <ul>
+                    <li><strong>Sinh viên:</strong> Liên hệ với Admin của khoa (thường là giáo vụ) để yêu cầu được gỡ khỏi đề tài hiện tại.</li>
+                    <li><strong>Quản trị viên (Admin):</strong>
+                        <ol className="list-decimal pl-5 mt-1">
+                            <li>Truy cập <strong>"Quản lý chung"</strong> {"->"} <strong>"Quản lý Đợt báo cáo"</strong>.</li>
+                            <li>Nhấn vào đợt báo cáo tương ứng để vào trang chi tiết.</li>
+                            <li>Trong bảng "Danh sách Sinh viên đăng ký", tìm đến sinh viên cần xử lý.</li>
+                            <li>Nhấn vào menu "..." ở cuối hàng và chọn <strong>"Sửa"</strong>.</li>
+                            <li>Trong hộp thoại hiện ra, xóa trống các trường <strong>"Tên đề tài"</strong> và <strong>"Giáo viên hướng dẫn"</strong>, sau đó nhấn "Lưu thay đổi".</li>
+                        </ol>
+                    </li>
+                </ul>
+                <hr className="my-6"/>
+                <h4>Tóm tắt luồng khuyến nghị:</h4>
+                 <ol className="list-decimal pl-5">
+                    <li><strong>Sinh viên tự hủy</strong> nếu đăng ký chưa được duyệt.</li>
+                    <li>Nếu đã được duyệt, <strong>sinh viên liên hệ GVHD</strong> để nhờ hủy đăng ký.</li>
+                    <li>Chỉ trong trường hợp khẩn cấp, <strong>sinh viên mới liên hệ Admin</strong> để can thiệp.</li>
+                </ol>
             </div>
           </CardContent>
         </Card>
