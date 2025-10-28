@@ -58,6 +58,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
 
 const categoryLabel: Record<Resource['category'], string> = {
   graduation: 'Tốt nghiệp',
@@ -203,7 +206,13 @@ export function ResourceManagementTable() {
               <TableRow key={resource.id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell className="font-medium">{resource.name}</TableCell>
-                <TableCell>{resource.summary}</TableCell>
+                <TableCell>
+                    <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {resource.summary || 'Không có mô tả.'}
+                      </ReactMarkdown>
+                    </div>
+                </TableCell>
                 <TableCell>
                     <Badge variant={categoryVariant[resource.category]}>
                         {categoryLabel[resource.category]}
