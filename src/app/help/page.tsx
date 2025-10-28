@@ -3,7 +3,7 @@
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat, Clock, BookText } from "lucide-react";
+import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat, Clock, BookText, UserPlus } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -13,6 +13,7 @@ export default function HelpPage() {
   const [isChangeTopicOpen, setIsChangeTopicOpen] = useState(true);
   const [isTopicManagementOpen, setIsTopicManagementOpen] = useState(true);
   const [isGradingOpen, setIsGradingOpen] = useState(true);
+  const [isAddStudentsOpen, setIsAddStudentsOpen] = useState(true);
 
 
   return (
@@ -457,6 +458,116 @@ export default function HelpPage() {
                                      <ul>
                                         <li>Khi sinh viên được đánh dấu "Hoàn thành", họ có thể truy cập mục <strong>Đăng ký Thực tập</strong> trong đợt báo cáo chính thức.</li>
                                         <li>Hệ thống sẽ cho phép họ chọn hình thức <strong>"Đăng ký từ Thực tập sớm"</strong>, tự động điền các thông tin đã có để chuẩn bị cho bước báo cáo trước hội đồng.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+                    </CardContent>
+                </CollapsibleContent>
+            </Card>
+        </Collapsible>
+        
+         <Collapsible asChild open={isAddStudentsOpen} onOpenChange={setIsAddStudentsOpen}>
+            <Card>
+                <CardHeader>
+                    <CollapsibleTrigger className="w-full">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-left">
+                                <UserPlus className="text-primary" />
+                                Quy trình Thêm Sinh viên
+                            </CardTitle>
+                            <ChevronDown className={`h-5 w-5 transition-transform ${isAddStudentsOpen ? 'rotate-180' : ''}`} />
+                        </div>
+                         <CardDescription className="text-left mt-2">
+                            Các cách khác nhau để Quản trị viên (Admin) có thể thêm sinh viên vào một đợt báo cáo cụ thể trong hệ thống.
+                        </CardDescription>
+                    </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                    <CardContent className="space-y-6 pt-0">
+                         <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground [&_h5]:font-semibold [&_h5]:mt-4">
+                            <h4>1. Thêm thủ công từng sinh viên</h4>
+                            <p>Cách này phù hợp khi cần thêm lẻ một vài sinh viên.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập chi tiết Đợt báo cáo:</strong>
+                                    <ul>
+                                        <li>Từ menu, vào <strong>Quản lý chung</strong> → <strong>Quản lý Đợt báo cáo</strong>.</li>
+                                        <li>Nhấn vào tên đợt báo cáo bạn muốn thêm sinh viên.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Thêm sinh viên:</strong>
+                                    <ul>
+                                        <li>Tại trang chi tiết, nhấn vào nút <strong>"Thêm Sinh viên"</strong>.</li>
+                                        <li>Một cửa sổ sẽ hiện ra. Tìm kiếm sinh viên theo MSSV hoặc tên.</li>
+                                        <li>Bạn có thể tùy chọn nhập tên đề tài và chọn GVHD ngay lúc này (hoặc để trống và cập nhật sau).</li>
+                                        <li>Nhấn nút "Thêm sinh viên" để hoàn tất.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+
+                            <hr className="my-6"/>
+
+                            <h4>2. Thêm hàng loạt theo lớp</h4>
+                            <p>Cách này hiệu quả khi cần thêm toàn bộ hoặc phần lớn sinh viên của một lớp vào đợt báo cáo.</p>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập chi tiết Đợt báo cáo.</strong></li>
+                                <li><strong>Mở chức năng thêm theo lớp:</strong>
+                                    <ul>
+                                        <li>Nhấn vào nút <strong>"Thêm theo lớp"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Chọn lớp và sinh viên:</strong>
+                                     <ul>
+                                        <li>Chọn lớp từ danh sách thả xuống.</li>
+                                        <li>Hệ thống sẽ liệt kê tất cả sinh viên thuộc lớp đó (những sinh viên đã có trong đợt sẽ không hiển thị).</li>
+                                        <li>Bạn có thể tick vào ô <strong>"Chọn tất cả"</strong> hoặc chọn từng sinh viên riêng lẻ.</li>
+                                        <li>Nhấn nút "Thêm ... sinh viên" để xác nhận.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            
+                             <hr className="my-6"/>
+
+                            <h4>3. Nhập từ file Excel</h4>
+                            <p>Phương pháp này phù hợp để đăng ký nhanh thông tin đề tài và GVHD cho hàng loạt sinh viên cùng lúc.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Chuẩn bị file Excel:</strong>
+                                    <ul>
+                                        <li>File cần có các cột tối thiểu là <strong>`StudentID`</strong> (hoặc <strong>`Mã SV`</strong>).</li>
+                                        <li>Các cột tùy chọn khác có thể bao gồm <strong>`ProjectTitle`</strong> (`Tên đề tài`) và <strong>`SupervisorName`</strong> (`GVHD`). Tên GVHD phải khớp với tên đã đăng ký trong hệ thống.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Truy cập chi tiết Đợt báo cáo.</strong></li>
+                                <li><strong>Mở chức năng nhập liệu:</strong>
+                                    <ul>
+                                        <li>Nhấn vào nút <strong>"Thêm sinh viên"</strong> → Chọn <strong>"Nhập từ Excel"</strong> (hoặc một nút riêng tùy giao diện).</li>
+                                        <li>Tải file Excel đã chuẩn bị lên.</li>
+                                        <li>Hệ thống sẽ đọc dữ liệu và thêm các sinh viên tương ứng vào đợt báo cáo, đồng thời gán luôn thông tin đề tài và GVHD nếu có.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            
+                            <hr className="my-6"/>
+                            
+                            <h4>4. Thêm từ trang Quản lý Sinh viên</h4>
+                            <p>Cách này linh hoạt, cho phép bạn lọc sinh viên theo nhiều tiêu chí trước khi thêm.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập trang Quản lý Sinh viên:</strong>
+                                    <ul>
+                                        <li>Từ menu, vào <strong>Quản lý chung</strong> → <strong>Quản lý Sinh viên</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Chọn sinh viên:</strong>
+                                    <ul>
+                                        <li>Sử dụng các bộ lọc (khóa, lớp...) và thanh tìm kiếm để tìm sinh viên.</li>
+                                        <li>Tick vào ô vuông ở đầu mỗi hàng để chọn một hoặc nhiều sinh viên.</li>
+                                    </ul>
+                                </li>
+                                 <li><strong>Thực hiện hành động:</strong>
+                                    <ul>
+                                        <li>Một menu hành động sẽ xuất hiện. Nhấn vào nút <strong>"Thêm vào đợt"</strong>.</li>
+                                        <li>Chọn đợt báo cáo bạn muốn thêm các sinh viên này vào từ danh sách.</li>
+                                        <li>Nhấn "Xác nhận" để hoàn tất.</li>
                                     </ul>
                                 </li>
                             </ol>
