@@ -57,7 +57,7 @@ export function EditResourceForm({ resource, onFinished }: EditResourceFormProps
       name: resource.name,
       summary: resource.summary || '',
       category: resource.category,
-      links: resource.links.length > 0 ? resource.links : [{ label: '', url: '' }],
+      links: resource.links && resource.links.length > 0 ? resource.links : [{ label: '', url: '' }],
     },
   });
   
