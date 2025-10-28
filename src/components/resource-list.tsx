@@ -75,14 +75,14 @@ export function ResourceList() {
                     </div>
                   </TableCell>
                   <TableCell className="text-right">
-                    {resource.links.length === 1 ? (
+                    {resource.links && resource.links.length === 1 ? (
                        <Button asChild variant="outline" size="sm">
                         <a href={resource.links[0].url} target="_blank" rel="noopener noreferrer">
                           <Download className="mr-2 h-4 w-4" />
                           {resource.links[0].label || 'Tải'}
                         </a>
                       </Button>
-                    ) : (
+                    ) : resource.links && resource.links.length > 1 ? (
                        <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                               <Button variant="outline" size="sm">
@@ -101,7 +101,7 @@ export function ResourceList() {
                               ))}
                           </DropdownMenuContent>
                       </DropdownMenu>
-                    )}
+                    ) : null}
                   </TableCell>
                 </TableRow>
               ))
