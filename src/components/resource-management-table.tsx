@@ -220,7 +220,7 @@ export function ResourceManagementTable() {
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                      {resource.links.map((link, idx) => (
+                      {resource.links && resource.links.map((link, idx) => (
                           <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
                               <LinkIcon className="h-3 w-3"/>
                               {link.label || `Link ${idx + 1}`}
