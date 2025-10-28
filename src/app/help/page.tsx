@@ -12,6 +12,7 @@ export default function HelpPage() {
   const [isEarlyInternshipOpen, setIsEarlyInternshipOpen] = useState(true);
   const [isChangeTopicOpen, setIsChangeTopicOpen] = useState(true);
   const [isTopicManagementOpen, setIsTopicManagementOpen] = useState(true);
+  const [isGradingOpen, setIsGradingOpen] = useState(true);
 
 
   return (
@@ -229,6 +230,86 @@ export default function HelpPage() {
                                     <ul>
                                         <li>Nhấn nút <strong>"Chấp nhận"</strong> để đồng ý. Trạng thái đăng ký của SV sẽ chuyển thành <strong>"Đã được xác nhận"</strong>.</li>
                                         <li>Hoặc nhấn <strong>"Từ chối"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+                    </CardContent>
+                </CollapsibleContent>
+            </Card>
+        </Collapsible>
+        
+        <Collapsible asChild open={isGradingOpen} onOpenChange={setIsGradingOpen}>
+            <Card>
+                <CardHeader>
+                    <CollapsibleTrigger className="w-full">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-left">
+                                <ClipboardCheckIcon className="text-primary" />
+                                Quy trình Chấm điểm
+                            </CardTitle>
+                            <ChevronDown className={`h-5 w-5 transition-transform ${isGradingOpen ? 'rotate-180' : ''}`} />
+                        </div>
+                         <CardDescription className="text-left mt-2">
+                            Các bước để GVHD và thành viên Hội đồng thực hiện việc chấm điểm cho sinh viên.
+                        </CardDescription>
+                    </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                    <CardContent className="space-y-6 pt-0">
+                         <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground [&_h5]:font-semibold [&_h5]:mt-4">
+                            <h4>1. Dành cho Giáo viên Hướng dẫn</h4>
+                            <p>Mục tiêu: GVHD cho điểm quá trình hướng dẫn đối với các sinh viên mình phụ trách.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập trang Chấm điểm:</strong>
+                                    <ul>
+                                        <li>GVHD vào mục <strong>"Chấm điểm Hướng dẫn"</strong> trên thanh menu.</li>
+                                        <li>Hệ thống sẽ liệt kê các đợt báo cáo đang diễn ra.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Chọn sinh viên/đề tài:</strong>
+                                    <ul>
+                                        <li>GVHD nhấn vào một đợt báo cáo để mở rộng danh sách các sinh viên/đề tài mình đang hướng dẫn.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Thực hiện Chấm điểm:</strong>
+                                     <ul>
+                                        <li>Tại dòng của sinh viên hoặc nhóm sinh viên cần chấm, nhấn nút <strong>"Chấm điểm"</strong>.</li>
+                                        <li>Một cửa sổ (dialog) chứa phiếu chấm điểm sẽ hiện ra.</li>
+                                        <li>GVHD điền điểm cho từng tiêu chí và có thể thêm nhận xét.</li>
+                                        <li>Nhấn <strong>"Lưu điểm"</strong> để hoàn tất.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+
+                            <hr className="my-6"/>
+
+                            <h4>2. Dành cho thành viên Hội đồng</h4>
+                             <p>Mục tiêu: Thành viên HĐ chấm điểm cho các đề tài được phân công trong các tiểu ban.</p>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập trang Chấm điểm:</strong>
+                                    <ul>
+                                        <li>Giáo viên được phân công vào hội đồng truy cập mục <strong>"Chấm điểm Hội đồng"</strong> trên thanh menu.</li>
+                                        <li>Hệ thống sẽ hiển thị danh sách các đợt báo cáo và các tiểu ban mà giáo viên đó là thành viên.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Chọn Tiểu ban:</strong>
+                                     <ul>
+                                        <li>Nhấn vào một tiểu ban để xem danh sách các đề tài/sinh viên được phân công bảo vệ tại tiểu ban đó.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Thực hiện Chấm điểm:</strong>
+                                     <ul>
+                                        <li>Tại dòng của đề tài/sinh viên cần chấm, nhấn nút <strong>"Chấm điểm"</strong>.</li>
+                                        <li>Phiếu chấm điểm (dựa trên rubric đã được Admin gán) sẽ hiện ra.</li>
+                                        <li>Thành viên HĐ điền điểm cho từng tiêu chí và thêm nhận xét.</li>
+                                        <li>Nhấn <strong>"Lưu điểm"</strong> để hoàn tất.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Sao chép điểm (Tùy chọn):</strong>
+                                     <ul>
+                                        <li>Để tiết kiệm thời gian, tại trang chi tiết đợt báo cáo, admin có thể nhấn vào menu "..." ở cuối hàng của sinh viên và chọn "Sao chép điểm hội đồng".</li>
+                                        <li>Chọn nguồn (ai đã chấm) và đích (ai sẽ nhận điểm sao chép) rồi xác nhận.</li>
                                     </ul>
                                 </li>
                             </ol>
