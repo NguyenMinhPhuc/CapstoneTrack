@@ -1,8 +1,9 @@
 
+
 'use client';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat, Clock } from "lucide-react";
+import { GraduationCap, UserCheck, Shield, BookMarked, FileSignature, Activity, FileUp, ClipboardList, ClipboardCheck as ClipboardCheckIcon, Repeat, Clock, BookText } from "lucide-react";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from "@/components/ui/collapsible";
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
@@ -10,6 +11,8 @@ import { ChevronDown } from "lucide-react";
 export default function HelpPage() {
   const [isEarlyInternshipOpen, setIsEarlyInternshipOpen] = useState(true);
   const [isChangeTopicOpen, setIsChangeTopicOpen] = useState(true);
+  const [isTopicManagementOpen, setIsTopicManagementOpen] = useState(true);
+
 
   return (
     <main className="p-4 sm:p-6 lg:p-8">
@@ -126,6 +129,114 @@ export default function HelpPage() {
             </div>
           </CardContent>
         </Card>
+
+        <Collapsible asChild open={isTopicManagementOpen} onOpenChange={setIsTopicManagementOpen}>
+            <Card>
+                <CardHeader>
+                    <CollapsibleTrigger className="w-full">
+                        <div className="flex items-center justify-between">
+                            <CardTitle className="flex items-center gap-2 text-left">
+                                <BookText className="text-primary" />
+                                Quy trình Quản lý Đề tài
+                            </CardTitle>
+                            <ChevronDown className={`h-5 w-5 transition-transform ${isTopicManagementOpen ? 'rotate-180' : ''}`} />
+                        </div>
+                         <CardDescription className="text-left mt-2">
+                            Các bước từ khi GVHD đề xuất đề tài, Admin duyệt, cho đến khi Sinh viên đăng ký thực hiện.
+                        </CardDescription>
+                    </CollapsibleTrigger>
+                </CardHeader>
+                <CollapsibleContent>
+                    <CardContent className="space-y-6 pt-0">
+                         <div className="prose prose-sm max-w-none text-foreground [&_ul]:list-disc [&_ul]:pl-5 [&_h4]:font-semibold [&_strong]:text-foreground [&_h5]:font-semibold [&_h5]:mt-4">
+                            <h4>1. GVHD Đề xuất Đề tài</h4>
+                            <p>Mục tiêu: Giáo viên tạo và gửi đề tài mới lên hệ thống để chờ duyệt.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập trang quản lý:</strong>
+                                    <ul>
+                                        <li>GVHD vào mục <strong>"Đề tài của tôi"</strong> trên thanh menu.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Tạo đề tài mới:</strong>
+                                    <ul>
+                                        <li>Nhấn nút <strong>"Thêm Đề tài mới"</strong>.</li>
+                                        <li>Điền đầy đủ các thông tin bắt buộc: Tên đề tài, đợt báo cáo, mô tả, số lượng SV...</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Gửi duyệt:</strong>
+                                     <ul>
+                                        <li>Sau khi điền xong, nhấn nút <strong>"Gửi duyệt"</strong>.</li>
+                                        <li>Đề tài mới tạo sẽ có trạng thái là <strong>"Chờ duyệt"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+
+                            <hr className="my-6"/>
+
+                            <h4>2. Admin Duyệt Đề tài</h4>
+                             <p>Mục tiêu: Admin xem xét và quyết định có chấp thuận đề tài do GVHD đề xuất hay không.</p>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập trang quản lý:</strong>
+                                    <ul>
+                                        <li>Admin vào <strong>Quản lý chung</strong> → <strong>"Quản lý Đề tài"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Xem danh sách chờ duyệt:</strong>
+                                     <ul>
+                                        <li>Hệ thống sẽ hiển thị tất cả các đề tài đang ở trạng thái <strong>"Chờ duyệt"</strong>.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Phê duyệt hoặc Từ chối:</strong>
+                                     <ul>
+                                        <li><strong>Để phê duyệt:</strong> Nhấn vào menu "..." ở cuối hàng và chọn <strong>"Thay đổi trạng thái"</strong> → <strong>"Đã duyệt"</strong>.</li>
+                                        <li><strong>Để từ chối:</strong> Chọn <strong>"Thay đổi trạng thái"</strong> → <strong>"Bị từ chối"</strong> và nhập lý do.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                            
+                             <hr className="my-6"/>
+
+                            <h4>3. Sinh viên Đăng ký Đề tài</h4>
+                            <p>Mục tiêu: Sinh viên tìm kiếm và đăng ký vào một đề tài đã được duyệt.</p>
+                            <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Truy cập trang đăng ký:</strong>
+                                    <ul>
+                                        <li>SV vào mục <strong>"Đăng ký Đề tài"</strong> trên thanh menu.</li>
+                                    </ul>
+                                </li>
+                                <li><strong>Tìm và chọn đề tài:</strong>
+                                     <ul>
+                                        <li>Hệ thống sẽ hiển thị danh sách các đề tài đã được duyệt và còn chỗ trống.</li>
+                                    </ul>
+                                </li>
+                                 <li><strong>Thực hiện đăng ký:</strong>
+                                     <ul>
+                                        <li>Nhấn nút <strong>"Đăng ký"</strong> ở đề tài mong muốn.</li>
+                                        <li>Trạng thái đăng ký sẽ là <strong>"Chờ GVHD xác nhận"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                             <hr className="my-6"/>
+                            <h4>4. GVHD Xác nhận Đăng ký của Sinh viên</h4>
+                            <p>Mục tiêu: GVHD xác nhận sinh viên nào sẽ được thực hiện đề tài mình hướng dẫn.</p>
+                             <ol className="list-decimal pl-5 mt-1">
+                                <li><strong>Xem danh sách đăng ký:</strong>
+                                    <ul>
+                                        <li>GVHD vào lại mục <strong>"Đề tài của tôi"</strong>, nhấn vào số lượng SV ở đề tài tương ứng.</li>
+                                    </ul>
+                                </li>
+                                 <li><strong>Chấp nhận hoặc Từ chối:</strong>
+                                    <ul>
+                                        <li>Nhấn nút <strong>"Chấp nhận"</strong> để đồng ý. Trạng thái đăng ký của SV sẽ chuyển thành <strong>"Đã được xác nhận"</strong>.</li>
+                                        <li>Hoặc nhấn <strong>"Từ chối"</strong>.</li>
+                                    </ul>
+                                </li>
+                            </ol>
+                        </div>
+                    </CardContent>
+                </CollapsibleContent>
+            </Card>
+        </Collapsible>
         
         <Collapsible asChild open={isEarlyInternshipOpen} onOpenChange={setIsEarlyInternshipOpen}>
             <Card>
