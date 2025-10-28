@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -20,6 +21,9 @@ import {
   Card,
   CardContent,
 } from '@/components/ui/card';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
 
 
 export function ResourceList() {
@@ -57,7 +61,13 @@ export function ResourceList() {
                 <TableRow key={resource.id}>
                   <TableCell>{index + 1}</TableCell>
                   <TableCell className="font-medium">{resource.name}</TableCell>
-                  <TableCell className="text-muted-foreground">{resource.summary || 'Không có mô tả.'}</TableCell>
+                  <TableCell>
+                    <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {resource.summary || 'Không có mô tả.'}
+                      </ReactMarkdown>
+                    </div>
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button asChild variant="outline" size="sm">
                       <a href={resource.link} target="_blank" rel="noopener noreferrer">
