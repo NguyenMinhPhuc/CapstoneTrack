@@ -3,36 +3,14 @@
 
 import { useState, useMemo } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from '@/components/ui/card';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import {
-    AlertDialog,
-    AlertDialogAction,
-    AlertDialogCancel,
-    AlertDialogContent,
-    AlertDialogDescription,
-    AlertDialogFooter,
-    AlertDialogHeader,
-    AlertDialogTitle,
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
 import {
@@ -41,7 +19,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Link as LinkIcon, Edit, Trash2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Link as LinkIcon, Edit, Trash2, GraduationCap, Briefcase } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc } from 'firebase/firestore';
 import type { Resource } from '@/lib/types';
@@ -61,6 +39,10 @@ import {
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
+
 
 const categoryLabel: Record<Resource['category'], string> = {
   graduation: 'Tốt nghiệp',
@@ -190,67 +172,84 @@ export function ResourceManagementTable() {
         </div>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[50px]">STT</TableHead>
-              <TableHead>Tên</TableHead>
-              <TableHead>Mô tả</TableHead>
-              <TableHead>Phân loại</TableHead>
-              <TableHead>Links</TableHead>
-              <TableHead className="text-right">Hành động</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredResources?.map((resource, index) => (
-              <TableRow key={resource.id}>
-                <TableCell>{index + 1}</TableCell>
-                <TableCell className="font-medium">{resource.name}</TableCell>
-                <TableCell>
-                    <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {resource.summary || 'Không có mô tả.'}
-                      </ReactMarkdown>
+        <Accordion type="multiple" className="w-full space-y-2">
+            {filteredResources?.map((resource) => (
+                <AccordionItem value={resource.id} key={resource.id} className="border rounded-md px-4 bg-card">
+                    <div className="flex items-center justify-between gap-4">
+                        <AccordionTrigger className="flex-1 text-left hover:no-underline py-4">
+                            <div className="flex items-center gap-4">
+                                <div className="p-2 bg-muted rounded-md">
+                                    {resource.category === 'graduation' ? (
+                                    <GraduationCap className="h-5 w-5 text-primary" />
+                                    ) : (
+                                    <Briefcase className="h-5 w-5 text-primary" />
+                                    )}
+                                </div>
+                                <div>
+                                    <span className="font-semibold">{resource.name}</span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant={categoryVariant[resource.category]}>
+                                        {categoryLabel[resource.category]}
+                                    </Badge>
+                                    <Badge variant="outline">{resource.links.length} link</Badge>
+                                    </div>
+                                </div>
+                            </div>
+                        </AccordionTrigger>
+                        <div className="flex-shrink-0">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleEditClick(resource)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    Sửa
+                                </DropdownMenuItem>
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(resource)}>
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    Xóa
+                                </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
                     </div>
-                </TableCell>
-                <TableCell>
-                    <Badge variant={categoryVariant[resource.category]}>
-                        {categoryLabel[resource.category]}
-                    </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-col gap-1">
-                      {resource.links && resource.links.map((link, idx) => (
-                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
-                              <LinkIcon className="h-3 w-3"/>
-                              {link.label || `Link ${idx + 1}`}
-                          </a>
-                      ))}
-                  </div>
-                </TableCell>
-                <TableCell className="text-right">
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                      <DropdownMenuItem onClick={() => handleEditClick(resource)}>
-                          <Edit className="mr-2 h-4 w-4" />
-                          Sửa
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteClick(resource)}>
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Xóa
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </TableCell>
-              </TableRow>
+                    <AccordionContent>
+                        <div className="border-t pt-4">
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="font-semibold mb-2">Mô tả</h4>
+                                     <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
+                                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                        {resource.summary || 'Không có mô tả.'}
+                                      </ReactMarkdown>
+                                    </div>
+                                </div>
+                                 <div>
+                                    <h4 className="font-semibold mb-2">Links</h4>
+                                     <div className="flex flex-col gap-2">
+                                      {resource.links && resource.links.map((link, idx) => (
+                                          <a key={idx} href={link.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline text-xs flex items-center gap-1">
+                                              <LinkIcon className="h-3 w-3"/>
+                                              <span className="font-medium">{link.label || `Link ${idx + 1}`}:</span>
+                                              <span className="text-muted-foreground truncate">{link.url}</span>
+                                          </a>
+                                      ))}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </AccordionContent>
+                </AccordionItem>
             ))}
-          </TableBody>
-        </Table>
+        </Accordion>
+        {filteredResources?.length === 0 && (
+            <div className="text-center py-10 text-muted-foreground">
+                Không tìm thấy tài nguyên nào.
+            </div>
+        )}
       </CardContent>
     </Card>
 
