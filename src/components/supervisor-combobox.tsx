@@ -1,5 +1,4 @@
 
-
 'use client';
 
 import * as React from 'react';
@@ -26,11 +25,12 @@ import { useToast } from '@/hooks/use-toast';
 
 interface SupervisorComboboxProps {
   value: string | null;
-  onChange: (supervisor: Supervisor | null) => void;
+  onChange: (value: string | null) => void;
+  onSupervisorSelect?: (supervisor: Supervisor | null) => void;
   disabled?: boolean;
 }
 
-export function SupervisorCombobox({ value, onChange, disabled = false }: SupervisorComboboxProps) {
+export function SupervisorCombobox({ value, onChange, onSupervisorSelect, disabled = false }: SupervisorComboboxProps) {
   const [open, setOpen] = React.useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -70,6 +70,16 @@ export function SupervisorCombobox({ value, onChange, disabled = false }: Superv
 
   const selectedSupervisorLabel = supervisorOptions.find(opt => opt.value === value)?.label || "Chọn giáo viên...";
 
+  const handleSelect = (currentValue: string) => {
+    const newValue = currentValue === value ? null : currentValue;
+    const selectedSupervisor = supervisors?.find(s => s.id === newValue) || null;
+    onChange(newValue);
+    if(onSupervisorSelect) {
+      onSupervisorSelect(selectedSupervisor);
+    }
+    setOpen(false);
+  }
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -93,12 +103,8 @@ export function SupervisorCombobox({ value, onChange, disabled = false }: Superv
               {supervisorOptions.map(option => (
                 <CommandItem
                   key={option.value}
-                  value={option.label}
-                  onSelect={() => {
-                    const selected = supervisorOptions.find(s => s.value === option.value);
-                    onChange(value === option.value ? null : selected || null);
-                    setOpen(false);
-                  }}
+                  value={`${option.label} ${option.email}`} // Search by name and email
+                  onSelect={() => handleSelect(option.value)}
                 >
                   <Check
                     className={cn(

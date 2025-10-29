@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState } from 'react';
@@ -10,7 +11,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { writeBatch, doc } from 'firebase/firestore';
 import type { DefenseRegistration, Supervisor } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -32,7 +33,7 @@ export function AssignInternshipSupervisorDialog({
 }: AssignInternshipSupervisorDialogProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
-  const [supervisorName, setSupervisorName] = useState('');
+  const [supervisor, setSupervisor] = useState<Supervisor | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
@@ -44,7 +45,7 @@ export function AssignInternshipSupervisorDialog({
         });
         return;
     }
-     if (!supervisorName.trim()) {
+     if (!supervisor) {
       toast({
         variant: 'destructive',
         title: 'Chưa có tên người hướng dẫn',
@@ -57,8 +58,8 @@ export function AssignInternshipSupervisorDialog({
     const batch = writeBatch(firestore);
     
     const dataToUpdate = {
-        internshipSupervisorId: '', // Clear ID since it might be an external person
-        internshipSupervisorName: supervisorName,
+        internshipSupervisorId: supervisor.id,
+        internshipSupervisorName: `${supervisor.firstName} ${supervisor.lastName}`,
     };
     
     registrationsToAssign.forEach(registration => {
@@ -75,12 +76,6 @@ export function AssignInternshipSupervisorDialog({
       onFinished();
     } catch (error: any) {
       console.error('Error assigning internship supervisor:', error);
-       const contextualError = new FirestorePermissionError({
-          path: 'batch update on defenseRegistrations',
-          operation: 'update',
-          requestResourceData: dataToUpdate,
-        });
-        errorEmitter.emit('permission-error', contextualError);
       toast({
         variant: 'destructive',
         title: 'Lỗi',
@@ -96,14 +91,17 @@ export function AssignInternshipSupervisorDialog({
       <DialogHeader>
         <DialogTitle>Gán Người Hướng dẫn Thực tập</DialogTitle>
         <DialogDescription>
-          Chọn một giáo viên từ danh sách hoặc nhập tên người hướng dẫn tại đơn vị cho {registrationsToAssign.length} sinh viên đã chọn.
+          Chọn một giáo viên từ danh sách cho {registrationsToAssign.length} sinh viên đã chọn.
         </DialogDescription>
       </DialogHeader>
 
       <div className="space-y-4 py-4">
         <SupervisorCombobox 
-            value={supervisorName}
-            onChange={setSupervisorName}
+            value={supervisor?.id || null}
+            onChange={(supervisorId) => {
+                // This component manages the full supervisor object, so we don't need just the ID here.
+            }}
+            onSupervisorSelect={setSupervisor}
         />
 
         {registrationsToAssign.length > 0 ? (

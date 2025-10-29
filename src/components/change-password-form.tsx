@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -14,8 +15,9 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth, useUser } from '@/firebase';
+import { useAuth, useUser, useFirestore } from '@/firebase';
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 
 const formSchema = z.object({
     currentPassword: z.string().min(1, 'Vui lòng nhập mật khẩu hiện tại.'),
@@ -30,6 +32,7 @@ export function ChangePasswordForm() {
   const { toast } = useToast();
   const auth = useAuth();
   const { user } = useUser();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -57,6 +60,10 @@ export function ChangePasswordForm() {
         
         // 2. If successful, update the password
         await updatePassword(user, values.newPassword);
+        
+        // 3. Update the passwordInitialized flag in Firestore
+        const userDocRef = doc(firestore, 'users', user.uid);
+        await updateDoc(userDocRef, { passwordInitialized: true });
 
         toast({
             title: 'Thành công',

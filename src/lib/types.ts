@@ -20,8 +20,10 @@ export type StudentProgress = {
 export type SystemUser = {
   id: string;
   email: string;
+  displayName?: string;
   role: 'admin' | 'supervisor' | 'student';
   status: 'active' | 'pending' | 'disabled';
+  passwordInitialized?: boolean;
   createdAt: any; 
 };
 
@@ -34,6 +36,8 @@ export type DefenseSession = {
   registrationDeadline: any;
   description?: string;
   zaloGroupLink?: string;
+  postDefenseSubmissionLink?: string;
+  postDefenseSubmissionDescription?: string;
   createdAt: any;
   status: 'upcoming' | 'ongoing' | 'completed';
   companyIds?: string[];
@@ -59,17 +63,8 @@ export type Student = {
     CCCD?: string;
     createdAt: any;
     status: 'studying' | 'reserved' | 'dropped_out' | 'graduated';
-}
-
-export type Supervisor = {
-    id: string;
-    userId: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    department?: string;
-    facultyRank?: string;
-    createdAt: any;
+    graduationStatus: 'achieved' | 'not_achieved';
+    internshipStatus: 'achieved' | 'not_achieved';
 }
 
 export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting' | 'completed';
@@ -92,6 +87,7 @@ export type DefenseRegistration = {
   expectedResults?: string;
   implementationPlan?: string;
   reportLink?: string;
+  postDefenseReportLink?: string;
   projectRegistrationStatus?: ProjectRegistrationStatus;
   proposalStatus?: ProposalStatus;
   proposalLink?: string;
@@ -216,8 +212,15 @@ export type SystemSettings = {
     allowStudentRegistration?: boolean;
     allowEditingApprovedProposal?: boolean;
     forceOpenReportSubmission?: boolean;
+    enablePostDefenseSubmission?: boolean;
     requireReportApproval?: boolean;
     earlyInternshipGoalHours?: number;
+    themePrimary?: string;
+    themePrimaryForeground?: string;
+    themeBackground?: string;
+    themeForeground?: string;
+    themeAccent?: string;
+    themeAccentForeground?: string;
 }
 
 export type ProjectTopic = {
@@ -295,10 +298,37 @@ export type EarlyInternshipWeeklyReport = {
     status: 'pending_review' | 'approved' | 'rejected';
 };
 
-    
+export type Conversation = {
+    id: string;
+    subject: string;
+    participantIds: string[];
+    participantNames: string[];
+    createdAt: any;
+    lastMessageAt: any;
+    lastMessageSnippet: string;
+    readBy: string[];
+}
 
-    
+export type Message = {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    senderName: string;
+    content: string;
+    createdAt: any;
+    mentionedUserIds?: string[];
+}
 
-    
+export type ResourceLink = {
+  label: string;
+  url: string;
+}
 
-    
+export type Resource = {
+  id: string;
+  name: string;
+  summary?: string;
+  category: 'graduation' | 'internship';
+  links: ResourceLink[];
+  createdAt: any;
+}

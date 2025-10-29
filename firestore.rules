@@ -1,153 +1,71 @@
 /**
- * @fileOverview Firestore Security Rules for CapstoneTrack System
+ * @file Firebase Security Rules for Firestore.
  *
- * Core Philosophy:
- * This ruleset enforces a role-based access control model, with granular
- * permissions based on the user's role (admin, supervisor, student) and
- * resource ownership.  It prioritizes security and data protection,
- * ensuring that users can only access the data they are authorized to view
- * or modify.
- *
- * Data Structure:
- * - /users/{userId}: Stores user account information, with the 'role' field
- *   determining access rights.
- * - /students/{studentId}: Stores student details.
- * - /supervisors/{supervisorId}: Stores supervisor details.
- * - /graduationDefenseSessions/{sessionId}: Stores information about defense sessions.
- * - /defenseRegistrations/{registrationId}: Stores student registrations for defense sessions.
- *
- * Key Security Decisions:
- * - User listing is disallowed for enhanced privacy.
- * - The 'users' collection enforces strict ownership. Only the user themselves
- *   or an admin can read/write their own document.
- * - Public read access is not generally permitted, except where explicitly
- *   defined for specific collections.
- * - All write operations require authentication and authorization checks.
- *
- * Denormalization for Authorization:
- *   No explicit denormalization is performed in this version.
+ * @core_philosophy This ruleset enforces a shared access model for conversations,
+ *  where participants can read and write to conversation threads and associated messages.
+ *  It also allows any signed-in user to create a conversation.
+ * @data_structure
+ *  /conversations/{conversationId} - Stores conversation metadata.
+ *  /conversations/{conversationId}/messages/{messageId} - Stores messages within a conversation.
+ * @key_security_decisions
+ *  - Conversation listing is disallowed to prevent unauthorized data access. Only participants can see a conversation.
+ *  - Data validation is relaxed during the prototyping phase.
+ *  - Relational integrity is enforced on message creation to link messages to their parent conversations.
+ *  - Conversations are created when a user messages another.
+ *  - Everyone is denied update or delete permissions.
+ *  - Only participants are granted access to read the data.
  */
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    /**
-     * @description Rule for user account information.
-     * @path /databases/{database}/documents/users/{userId}
-     * @allow (get, update, delete) User with matching userId. (create) User with matching userId, if no document existed before.
-     * @deny (get, update, delete) User with non-matching userId. (create) User with non-matching userId
-     * @principle Enforces document ownership for writes.
-     */
-    match /users/{userId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
+    function isSignedIn() {
+      return request.auth != null;
+    }
 
-      function isOwner(userId) {
-        return request.auth.uid == userId;
-      }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      allow get: if isOwner(userId) || isAdmin();
-      allow list: if false;
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
-      allow delete: if isOwner(userId) || isAdmin();
+    function isParticipant(conversationId) {
+        return isSignedIn() && get(/databases/$(database)/documents/conversations/$(conversationId)).data.participantIds.hasAny([request.auth.uid]);
     }
 
     /**
-     * @description Rule for student information.
-     * @path /databases/{database}/documents/students/{studentId}
-     * @allow (get, list) Any signed in user. (create, update, delete) Admin only.
-     * @deny (get, list) Not signed in user. (create, update, delete) Non-admin users.
-     * @principle Restricts student management to admins.
+     * @description Controls access to the /conversations collection.
+     * @path /conversations/{conversationId}
+     * @allow (create) - Any signed-in user can create a conversation.
+     * @deny (create) - Conversation creation fails if the conversation document already exists.
+     * @allow (get) - Only a participant of the conversation can read it.
+     * @deny (get) - A non-participant cannot read the conversation.
+     * @deny (list) - Listing conversations is disallowed.
+     * @allow (update) - No one is allowed to update the document.
+     * @allow (delete) - No one is allowed to delete the document.
+     * @principle Enforces shared access to conversations: only participants can access.
      */
-    match /students/{studentId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      allow get: if isSignedIn() || isAdmin();
-      allow list: if isSignedIn() || isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * @description Rule for supervisor information.
-     * @path /databases/{database}/documents/supervisors/{supervisorId}
-     * @allow (get, list) Any signed in user. (create, update, delete) Admin only.
-     * @deny (get, list) Not signed in user. (create, update, delete) Non-admin users.
-     * @principle Restricts supervisor management to admins.
-     */
-    match /supervisors/{supervisorId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      allow get: if isSignedIn() || isAdmin();
-      allow list: if isSignedIn() || isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * @description Rule for graduation defense sessions.
-     * @path /databases/{database}/documents/graduationDefenseSessions/{sessionId}
-     * @allow (get, list) Any signed in user. (create, update, delete) Admin only.
-     * @deny (get, list) Not signed in user. (create, update, delete) Non-admin users.
-     * @principle Restricts defense session management to admins.
-     */
-    match /graduationDefenseSessions/{sessionId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      allow get: if isSignedIn() || isAdmin();
-      allow list: if isSignedIn() || isAdmin();
-      allow create: if isAdmin();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
-    }
-
-    /**
-     * @description Rule for defense registrations.
-     * @path /databases/{database}/documents/defenseRegistrations/{registrationId}
-     * @allow (get) Any signed in user. (create) Any signed in user. (update, delete) Admin only.
-     * @deny (get) Not signed in user. (create) Not signed in user. (update, delete) Non-admin users.
-     * @principle Allows signed-in users to view and create defense registrations, with admin control over modifications and deletions.
-     */
-    match /defenseRegistrations/{registrationId} {
-      function isSignedIn() {
-        return request.auth != null;
-      }
-
-      function isAdmin() {
-        return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
-      }
-
-      allow get: if isSignedIn() || isAdmin();
-      allow list: if isSignedIn() || isAdmin();
+    match /conversations/{conversationId} {
       allow create: if isSignedIn();
-      allow update: if isAdmin();
-      allow delete: if isAdmin();
+      allow get: if isParticipant(conversationId);
+      allow list: if false;
+      allow update: if false;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Controls access to the /conversations/{conversationId}/messages subcollection.
+     * @path /conversations/{conversationId}/messages/{messageId}
+     * @allow (create) - Only a participant of the conversation can create a message.  The conversationId must match.
+     * @deny (create) - Message creation fails if the user is not a participant.
+     * @allow (get) - Only a participant of the conversation can read a message.
+     * @deny (get) - A non-participant cannot read the message.
+     * @allow (list) - Only a participant of the conversation can list messages.
+     * @deny (list) - A non-participant cannot list messages.
+     * @allow (update) - No one is allowed to update the document.
+     * @allow (delete) - No one is allowed to delete the document.
+     * @principle Enforces shared access to messages within a conversation: only participants can access.
+     */
+    match /conversations/{conversationId}/messages/{messageId} {
+      allow create: if isParticipant(conversationId) && request.resource.data.conversationId == conversationId;
+      allow get: if isParticipant(conversationId);
+      allow list: if isParticipant(conversationId);
+      allow update: if false;
+      allow delete: if false;
     }
   }
 }

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -10,7 +11,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, DefenseSubCommittee } from '@/lib/types';
 import { useToast } from '@/hooks/use-toast';
@@ -100,18 +101,12 @@ export function AssignSubcommitteeDialog({
         description: `Đã phân công ${projectGroups.length} đề tài vào ${subCommittees.length} tiểu ban.`,
       });
       onFinished();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error assigning subcommittees:', error);
-       const contextualError = new FirestorePermissionError({
-          path: 'batch update on defenseRegistrations',
-          operation: 'update',
-          requestResourceData: { subCommitteeId: '...multiple...' },
-        });
-        errorEmitter.emit('permission-error', contextualError);
       toast({
         variant: 'destructive',
         title: 'Lỗi',
-        description: 'Không thể thực hiện phân công.',
+        description: `Không thể thực hiện phân công: ${error.message}`,
       });
     } finally {
       setIsAssigning(false);

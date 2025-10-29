@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,12 +20,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { Calendar } from '@/components/ui/calendar';
 import { useToast } from '@/hooks/use-toast';
 import { useCollection, useFirestore, errorEmitter, FirestorePermissionError, useMemoFirebase } from '@/firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { CalendarIcon, GraduationCap, Briefcase, UserCheck, Building, Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { format } from 'date-fns';
+import { format, addMonths, startOfMonth, getDay, addDays } from 'date-fns';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import type { Rubric, InternshipCompany } from '@/lib/types';
+import type { Rubric, InternshipCompany, DefenseSession } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { Slider } from './ui/slider';
 import { DialogFooter, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
@@ -46,6 +47,8 @@ const formSchema = z.object({
   expectedReportDate: z.date({ required_error: 'Ngày báo cáo dự kiến là bắt buộc.' }),
   zaloGroupLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
   description: z.string().optional(),
+  postDefenseSubmissionLink: z.string().url({ message: 'Vui lòng nhập một URL hợp lệ.' }).optional().or(z.literal('')),
+  postDefenseSubmissionDescription: z.string().optional(),
   companyIds: z.array(z.string()).optional(),
   councilGraduationRubricId: z.string().optional(),
   councilInternshipRubricId: z.string().optional(),
@@ -57,9 +60,10 @@ const formSchema = z.object({
 
 interface AddDefenseSessionFormProps {
   onFinished: () => void;
+  sessionToCopy?: DefenseSession | null;
 }
 
-export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps) {
+export function AddDefenseSessionForm({ onFinished, sessionToCopy }: AddDefenseSessionFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
 
@@ -68,22 +72,37 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
 
   const companiesCollectionRef = useMemoFirebase(() => collection(firestore, 'internshipCompanies'), [firestore]);
   const { data: companies, isLoading: isLoadingCompanies } = useCollection<InternshipCompany>(companiesCollectionRef);
+  
+  const toDate = (timestamp: any): Date | undefined => {
+    if (timestamp instanceof Timestamp) {
+      return timestamp.toDate();
+    }
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
 
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: '',
-      sessionType: 'combined',
-      description: '',
-      zaloGroupLink: '',
-      companyIds: [],
-      councilGraduationRubricId: '',
-      councilInternshipRubricId: '',
-      supervisorGraduationRubricId: '',
-      companyInternshipRubricId: '',
-      graduationCouncilWeight: 80, // Default to 80%
-      internshipCouncilWeight: 50, // Default to 50%
+      name: sessionToCopy ? `${sessionToCopy.name} (Copy)` : '',
+      sessionType: sessionToCopy?.sessionType || 'combined',
+      description: sessionToCopy?.description || '',
+      zaloGroupLink: sessionToCopy?.zaloGroupLink || '',
+      postDefenseSubmissionLink: sessionToCopy?.postDefenseSubmissionLink || '',
+      postDefenseSubmissionDescription: sessionToCopy?.postDefenseSubmissionDescription || '',
+      companyIds: sessionToCopy?.companyIds || [],
+      councilGraduationRubricId: sessionToCopy?.councilGraduationRubricId || '',
+      councilInternshipRubricId: sessionToCopy?.councilInternshipRubricId || '',
+      supervisorGraduationRubricId: sessionToCopy?.supervisorGraduationRubricId || '',
+      companyInternshipRubricId: sessionToCopy?.companyInternshipRubricId || '',
+      graduationCouncilWeight: sessionToCopy?.graduationCouncilWeight ?? 80,
+      internshipCouncilWeight: sessionToCopy?.internshipCouncilWeight ?? 50,
+      startDate: sessionToCopy ? undefined : new Date(),
+      registrationDeadline: undefined,
+      expectedReportDate: undefined,
     },
   });
 
@@ -91,6 +110,31 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
       control: form.control,
       name: 'sessionType'
   });
+  
+  const startDate = useWatch({
+      control: form.control,
+      name: 'startDate'
+  });
+
+  React.useEffect(() => {
+    if (startDate) {
+      // Logic: Saturday of the second week of the month, 3 months from the start date.
+      // 1. Add 3 months to start date
+      const futureMonth = addMonths(startDate, 3);
+      // 2. Get the first day of that month
+      const firstDayOfFutureMonth = startOfMonth(futureMonth);
+      // 3. Find the day of the week for the 1st (0=Sun, 1=Mon, ..., 6=Sat)
+      const firstDayOfWeek = getDay(firstDayOfFutureMonth);
+      // 4. Calculate days to add to get to the first Saturday
+      // (6 - firstDayOfWeek + 7) % 7 ensures we always move forward to the next Saturday
+      const daysUntilFirstSaturday = (6 - firstDayOfWeek + 7) % 7;
+      // 5. First Saturday is found. Add 7 more days to get to the second Saturday.
+      const secondSaturday = addDays(firstDayOfFutureMonth, daysUntilFirstSaturday + 7);
+
+      form.setValue('expectedReportDate', secondSaturday);
+    }
+  }, [startDate, form]);
+
   
   const cleanRubricId = (value: string | undefined) => value === NO_RUBRIC_VALUE ? '' : value;
 
@@ -131,7 +175,7 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
         render={({ field }) => (
             <FormItem>
             <FormLabel className="flex items-center gap-2">{icon}{label}</FormLabel>
-            <Select onValueChange={field.onChange} defaultValue={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
+            <Select onValueChange={field.onChange} value={field.value || NO_RUBRIC_VALUE} disabled={isLoadingRubrics}>
                 <FormControl>
                 <SelectTrigger>
                     <SelectValue placeholder={isLoadingRubrics ? "Đang tải..." : "Chọn một rubric"} />
@@ -157,9 +201,9 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Tạo Đợt báo cáo mới</DialogTitle>
+        <DialogTitle>{sessionToCopy ? 'Sao chép Đợt báo cáo' : 'Tạo Đợt báo cáo mới'}</DialogTitle>
         <DialogDescription>
-            Điền thông tin chi tiết để tạo một đợt báo cáo mới.
+            {sessionToCopy ? `Tạo một bản sao của "${sessionToCopy.name}". Vui lòng cập nhật lại thời gian.` : 'Điền thông tin chi tiết để tạo một đợt báo cáo mới.'}
         </DialogDescription>
       </DialogHeader>
       <Form {...form}>
@@ -470,6 +514,40 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
 
 
                 <Separator />
+                <p className="text-sm font-medium">Nộp báo cáo sau Hội đồng</p>
+                <FormField
+                control={form.control}
+                name="postDefenseSubmissionLink"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Link nộp bài</FormLabel>
+                    <FormControl>
+                        <Input placeholder="https://forms.gle/..." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+                 <FormField
+                control={form.control}
+                name="postDefenseSubmissionDescription"
+                render={({ field }) => (
+                    <FormItem>
+                    <FormLabel>Mô tả/Yêu cầu</FormLabel>
+                    <FormControl>
+                        <Textarea
+                        placeholder="Nhập các yêu cầu khi nộp bài: thành phần, định dạng,..."
+                        className="resize-y"
+                        {...field}
+                        />
+                    </FormControl>
+                    <FormMessage />
+                    </FormItem>
+                )}
+                />
+
+
+                <Separator />
 
 
                 <FormField
@@ -515,5 +593,3 @@ export function AddDefenseSessionForm({ onFinished }: AddDefenseSessionFormProps
     </>
   );
 }
-
-    

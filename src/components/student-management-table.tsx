@@ -1,8 +1,9 @@
 
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Table,
   TableBody,
@@ -50,9 +51,9 @@ import {
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown, KeyRound } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, doc, deleteDoc, updateDoc, writeBatch } from 'firebase/firestore';
+import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { Student } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
@@ -69,6 +70,7 @@ import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 import { StudentStatusDetailsDialog } from './student-status-details-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ScrollArea } from './ui/scroll-area';
+import { Separator } from './ui/separator';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -76,6 +78,11 @@ const statusLabel: Record<Student['status'], string> = {
   reserved: 'Bảo lưu',
   dropped_out: 'Đã nghỉ',
   graduated: 'Đã tốt nghiệp',
+};
+
+const completionStatusLabel: Record<'achieved' | 'not_achieved', string> = {
+  achieved: 'Đã đạt',
+  not_achieved: 'Chưa đạt',
 };
 
 const statusVariant: Record<Student['status'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -110,6 +117,8 @@ export function StudentManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [classFilter, setClassFilter] = useState('all');
   const [courseFilter, setCourseFilter] = useState('all');
+  const [graduationStatusFilter, setGraduationStatusFilter] = useState('all');
+  const [internshipStatusFilter, setInternshipStatusFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
@@ -138,7 +147,7 @@ export function StudentManagementTable() {
   const classStatsByCourse = useMemo(() => {
     if (!students || !isStatsOpen) return [];
 
-    const statsByClass: Record<string, { total: number; studying: number; reserved: number; dropped_out: number; graduated: number; }> = {};
+    const statsByClass: Record<string, { total: number; studying: number; reserved: number; dropped_out: number; graduated: number; gradAchieved: number; gradNotAchieved: number; internAchieved: number; internNotAchieved: number; }> = {};
 
     students.forEach(student => {
         const className = student.className || 'Chưa xếp lớp';
@@ -147,11 +156,23 @@ export function StudentManagementTable() {
         }
 
         if (!statsByClass[className]) {
-            statsByClass[className] = { total: 0, studying: 0, reserved: 0, dropped_out: 0, graduated: 0 };
+            statsByClass[className] = { total: 0, studying: 0, reserved: 0, dropped_out: 0, graduated: 0, gradAchieved: 0, gradNotAchieved: 0, internAchieved: 0, internNotAchieved: 0 };
         }
         statsByClass[className].total++;
         if (statsByClass[className][student.status] !== undefined) {
             statsByClass[className][student.status]++;
+        }
+        
+        if (student.graduationStatus === 'achieved') {
+          statsByClass[className].gradAchieved++;
+        } else {
+          statsByClass[className].gradNotAchieved++;
+        }
+
+        if (student.internshipStatus === 'achieved') {
+          statsByClass[className].internAchieved++;
+        } else {
+          statsByClass[className].internNotAchieved++;
         }
     });
 
@@ -211,10 +232,12 @@ export function StudentManagementTable() {
       
       const classFilterMatch = classFilter === 'all' || student.className === classFilter;
       const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
+      const gradStatusMatch = graduationStatusFilter === 'all' || (student.graduationStatus || 'not_achieved') === graduationStatusFilter;
+      const internStatusMatch = internshipStatusFilter === 'all' || (student.internshipStatus || 'not_achieved') === internshipStatusFilter;
 
-      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch;
+      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch && gradStatusMatch && internStatusMatch;
     });
-  }, [students, searchTerm, classFilter, courseFilter, sortConfig]);
+  }, [students, searchTerm, classFilter, courseFilter, graduationStatusFilter, internshipStatusFilter, sortConfig]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -255,6 +278,54 @@ export function StudentManagementTable() {
     setStudentToDelete(student);
     setIsDeleteDialogOpen(true);
   };
+
+  const handleBatchStatusChange = async (newStatus: Student['status']) => {
+    if (selectedRowIds.length === 0) {
+      toast({
+        variant: 'destructive',
+        title: 'Chưa chọn sinh viên',
+        description: 'Vui lòng chọn ít nhất một sinh viên để cập nhật.',
+      });
+      return;
+    }
+    const batch = writeBatch(firestore);
+    selectedRowIds.forEach(id => {
+      const studentDocRef = doc(firestore, 'students', id);
+      batch.update(studentDocRef, { status: newStatus });
+    });
+    try {
+      await batch.commit();
+      toast({
+        title: 'Thành công',
+        description: `Đã cập nhật trạng thái cho ${selectedRowIds.length} sinh viên.`,
+      });
+      setSelectedRowIds([]);
+    } catch (error) {
+       toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái sinh viên.',
+      });
+    }
+  };
+
+  const handleCompletionStatusChange = async (studentId: string, field: 'graduationStatus' | 'internshipStatus', newStatus: 'achieved' | 'not_achieved') => {
+    const studentDocRef = doc(firestore, 'students', studentId);
+    try {
+      await updateDoc(studentDocRef, { [field]: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Trạng thái hoàn thành của sinh viên đã được cập nhật.`,
+      });
+    } catch (error) {
+      console.error("Error updating student completion status:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái hoàn thành.',
+      });
+    }
+  }
 
   const handleStatusChange = async (studentId: string, newStatus: Student['status']) => {
     const studentDocRef = doc(firestore, 'students', studentId);
@@ -344,6 +415,34 @@ export function StudentManagementTable() {
     setSelectedRowIds([]);
   }
 
+  const exportToExcel = () => {
+    const dataToExport = filteredStudents.map((student, index) => ({
+      'STT': index + 1,
+      'MSSV': student.studentId,
+      'Họ': student.firstName,
+      'Tên': student.lastName,
+      'Lớp': student.className,
+      'Email': student.email,
+      'Chuyên ngành': student.major,
+      'Trạng thái học tập': statusLabel[student.status],
+      'Trạng thái TN': completionStatusLabel[student.graduationStatus || 'not_achieved'],
+      'Trạng thái TT': completionStatusLabel[student.internshipStatus || 'not_achieved'],
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'DanhSachSinhVien');
+    
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 20 }, { wch: 10 }, { wch: 15 }, 
+      { wch: 30 }, { wch: 25 }, { wch: 15 }, { wch: 15 }, { wch: 15 }
+    ];
+    
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], {type: 'application/octet-stream'});
+    saveAs(data, 'DanhSachSinhVien.xlsx');
+  };
+
   if (isLoading) {
     return (
       <Card>
@@ -366,7 +465,7 @@ export function StudentManagementTable() {
   }
 
   const isAllSelected = filteredStudents && selectedRowIds.length > 0 && selectedRowIds.length === filteredStudents.length;
-  const isSomeSelected = selectedRowIds.length > 0 && selectedRowIds.length < (filteredStudents?.length ?? 0);
+  const isSomeSelected = selectedRowIds.length > 0 && (!filteredStudents || selectedRowIds.length < filteredStudents.length);
 
   const getPercentage = (value: number, total: number) => {
     if (total === 0) return '0%';
@@ -401,34 +500,61 @@ export function StudentManagementTable() {
                                                     <CardTitle className="text-base">{stat.className}</CardTitle>
                                                     <CardDescription>{stat.total} sinh viên</CardDescription>
                                                 </CardHeader>
-                                                <CardContent className="text-xs space-y-1">
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
-                                                            {statusLabel.studying}
-                                                        </span>
-                                                        <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
+                                                <CardContent className="text-xs space-y-2">
+                                                    <div>
+                                                        <p className="font-semibold mb-1">Trạng thái học tập</p>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'studying')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.studying, "bg-green-500")}></span>
+                                                                {statusLabel.studying}
+                                                            </span>
+                                                            <span>{stat.studying} <span className="text-muted-foreground">({getPercentage(stat.studying, stat.total)})</span></span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
+                                                                {statusLabel.reserved}
+                                                            </span>
+                                                            <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
+                                                                {statusLabel.dropped_out}
+                                                            </span>
+                                                            <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
+                                                        </div>
+                                                        <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
+                                                            <span className="flex items-center gap-1.5">
+                                                                <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
+                                                                {statusLabel.graduated}
+                                                            </span>
+                                                            <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
+                                                        </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'reserved')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.reserved, "bg-orange-500")}></span>
-                                                            {statusLabel.reserved}
-                                                        </span>
-                                                        <span>{stat.reserved} <span className="text-muted-foreground">({getPercentage(stat.reserved, stat.total)})</span></span>
+                                                    <Separator />
+                                                    <div>
+                                                        <p className="font-semibold mb-1">Hoàn thành TN</p>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-green-600"><Check className="h-3 w-3"/> Đã đạt</span>
+                                                            <span>{stat.gradAchieved} <span className="text-muted-foreground">({getPercentage(stat.gradAchieved, stat.total)})</span></span>
+                                                         </div>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-red-600"><X className="h-3 w-3"/> Chưa đạt</span>
+                                                            <span>{stat.gradNotAchieved} <span className="text-muted-foreground">({getPercentage(stat.gradNotAchieved, stat.total)})</span></span>
+                                                         </div>
                                                     </div>
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'dropped_out')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.dropped_out, "bg-red-500")}></span>
-                                                            {statusLabel.dropped_out}
-                                                        </span>
-                                                        <span>{stat.dropped_out} <span className="text-muted-foreground">({getPercentage(stat.dropped_out, stat.total)})</span></span>
-                                                    </div>
-                                                    <div className="flex items-center justify-between hover:bg-muted/50 rounded-md -mx-2 px-2 py-1 cursor-pointer" onClick={() => handleStatusClick(stat.className, 'graduated')}>
-                                                        <span className="flex items-center gap-1.5">
-                                                            <span className={cn("h-2 w-2 rounded-full", statusColorClass.graduated, "bg-blue-500")}></span>
-                                                            {statusLabel.graduated}
-                                                        </span>
-                                                        <span>{stat.graduated} <span className="text-muted-foreground">({getPercentage(stat.graduated, stat.total)})</span></span>
+                                                     <Separator />
+                                                     <div>
+                                                        <p className="font-semibold mb-1">Hoàn thành TT</p>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-green-600"><Check className="h-3 w-3"/> Đã đạt</span>
+                                                            <span>{stat.internAchieved} <span className="text-muted-foreground">({getPercentage(stat.internAchieved, stat.total)})</span></span>
+                                                         </div>
+                                                         <div className="flex items-center justify-between">
+                                                            <span className="flex items-center gap-1.5 text-red-600"><X className="h-3 w-3"/> Chưa đạt</span>
+                                                            <span>{stat.internNotAchieved} <span className="text-muted-foreground">({getPercentage(stat.internNotAchieved, stat.total)})</span></span>
+                                                         </div>
                                                     </div>
                                                 </CardContent>
                                             </Card>
@@ -447,6 +573,21 @@ export function StudentManagementTable() {
             <div className="flex items-center gap-2">
                  {selectedRowIds.length > 0 && (
                     <>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <Users className="mr-2 h-4 w-4" />
+                            Cập nhật trạng thái ({selectedRowIds.length})
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('studying')}>Đang học</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('reserved')}>Bảo lưu</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('dropped_out')}>Đã nghỉ học</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleBatchStatusChange('graduated')}>Đã tốt nghiệp</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
                       <Dialog open={isAssignClassDialogOpen} onOpenChange={setIsAssignClassDialogOpen}>
                         <DialogTrigger asChild>
                           <Button variant="outline" size="sm">
@@ -542,11 +683,28 @@ export function StudentManagementTable() {
                                     {className}
                                 </DropdownMenuCheckboxItem>
                             ))}
+                             <DropdownMenuSeparator />
+                             <DropdownMenuLabel>Trạng thái Tốt nghiệp</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'all'} onCheckedChange={() => setGraduationStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'achieved'} onCheckedChange={() => setGraduationStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'not_achieved'} onCheckedChange={() => setGraduationStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
+
+                             <DropdownMenuSeparator />
+                             <DropdownMenuLabel>Trạng thái Thực tập</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
+                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'all'} onCheckedChange={() => setInternshipStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'achieved'} onCheckedChange={() => setInternshipStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
                           </ScrollArea>
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
+                    <Button onClick={exportToExcel} variant="outline" className="w-full">
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Xuất Excel
+                    </Button>
                     <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
                         <DialogTrigger asChild>
                             <Button variant="outline" className="w-full">
@@ -603,8 +761,9 @@ export function StudentManagementTable() {
                     Lớp {getSortIcon('className')}
                 </Button>
               </TableHead>
-              <TableHead>Trạng thái</TableHead>
-              <TableHead>Email</TableHead>
+              <TableHead>TT Học tập</TableHead>
+              <TableHead>TT Tốt nghiệp</TableHead>
+              <TableHead>TT Thực tập</TableHead>
               <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -647,7 +806,12 @@ export function StudentManagementTable() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                 </TableCell>
-                <TableCell>{student.email}</TableCell>
+                <TableCell>
+                    <Badge variant={student.graduationStatus === 'achieved' ? 'default' : 'outline'}>{completionStatusLabel[student.graduationStatus || 'not_achieved']}</Badge>
+                </TableCell>
+                <TableCell>
+                    <Badge variant={student.internshipStatus === 'achieved' ? 'default' : 'outline'}>{completionStatusLabel[student.internshipStatus || 'not_achieved']}</Badge>
+                </TableCell>
                 <TableCell className="hidden md:table-cell">
                     {student.createdAt?.toDate && format(student.createdAt.toDate(), 'PPP')}
                 </TableCell>
@@ -662,7 +826,7 @@ export function StudentManagementTable() {
                       <DropdownMenuItem onClick={() => handleEditClick(student)}>Sửa</DropdownMenuItem>
                        <DropdownMenuSub>
                         <DropdownMenuSubTrigger>
-                          <span>Thay đổi trạng thái</span>
+                          <span>Thay đổi trạng thái học tập</span>
                         </DropdownMenuSubTrigger>
                         <DropdownMenuPortal>
                           <DropdownMenuSubContent>
@@ -679,6 +843,23 @@ export function StudentManagementTable() {
                               {statusLabel.graduated}
                             </DropdownMenuItem>
                           </DropdownMenuSubContent>
+                        </DropdownMenuPortal>
+                      </DropdownMenuSub>
+                      <DropdownMenuSub>
+                        <DropdownMenuSubTrigger>
+                          <span>Cập nhật hoàn thành</span>
+                        </DropdownMenuSubTrigger>
+                        <DropdownMenuPortal>
+                            <DropdownMenuSubContent>
+                                <DropdownMenuItem onClick={() => handleCompletionStatusChange(student.id, 'graduationStatus', student.graduationStatus === 'achieved' ? 'not_achieved' : 'achieved')}>
+                                    <GraduationCap className="mr-2 h-4 w-4"/>
+                                    <span>{student.graduationStatus === 'achieved' ? 'Hủy đạt TN' : 'Xác nhận đạt TN'}</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleCompletionStatusChange(student.id, 'internshipStatus', student.internshipStatus === 'achieved' ? 'not_achieved' : 'achieved')}>
+                                    <Briefcase className="mr-2 h-4 w-4"/>
+                                    <span>{student.internshipStatus === 'achieved' ? 'Hủy đạt TT' : 'Xác nhận đạt TT'}</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuSubContent>
                         </DropdownMenuPortal>
                       </DropdownMenuSub>
                       <DropdownMenuSeparator />
@@ -735,4 +916,10 @@ export function StudentManagementTable() {
     </div>
   );
 }
+
+
+
+    
+
+
 

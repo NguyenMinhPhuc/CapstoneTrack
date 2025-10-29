@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -34,16 +33,16 @@ import {
   DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
   DropdownMenuPortal,
-  DropdownMenuTrigger,
+  DropdownMenuSubTrigger,
   DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound, ArrowUpDown, Link as LinkIcon } from 'lucide-react';
 import { useAuth, useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, updateDoc } from 'firebase/firestore';
-import type { SystemUser } from '@/lib/types';
+import type { SystemUser, Student, Supervisor } from '@/lib/types';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
 import Image from 'next/image';
 import { Skeleton } from './ui/skeleton';
@@ -55,7 +54,7 @@ import { sendPasswordResetEmail } from 'firebase/auth';
 import { Input } from './ui/input';
 import { ImportUsersDialog } from './import-users-dialog';
 import { cn } from '@/lib/utils';
-import { v4 as uuidv4 } from 'uuid';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from './ui/tooltip';
 
 
 const defaultAvatar = PlaceHolderImages.find(p => p.id === 'user-avatar-default');
@@ -66,6 +65,10 @@ type RoleStats = {
     pending: number;
     disabled: number;
 }
+
+type SortKey = 'displayName' | 'email' | 'role' | 'status' | 'createdAt';
+type SortDirection = 'asc' | 'desc';
+
 
 export function UserManagementTable() {
   const firestore = useFirestore();
@@ -78,14 +81,33 @@ export function UserManagementTable() {
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [showOnlyDuplicates, setShowOnlyDuplicates] = useState(false);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
 
   const usersCollectionRef = useMemoFirebase(
     () => collection(firestore, 'users'),
     [firestore]
   );
+  const { data: users, isLoading: isLoadingUsers } = useCollection<SystemUser>(usersCollectionRef);
+
+  const studentsCollectionRef = useMemoFirebase(() => collection(firestore, 'students'), [firestore]);
+  const { data: students, isLoading: isLoadingStudents } = useCollection<Student>(studentsCollectionRef);
   
-  const { data: users, isLoading } = useCollection<SystemUser>(usersCollectionRef);
+  const supervisorsCollectionRef = useMemoFirebase(() => collection(firestore, 'supervisors'), [firestore]);
+  const { data: supervisors, isLoading: isLoadingSupervisors } = useCollection<Supervisor>(supervisorsCollectionRef);
+
+  const linkedUserIds = useMemo(() => {
+      const ids = new Set<string>();
+      if (students) {
+          students.forEach(s => ids.add(s.userId));
+      }
+      if (supervisors) {
+          supervisors.forEach(s => ids.add(s.userId));
+      }
+      return ids;
+  }, [students, supervisors]);
+
 
   const roleStats = useMemo(() => {
     const stats: Record<SystemUser['role'], RoleStats> = {
@@ -108,12 +130,95 @@ export function UserManagementTable() {
   }, [users]);
 
 
-  const filteredUsers = users?.filter(user => {
-    const searchMatch = user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false;
-    const roleMatch = roleFilter === 'all' || user.role === roleFilter;
-    const statusMatch = statusFilter === 'all' || user.status === statusFilter;
-    return searchMatch && roleMatch && statusMatch;
-  });
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+
+    let filtered = users;
+    
+    if (showOnlyDuplicates) {
+      const emailCounts = users.reduce((acc, user) => {
+        if (user.email) {
+          acc.set(user.email, (acc.get(user.email) || 0) + 1);
+        }
+        return acc;
+      }, new Map<string, number>());
+
+      const duplicateEmails = new Set<string>();
+      emailCounts.forEach((count, email) => {
+        if (count > 1) {
+          duplicateEmails.add(email);
+        }
+      });
+      
+      filtered = filtered.filter(user => user.email && duplicateEmails.has(user.email));
+    }
+
+    filtered = filtered.filter(user => {
+      const searchMatch = user.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) || (user.email ? user.email.toLowerCase().includes(searchTerm.toLowerCase()) : false);
+      const roleMatch = roleFilter === 'all' || user.role === roleFilter;
+      const statusMatch = statusFilter === 'all' || user.status === statusFilter;
+      return searchMatch && roleMatch && statusMatch;
+    });
+
+    const sortableUsers = [...filtered];
+
+    sortableUsers.sort((a, b) => {
+        if (showOnlyDuplicates && a.email && b.email) {
+            const emailCompare = a.email.localeCompare(b.email);
+            if (emailCompare !== 0) {
+                return emailCompare;
+            }
+        }
+
+        if (sortConfig !== null) {
+            const aValue = a[sortConfig.key] ?? '';
+            const bValue = b[sortConfig.key] ?? '';
+            
+            if (sortConfig.key === 'createdAt') {
+                const dateA = (aValue as any)?.toDate ? (aValue as any).toDate().getTime() : 0;
+                const dateB = (bValue as any)?.toDate ? (bValue as any).toDate().getTime() : 0;
+                if (dateA < dateB) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (dateA > dateB) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            }
+            
+             if (sortConfig.key === 'displayName') {
+                const aName = a.displayName || a.email;
+                const bName = b.displayName || b.email;
+                 if (aName < bName) return sortConfig.direction === 'asc' ? -1 : 1;
+                if (aName > bName) return sortConfig.direction === 'asc' ? 1 : -1;
+                return 0;
+            }
+
+            if (String(aValue) < String(bValue)) {
+                return sortConfig.direction === 'asc' ? -1 : 1;
+            }
+            if (String(aValue) > String(bValue)) {
+                return sortConfig.direction === 'asc' ? 1 : -1;
+            }
+        }
+
+        return (b.createdAt?.toDate ? b.createdAt.toDate().getTime() : 0) - (a.createdAt?.toDate ? a.createdAt.toDate().getTime() : 0);
+    });
+
+    return sortableUsers;
+
+  }, [users, searchTerm, roleFilter, statusFilter, showOnlyDuplicates, sortConfig]);
+  
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
 
   const roleVariant: Record<SystemUser['role'], 'default' | 'secondary' | 'outline'> = {
     'admin': 'default',
@@ -178,6 +283,8 @@ export function UserManagementTable() {
       });
     }
   };
+  
+  const isLoading = isLoadingUsers || isLoadingStudents || isLoadingSupervisors;
 
   if (isLoading) {
     return (
@@ -293,13 +400,14 @@ export function UserManagementTable() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
+                             <DropdownMenuLabel>Lọc theo vai trò</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
                              <DropdownMenuCheckboxItem
                                 checked={roleFilter === 'all'}
                                 onCheckedChange={() => setRoleFilter('all')}
                             >
-                                All Roles
+                                Tất cả vai trò
                             </DropdownMenuCheckboxItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuCheckboxItem
                                 checked={roleFilter === 'admin'}
                                 onCheckedChange={() => setRoleFilter('admin')}
@@ -319,30 +427,38 @@ export function UserManagementTable() {
                                 Student
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuSeparator />
+                             <DropdownMenuLabel>Lọc theo trạng thái</DropdownMenuLabel>
+                             <DropdownMenuSeparator />
                              <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'all'}
                                 onCheckedChange={() => setStatusFilter('all')}
                             >
-                                All Statuses
+                                Tất cả trạng thái
                             </DropdownMenuCheckboxItem>
-                            <DropdownMenuSeparator />
                             <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'active'}
                                 onCheckedChange={() => setStatusFilter('active')}
                             >
-                                Active
+                                Đang hoạt động
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'pending'}
                                 onCheckedChange={() => setStatusFilter('pending')}
                             >
-                                Pending
+                                Đang chờ
                             </DropdownMenuCheckboxItem>
                             <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'disabled'}
                                 onCheckedChange={() => setStatusFilter('disabled')}
                             >
-                                Disabled
+                                Đã bị khóa
+                            </DropdownMenuCheckboxItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuCheckboxItem
+                                checked={showOnlyDuplicates}
+                                onCheckedChange={setShowOnlyDuplicates}
+                            >
+                                Chỉ hiển thị email trùng lặp
                             </DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -364,7 +480,7 @@ export function UserManagementTable() {
                                 Add User
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-[425px]">
+                        <DialogContent className="sm:max-w-md">
                             <DialogHeader>
                             <DialogTitle>Add New User</DialogTitle>
                             <DialogDescription>
@@ -383,15 +499,33 @@ export function UserManagementTable() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-[50px]">#</TableHead>
-              <TableHead>User</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="hidden md:table-cell">Created At</TableHead>
+              <TableHead>
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('displayName')}>
+                    User {getSortIcon('displayName')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                 <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('role')}>
+                    Role {getSortIcon('role')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('status')}>
+                    Status {getSortIcon('status')}
+                </Button>
+              </TableHead>
+              <TableHead className="hidden md:table-cell">
+                 <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('createdAt')}>
+                    Created At {getSortIcon('createdAt')}
+                </Button>
+              </TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredUsers?.map((user, index) => (
+            {filteredUsers?.map((user, index) => {
+              const isLinked = linkedUserIds.has(user.id);
+              return (
               <TableRow key={user.id}>
                 <TableCell>{index + 1}</TableCell>
                 <TableCell>
@@ -400,9 +534,24 @@ export function UserManagementTable() {
                         {defaultAvatar && (
                             <Image src={defaultAvatar.imageUrl} alt={user.email} width={40} height={40} data-ai-hint={defaultAvatar.imageHint}/>
                         )}
-                      <AvatarFallback>{user.email.substring(0, 2).toUpperCase()}</AvatarFallback>
+                      <AvatarFallback>{user.displayName ? user.displayName.substring(0, 2).toUpperCase() : user.email.substring(0, 2).toUpperCase()}</AvatarFallback>
                     </Avatar>
-                    <div className="font-medium">{user.email}</div>
+                    <div>
+                        <div className="font-medium">{user.displayName || 'Chưa có tên'}</div>
+                        <div className="text-sm text-muted-foreground">{user.email}</div>
+                    </div>
+                    {isLinked && (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger>
+                                     <LinkIcon className="h-4 w-4 text-muted-foreground" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>Tài khoản này đã được liên kết với một hồ sơ Sinh viên hoặc Giáo viên.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    )}
                   </div>
                 </TableCell>
                 <TableCell>
@@ -450,7 +599,7 @@ export function UserManagementTable() {
                   </DropdownMenu>
                 </TableCell>
               </TableRow>
-            ))}
+            )})}
           </TableBody>
         </Table>
       </CardContent>

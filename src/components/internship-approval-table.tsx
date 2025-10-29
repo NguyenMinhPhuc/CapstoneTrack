@@ -38,6 +38,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SelectGroup,
+  SelectLabel,
 } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import {
@@ -66,6 +68,7 @@ const reportStatusLabel: Record<ReportStatus, string> = {
     exempted: 'Đặc cách',
     withdrawn: 'Bỏ báo cáo',
     not_reporting: 'Chưa ĐK',
+    completed: 'Hoàn thành',
 };
 
 const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
@@ -73,7 +76,15 @@ const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destr
     exempted: 'secondary',
     withdrawn: 'destructive',
     not_reporting: 'outline',
+    completed: 'default',
 };
+
+const statusLabel: Record<string, string> = {
+  ongoing: 'Đang diễn ra',
+  upcoming: 'Sắp diễn ra',
+  completed: 'Đã hoàn thành',
+};
+
 
 export function InternshipApprovalTable() {
   const firestore = useFirestore();
@@ -108,6 +119,16 @@ export function InternshipApprovalTable() {
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
     return new Map(sessions.map(s => [s.id, s.name]));
+  }, [sessions]);
+  
+  const groupedSessions = useMemo(() => {
+    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
+    return sessions.reduce((acc, session) => {
+      const group = acc[session.status] || [];
+      group.push(session);
+      acc[session.status] = group;
+      return acc;
+    }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
   }, [sessions]);
 
   const filteredRegistrations = useMemo(() => {
@@ -284,15 +305,24 @@ export function InternshipApprovalTable() {
                 />
                 </div>
                 <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                <SelectTrigger className="w-full sm:w-[250px]">
+                  <SelectTrigger className="w-full sm:w-[250px]">
                     <SelectValue placeholder="Lọc theo đợt" />
-                </SelectTrigger>
-                <SelectContent>
+                  </SelectTrigger>
+                  <SelectContent>
                     <SelectItem value="all">Tất cả các đợt</SelectItem>
-                    {sessions?.map(session => (
-                    <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                    ))}
-                </SelectContent>
+                    {Object.entries(groupedSessions).map(([status, sessionList]) =>
+                      sessionList.length > 0 && (
+                        <SelectGroup key={status}>
+                          <SelectLabel>{statusLabel[status] || status}</SelectLabel>
+                          {sessionList.map(session => (
+                            <SelectItem key={session.id} value={session.id}>
+                              {session.name}
+                            </SelectItem>
+                          ))}
+                        </SelectGroup>
+                      )
+                    )}
+                  </SelectContent>
                 </Select>
             </div>
             </div>

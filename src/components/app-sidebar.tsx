@@ -12,6 +12,7 @@ import {
   SidebarMenuButton,
   SidebarGroup,
   SidebarSeparator,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 import {
   LayoutDashboard,
@@ -38,12 +39,16 @@ import {
   ClipboardList,
   Clock,
   CheckSquare,
+  LifeBuoy,
+  MessageSquare,
+  Library,
 } from "lucide-react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Button } from "./ui/button";
+import type { SystemSettings } from "@/lib/types";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -56,6 +61,10 @@ export function AppSidebar() {
   }, [user, firestore]);
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
+  
+  const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
+  const { data: settings, isLoading: isLoadingSettings } = useDoc<SystemSettings>(settingsDocRef);
+  const isPostDefenseSubmissionEnabled = settings?.enablePostDefenseSubmission ?? false;
 
   const isActive = (href: string) => {
     if (href === '/') {
@@ -64,7 +73,7 @@ export function AppSidebar() {
     return pathname.startsWith(href);
   }
 
-  const isLoading = isUserLoading || isUserDataLoading;
+  const isLoading = isUserLoading || isUserDataLoading || isLoadingSettings;
 
   if (isLoading) {
       return (
@@ -110,6 +119,16 @@ export function AppSidebar() {
                     <Link href="/"><LayoutDashboard /><span>Dashboard</span></Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/qna")} tooltip="Hỏi & Đáp">
+                    <Link href="/qna"><MessageSquare /><span>Hỏi & Đáp</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+             <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/resources")} tooltip="Tài nguyên">
+                    <Link href="/resources"><Library /><span>Tài nguyên</span></Link>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
 
             {userData?.role === 'student' && (
               <>
@@ -144,6 +163,11 @@ export function AppSidebar() {
                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/report-submission")} tooltip="Nộp báo cáo">
                                         <Link href="/report-submission"><FileUp /><span>Nộp báo cáo</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/post-defense-submission")} tooltip="Nộp sau HĐ">
+                                        <Link href="/post-defense-submission"><FileUp /><span>Nộp sau Hội đồng</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                             </SidebarMenu>
@@ -198,6 +222,11 @@ export function AppSidebar() {
                     </SidebarMenuButton>
                 </SidebarMenuItem>
                  <SidebarMenuItem>
+                    <SidebarMenuButton asChild isActive={isActive("/graduation-guidance")} tooltip="Hướng dẫn Tốt nghiệp">
+                        <Link href="/graduation-guidance"><GraduationCap /><span>Hướng dẫn Tốt nghiệp</span></Link>
+                    </SidebarMenuButton>
+                </SidebarMenuItem>
+                 <SidebarMenuItem>
                     <SidebarMenuButton asChild isActive={isActive("/early-internship-guidance")} tooltip="Hướng dẫn TT sớm">
                         <Link href="/early-internship-guidance"><Clock /><span>Hướng dẫn TT sớm</span></Link>
                     </SidebarMenuButton>
@@ -239,6 +268,11 @@ export function AppSidebar() {
                                  <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/topics")} tooltip="Topic Management">
                                         <Link href="/admin/topics"><BookA /><span>Quản lý Đề tài</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/resources")} tooltip="Resource Management">
+                                        <Link href="/admin/resources"><Library /><span>Quản lý Tài nguyên</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                  <SidebarMenuItem>
@@ -314,18 +348,25 @@ export function AppSidebar() {
                  <div className="px-2 py-2"><SidebarSeparator /></div>
                 </>
              )}
-            
-            <div className="flex-1" />
-
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter>
+          <SidebarMenu>
             <SidebarMenuItem>
-                <SidebarMenuButton asChild isActive={isActive("/settings")} tooltip="Settings">
-                    <Link href="#"><Settings /><span>Settings</span></Link>
+              <SidebarMenuButton asChild isActive={isActive("/help")} tooltip="Help">
+                <Link href="/help">
+                  <LifeBuoy />
+                  <span>Hướng dẫn</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton asChild isActive={isActive("/profile")} tooltip="Settings">
+                    <Link href="/profile"><Settings /><span>Settings</span></Link>
                 </SidebarMenuButton>
             </SidebarMenuItem>
         </SidebarMenu>
-      </SidebarContent>
+      </SidebarFooter>
     </Sidebar>
   );
 }
-
-    

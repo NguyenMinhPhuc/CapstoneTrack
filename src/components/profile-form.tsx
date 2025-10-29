@@ -14,16 +14,16 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useDoc, useFirestore, useMemoFirebase, FirestorePermissionError, errorEmitter } from '@/firebase';
+import { useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc, updateDoc, writeBatch } from 'firebase/firestore';
 import type { SystemUser } from '@/lib/types';
 import type { User } from 'firebase/auth';
 import { useEffect } from 'react';
 import { Skeleton } from './ui/skeleton';
+import { updateProfile } from 'firebase/auth';
 
 const formSchema = z.object({
-  firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
-  lastName: z.string().min(1, { message: 'Tên là bắt buộc.' }),
+  displayName: z.string().min(3, { message: 'Tên hiển thị phải có ít nhất 3 ký tự.' }),
 });
 
 interface ProfileFormProps {
@@ -46,8 +46,7 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      firstName: '',
-      lastName: '',
+      displayName: '',
     },
   });
   
@@ -70,13 +69,13 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
                     title: 'Đồng bộ hóa thành công',
                     description: 'Email của bạn đã được cập nhật trên toàn hệ thống.',
                 });
-            } catch(e) {
-                 const contextualError = new FirestorePermissionError({
-                    path: `batch update for user ${user.uid}`,
-                    operation: 'update',
-                    requestResourceData: { email: user.email },
+            } catch(e: any) {
+                 console.error("Error syncing email:", e);
+                toast({
+                    variant: "destructive",
+                    title: "Lỗi đồng bộ hóa email",
+                    description: e.message,
                 });
-                errorEmitter.emit('permission-error', contextualError);
             }
         }
       }
@@ -85,43 +84,39 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
 
 
   useEffect(() => {
-    if (profileData) {
+    if (userData) {
       form.reset({
-        firstName: profileData.firstName || '',
-        lastName: profileData.lastName || '',
+        displayName: userData.displayName || '',
       });
     }
-  }, [profileData, form]);
+  }, [userData, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!profileDocRef) {
+    
+    try {
+        const batch = writeBatch(firestore);
+        
+        // Update the users document
+        const userDocRef = doc(firestore, 'users', user.uid);
+        batch.update(userDocRef, { displayName: values.displayName });
+
+        // Update the auth user profile
+        await updateProfile(user, { displayName: values.displayName });
+
+        await batch.commit();
+
         toast({
-            variant: 'destructive',
-            title: 'Lỗi',
-            description: 'Không thể cập nhật hồ sơ cho vai trò admin.',
+            title: 'Thành công',
+            description: 'Thông tin hồ sơ của bạn đã được cập nhật.',
         });
-        return;
+    } catch (error: any) {
+        console.error("Error updating profile:", error);
+        toast({
+            variant: "destructive",
+            title: "Lỗi",
+            description: error.message,
+        });
     }
-    
-    const updateData = {
-        firstName: values.firstName,
-        lastName: values.lastName,
-    };
-    
-    updateDoc(profileDocRef, updateData)
-        .catch(error => {
-            const contextualError = new FirestorePermissionError({
-                path: profileDocRef.path,
-                operation: 'update',
-                requestResourceData: updateData,
-            });
-            errorEmitter.emit('permission-error', contextualError);
-        });
-    
-      toast({
-        title: 'Thành công',
-        description: 'Thông tin hồ sơ của bạn đã được cập nhật.',
-      });
   }
   
   if (isProfileLoading) {
@@ -137,40 +132,21 @@ export function ProfileForm({ user, userData }: ProfileFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {userData.role !== 'admin' ? (
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <FormField
-                control={form.control}
-                name="firstName"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Họ</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Nguyễn" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-                <FormField
-                control={form.control}
-                name="lastName"
-                render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Tên</FormLabel>
-                    <FormControl>
-                        <Input placeholder="Văn A" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                    </FormItem>
-                )}
-                />
-            </div>
-        ) : (
-             <p className="text-sm text-muted-foreground">Không có thông tin hồ sơ (Họ, Tên) cho tài khoản Quản trị viên.</p>
-        )}
+        <FormField
+          control={form.control}
+          name="displayName"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Tên hiển thị</FormLabel>
+              <FormControl>
+                <Input placeholder="Nhập tên bạn muốn hiển thị" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
        
-        <Button type="submit" disabled={form.formState.isSubmitting || userData.role === 'admin'}>
+        <Button type="submit" disabled={form.formState.isSubmitting}>
           {form.formState.isSubmitting ? 'Đang lưu...' : 'Lưu thay đổi'}
         </Button>
       </form>

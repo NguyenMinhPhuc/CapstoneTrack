@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -17,10 +16,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, signOut, sendPasswordResetEmail, updateProfile } from 'firebase/auth';
 import { initializeApp, getApps } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
-import { doc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
+import { Checkbox } from './ui/checkbox';
+import type { SystemUser } from '@/lib/types';
+
 
 const formSchema = z.object({
   firstName: z.string().min(1, { message: 'Họ là bắt buộc.' }),
@@ -28,6 +30,8 @@ const formSchema = z.object({
   email: z.string().email({ message: 'Email không hợp lệ.' }),
   department: z.string().min(1, { message: 'Khoa/Bộ môn là bắt buộc.' }),
   facultyRank: z.string().optional(),
+  canGuideGraduation: z.boolean().default(true),
+  canGuideInternship: z.boolean().default(false),
 });
 
 interface AddSupervisorFormProps {
@@ -52,10 +56,26 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
       email: '',
       department: '',
       facultyRank: '',
+      canGuideGraduation: true,
+      canGuideInternship: false,
     },
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
+    // Check if email already exists in 'users' collection
+    const usersRef = collection(firestore, 'users');
+    const q = query(usersRef, where('email', '==', values.email));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+        toast({
+            variant: 'destructive',
+            title: 'Email đã tồn tại',
+            description: 'Email này đã được sử dụng cho một tài khoản khác.',
+        });
+        return;
+    }
+
     const secondaryApp = getSecondaryApp();
     const tempAuth = getAuth(secondaryApp);
     const password = uuidv4(); // Generate a strong random password
@@ -63,19 +83,22 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
     try {
         const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, password);
         const user = userCredential.user;
+        
+        const displayName = `${values.firstName} ${values.lastName}`.trim();
+        await updateProfile(user, { displayName: displayName });
 
-        // After creating the user, immediately send a password reset email
-        // This allows them to set their own password securely.
         await sendPasswordResetEmail(tempAuth, values.email);
 
         const batch = writeBatch(firestore);
 
         const userDocRef = doc(firestore, 'users', user.uid);
-        const userData = {
+        const userData: SystemUser = {
             id: user.uid,
             email: values.email,
+            displayName: displayName,
             role: 'supervisor' as const,
             status: 'active' as const,
+            passwordInitialized: false,
             createdAt: serverTimestamp(),
         };
         batch.set(userDocRef, userData);
@@ -198,6 +221,49 @@ export function AddSupervisorForm({ onFinished }: AddSupervisorFormProps) {
                 </FormItem>
             )}
         />
+        <div className="space-y-2">
+            <FormLabel>Phạm vi hướng dẫn</FormLabel>
+            <div className="flex items-center space-x-4">
+                 <FormField
+                    control={form.control}
+                    name="canGuideGraduation"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                Hướng dẫn Đồ án Tốt nghiệp
+                                </FormLabel>
+                            </div>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="canGuideInternship"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                            <FormControl>
+                                <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                                />
+                            </FormControl>
+                            <div className="space-y-1 leading-none">
+                                <FormLabel>
+                                Hướng dẫn Thực tập
+                                </FormLabel>
+                            </div>
+                        </FormItem>
+                    )}
+                 />
+            </div>
+        </div>
         <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
             {form.formState.isSubmitting ? "Đang tạo..." : "Tạo Giáo viên"}
         </Button>

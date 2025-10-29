@@ -25,7 +25,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning, Rocket } from 'lucide-react';
 import { getAuth, createUserWithEmailAndPassword, signOut } from 'firebase/auth';
 import { useFirestore } from '@/firebase';
-import { doc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, setDoc, serverTimestamp, writeBatch, collection, query, where, getDocs } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { firebaseConfig } from '@/firebase/config';
 
@@ -118,6 +118,22 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
         let successCount = 0;
         let errorCount = 0;
         const failedRows: any[] = [];
+        
+        // Pre-fetch all existing user emails to check for duplicates
+        const existingEmails = new Set<string>();
+        try {
+            const usersSnapshot = await getDocs(collection(firestore, 'users'));
+            usersSnapshot.forEach(doc => existingEmails.add(doc.data().email));
+        } catch (e) {
+            toast({
+                variant: 'destructive',
+                title: 'Lỗi tải dữ liệu',
+                description: 'Không thể tải danh sách người dùng hiện tại để kiểm tra trùng lặp.',
+            });
+            setIsImporting(false);
+            return;
+        }
+
 
         for (let i = 0; i < data.length; i++) {
             const row = data[i];
@@ -130,6 +146,14 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                 errorCount++;
                 failedRows.push({ ...row, reason: 'Thiếu Email hoặc Mã SV' });
                 console.warn(`Skipping row ${i + 2} due to missing email or StudentID.`);
+                setImportProgress(((i + 1) / data.length) * 100);
+                continue;
+            }
+
+            if (existingEmails.has(email)) {
+                errorCount++;
+                failedRows.push({ ...row, reason: `Email '${email}' đã tồn tại.` });
+                console.warn(`Skipping row ${i + 2} because email '${email}' already exists.`);
                 setImportProgress(((i + 1) / data.length) * 100);
                 continue;
             }
@@ -179,6 +203,8 @@ export function ImportStudentsDialog({ onFinished }: ImportStudentsDialogProps) 
                 }
                 
                 successCount++;
+                existingEmails.add(email); // Add to set to prevent duplicates within the same batch
+
             } catch (error: any) {
                 errorCount++;
                 failedRows.push({ ...row, reason: error.code || error.message });

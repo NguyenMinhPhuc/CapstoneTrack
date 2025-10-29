@@ -421,6 +421,7 @@ export default function DefenseSessionDetailPage() {
 
         <StudentRegistrationTable 
             sessionId={sessionId} 
+            sessionType={session.sessionType}
             initialData={combinedRegistrationData}
             isLoading={isLoading}
         />

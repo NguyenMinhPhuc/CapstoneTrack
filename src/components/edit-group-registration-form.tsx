@@ -25,7 +25,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, writeBatch } from 'firebase/firestore';
 import type { DefenseRegistration, Supervisor } from '@/lib/types';
-import { SupervisorSelect } from './supervisor-select';
+import { SupervisorCombobox } from './supervisor-combobox';
 import { ScrollArea } from './ui/scroll-area';
 import { useState } from 'react';
 
@@ -66,8 +66,8 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
     }
 
     const batch = writeBatch(firestore);
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
-    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === '' ? '' : registrations[0]?.supervisorName);
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
+    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (supervisorIdValue === null ? '' : registrations[0]?.supervisorName);
 
 
     const dataToUpdate = {
@@ -139,9 +139,9 @@ export function EditGroupRegistrationForm({ registrations, onFinished }: EditGro
                     <FormItem>
                     <FormLabel>Giáo viên hướng dẫn</FormLabel>
                     <FormControl>
-                        <SupervisorSelect
-                            value={field.value || ''}
-                            onChange={field.onChange}
+                        <SupervisorCombobox
+                            value={field.value || null}
+                            onChange={(supervisorId) => field.onChange(supervisorId || '')}
                             onSupervisorSelect={setSelectedSupervisor}
                         />
                     </FormControl>

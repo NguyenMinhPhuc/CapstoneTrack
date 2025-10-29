@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useMemo, useState } from 'react';
@@ -49,7 +50,7 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown, Copy } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { DefenseSession } from '@/lib/types';
@@ -60,9 +61,15 @@ import { useToast } from '@/hooks/use-toast';
 import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { EditDefenseSessionForm } from './edit-defense-session-form';
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
 
 type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
+type SessionType = 'graduation' | 'internship' | 'combined';
+
+type SortKey = 'name' | 'startDate' | 'registrationDeadline' | 'expectedReportDate' | 'status';
+type SortDirection = 'asc' | 'desc';
+
 
 const statusLabel: Record<SessionStatus, SessionStatusLabel> = {
   upcoming: 'Sắp diễn ra',
@@ -76,6 +83,23 @@ const statusVariant: Record<SessionStatus, 'secondary' | 'default' | 'outline'> 
   completed: 'outline',
 };
 
+const sessionTypeInfo: Record<SessionType, { label: string; variant: 'default' | 'secondary' | 'outline' }> = {
+    graduation: { label: 'Tốt nghiệp', variant: 'default' },
+    internship: { label: 'Thực tập', variant: 'secondary' },
+    combined: { label: 'Kết hợp', variant: 'outline' },
+};
+
+
+const getAcademicYear = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0 = January, 7 = August
+
+    if (month >= 7) { // August or later
+        return `${year} - ${year + 1}`;
+    } else { // July or earlier
+        return `${year - 1} - ${year}`;
+    }
+};
 
 export function DefenseSessionsTable() {
   const firestore = useFirestore();
@@ -84,9 +108,13 @@ export function DefenseSessionsTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedSession, setSelectedSession] = useState<DefenseSession | null>(null);
+  const [sessionToCopy, setSessionToCopy] = useState<DefenseSession | null>(null);
   const [sessionToDelete, setSessionToDelete] = useState<DefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [academicYearFilter, setAcademicYearFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'startDate', direction: 'desc' });
+
 
   const sessionsCollectionRef = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -94,6 +122,27 @@ export function DefenseSessionsTable() {
   );
 
   const { data: sessions, isLoading } = useCollection<DefenseSession>(sessionsCollectionRef);
+  
+  const toDate = (timestamp: any): Date | undefined => {
+    if (!timestamp) return undefined;
+    if (timestamp && typeof timestamp.toDate === 'function') {
+        return timestamp.toDate();
+    }
+    return timestamp;
+  };
+  
+  const academicYears = useMemo(() => {
+    if (!sessions) return [];
+    const years = new Set<string>();
+    sessions.forEach(session => {
+        const date = toDate(session.startDate);
+        if (date) {
+            years.add(getAcademicYear(date));
+        }
+    });
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [sessions]);
+
 
   const sessionStats = useMemo(() => {
     const stats = {
@@ -115,16 +164,66 @@ export function DefenseSessionsTable() {
 
   const filteredSessions = useMemo(() => {
     if (!sessions) return [];
-    return sessions.filter(session => {
+    let sortableSessions = [...sessions];
+    
+    // Sorting logic
+    if (sortConfig !== null) {
+      sortableSessions.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
+
+        if (sortConfig.key === 'startDate' || sortConfig.key === 'registrationDeadline' || sortConfig.key === 'expectedReportDate') {
+            aValue = toDate(a[sortConfig.key])?.getTime() || 0;
+            bValue = toDate(b[sortConfig.key])?.getTime() || 0;
+        } else {
+            aValue = a[sortConfig.key] ?? '';
+            bValue = b[sortConfig.key] ?? '';
+        }
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableSessions.filter(session => {
         const searchMatch = session.name.toLowerCase().includes(searchTerm.toLowerCase());
         const statusMatch = statusFilter === 'all' || session.status === statusFilter;
-        return searchMatch && statusMatch;
+        
+        const sessionDate = toDate(session.startDate);
+        const academicYearMatch = academicYearFilter === 'all' || (sessionDate ? getAcademicYear(sessionDate) === academicYearFilter : false);
+
+        return searchMatch && statusMatch && academicYearMatch;
     });
-  }, [sessions, searchTerm, statusFilter]);
+  }, [sessions, searchTerm, statusFilter, academicYearFilter, sortConfig]);
+
+    const requestSort = (key: SortKey) => {
+        let direction: SortDirection = 'asc';
+        if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+    };
+
+    const getSortIcon = (key: SortKey) => {
+        if (!sortConfig || sortConfig.key !== key) {
+            return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+        }
+        return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+    };
   
   const handleEditClick = (session: DefenseSession) => {
     setSelectedSession(session);
     setIsEditDialogOpen(true);
+  };
+
+  const handleCopyClick = (session: DefenseSession) => {
+    setSessionToCopy(session);
+    setIsAddDialogOpen(true);
   };
   
   const handleDeleteClick = (session: DefenseSession) => {
@@ -270,6 +369,19 @@ export function DefenseSessionsTable() {
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
                     </div>
+                     <Select value={academicYearFilter} onValueChange={setAcademicYearFilter}>
+                        <SelectTrigger className="w-full sm:w-[180px]">
+                            <SelectValue placeholder="Lọc theo năm học" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="all">Tất cả năm học</SelectItem>
+                            {academicYears.map(year => (
+                                <SelectItem key={year} value={year}>
+                                    Năm học {year}
+                                </SelectItem>
+                            ))}
+                        </SelectContent>
+                    </Select>
                      <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <Button variant="outline" size="sm" className="h-9 gap-1 text-sm w-full sm:w-auto">
@@ -297,7 +409,7 @@ export function DefenseSessionsTable() {
                             >
                                 {statusLabel.ongoing}
                             </DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem
+                            <DropdownMenuCheckboxItem
                                 checked={statusFilter === 'completed'}
                                 onCheckedChange={() => setStatusFilter('completed')}
                             >
@@ -306,7 +418,12 @@ export function DefenseSessionsTable() {
                         </DropdownMenuContent>
                     </DropdownMenu>
                 </div>
-                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                <Dialog open={isAddDialogOpen} onOpenChange={(isOpen) => {
+                    setIsAddDialogOpen(isOpen);
+                    if (!isOpen) {
+                        setSessionToCopy(null); // Clear copy data when dialog closes
+                    }
+                }}>
                 <DialogTrigger asChild>
                     <Button className="w-full sm:w-auto">
                     <PlusCircle className="mr-2 h-4 w-4" />
@@ -314,7 +431,13 @@ export function DefenseSessionsTable() {
                     </Button>
                 </DialogTrigger>
                 <DialogContent className="sm:max-w-lg">
-                    <AddDefenseSessionForm onFinished={() => setIsAddDialogOpen(false)} />
+                    <AddDefenseSessionForm
+                        onFinished={() => {
+                            setIsAddDialogOpen(false);
+                            setSessionToCopy(null);
+                        }}
+                        sessionToCopy={sessionToCopy}
+                     />
                 </DialogContent>
                 </Dialog>
             </div>
@@ -325,28 +448,56 @@ export function DefenseSessionsTable() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-[50px]">STT</TableHead>
-                <TableHead>Tên đợt</TableHead>
-                <TableHead>Ngày bắt đầu</TableHead>
-                <TableHead>Hạn đăng ký</TableHead>
-                <TableHead>Trạng thái</TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('name')} className="px-0 hover:bg-transparent">
+                        Tên đợt {getSortIcon('name')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('startDate')} className="px-0 hover:bg-transparent">
+                        Ngày bắt đầu {getSortIcon('startDate')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('registrationDeadline')} className="px-0 hover:bg-transparent">
+                        Hạn đăng ký {getSortIcon('registrationDeadline')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('expectedReportDate')} className="px-0 hover:bg-transparent">
+                        Ngày báo cáo {getSortIcon('expectedReportDate')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('status')} className="px-0 hover:bg-transparent">
+                        Trạng thái {getSortIcon('status')}
+                    </Button>
+                </TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {filteredSessions?.map((session, index) => {
+                const typeInfo = sessionTypeInfo[session.sessionType] || sessionTypeInfo.combined;
                 return (
                   <TableRow key={session.id}>
                     <TableCell>{index + 1}</TableCell>
                     <TableCell className="font-medium">
-                      <Link href={`/admin/defense-sessions/${session.id}`} className="hover:underline">
-                        {session.name}
-                      </Link>
+                      <div className="flex flex-col">
+                        <Link href={`/admin/defense-sessions/${session.id}`} className="hover:underline">
+                            {session.name}
+                        </Link>
+                        <Badge variant={typeInfo.variant} className="w-fit mt-1">{typeInfo.label}</Badge>
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {session.startDate?.toDate && format(session.startDate.toDate(), 'dd/MM/yyyy')}
+                      {toDate(session.startDate) ? format(toDate(session.startDate)!, 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
-                      {session.registrationDeadline?.toDate && format(session.registrationDeadline.toDate(), 'dd/MM/yyyy')}
+                      {toDate(session.registrationDeadline) ? format(toDate(session.registrationDeadline)!, 'dd/MM/yyyy') : 'N/A'}
+                    </TableCell>
+                    <TableCell>
+                      {toDate(session.expectedReportDate) ? format(toDate(session.expectedReportDate)!, 'dd/MM/yyyy') : 'N/A'}
                     </TableCell>
                     <TableCell>
                       {session.status && (
@@ -364,6 +515,10 @@ export function DefenseSessionsTable() {
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => handleEditClick(session)}>Sửa</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleCopyClick(session)}>
+                            <Copy className="mr-2 h-4 w-4" />
+                            Sao chép
+                          </DropdownMenuItem>
                            <DropdownMenuSub>
                             <DropdownMenuSubTrigger>
                               <span>Thay đổi trạng thái</span>
@@ -423,4 +578,3 @@ export function DefenseSessionsTable() {
   );
 }
 
-    

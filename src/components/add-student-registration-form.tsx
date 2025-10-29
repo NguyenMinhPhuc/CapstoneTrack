@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -15,11 +16,11 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
-import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
-import type { Student, Supervisor } from '@/lib/types';
+import type { Student, Supervisor, DefenseSession } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { SupervisorSelect } from './supervisor-select';
+import { SupervisorCombobox } from './supervisor-combobox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Check, ChevronsUpDown } from 'lucide-react';
@@ -36,10 +37,11 @@ const formSchema = z.object({
 
 interface AddStudentRegistrationFormProps {
   sessionId: string;
+  sessionType: DefenseSession['sessionType'];
   onFinished: () => void;
 }
 
-export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudentRegistrationFormProps) {
+export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished }: AddStudentRegistrationFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
   const [students, setStudents] = useState<Student[]>([]);
@@ -106,10 +108,10 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
         return;
     }
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? '' : (values.supervisorId || '');
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
     
-    const newRegistrationData = {
+    const newRegistrationData: any = {
       sessionId: sessionId,
       studentDocId: selectedStudent.id,
       studentId: selectedStudent.studentId,
@@ -118,26 +120,35 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
       supervisorId: supervisorIdValue,
       supervisorName: supervisorNameValue,
       registrationDate: serverTimestamp(),
-      graduationStatus: 'reporting' as const,
-      internshipStatus: 'not_reporting' as const, // Default to not reporting for internship
     };
+    
+    if (sessionType === 'graduation') {
+        newRegistrationData.graduationStatus = 'reporting';
+        newRegistrationData.internshipStatus = 'not_reporting';
+    } else if (sessionType === 'internship') {
+        newRegistrationData.graduationStatus = 'not_reporting';
+        newRegistrationData.internshipStatus = 'reporting';
+    } else { // combined
+        newRegistrationData.graduationStatus = 'reporting';
+        newRegistrationData.internshipStatus = 'reporting';
+    }
 
-    addDoc(registrationsCollectionRef, newRegistrationData)
-      .then(() => {
+
+    try {
+        await addDoc(registrationsCollectionRef, newRegistrationData);
         toast({
           title: 'Thành công',
           description: `Đã thêm sinh viên ${newRegistrationData.studentName} vào đợt báo cáo.`,
         });
         onFinished();
-      })
-      .catch((error) => {
-        const contextualError = new FirestorePermissionError({
-          path: registrationsCollectionRef.path,
-          operation: 'create',
-          requestResourceData: newRegistrationData,
+      } catch (error: any) {
+        console.error("Error creating registration:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: error.message,
         });
-        errorEmitter.emit('permission-error', contextualError);
-      });
+      }
   }
 
   return (
@@ -229,9 +240,9 @@ export function AddStudentRegistrationForm({ sessionId, onFinished }: AddStudent
             <FormItem>
               <FormLabel>Giáo viên hướng dẫn</FormLabel>
                <FormControl>
-                 <SupervisorSelect
-                    value={field.value || ''}
-                    onChange={field.onChange}
+                 <SupervisorCombobox
+                    value={field.value || null}
+                    onChange={(supervisorId) => field.onChange(supervisorId || '')}
                     onSupervisorSelect={setSelectedSupervisor}
                 />
                </FormControl>
