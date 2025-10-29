@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
-import type { Student, Supervisor, DefenseSession } from '@/lib/types';
+import type { Student, Supervisor, DefenseSession, DefenseRegistration } from '@/lib/types';
 import { useEffect, useState } from 'react';
 import { SupervisorCombobox } from './supervisor-combobox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
@@ -108,10 +106,10 @@ export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished 
         return;
     }
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
+    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? undefined : (values.supervisorId || undefined);
     const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
     
-    const newRegistrationData: any = {
+    const newRegistrationData: Partial<DefenseRegistration> = {
       sessionId: sessionId,
       studentDocId: selectedStudent.id,
       studentId: selectedStudent.studentId,
@@ -243,7 +241,7 @@ export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished 
                  <SupervisorCombobox
                     value={field.value || null}
                     onChange={(supervisorId) => field.onChange(supervisorId || '')}
-                    onSupervisorSelect={setSelectedSupervisor}
+                    onSupervisorSelect={(supervisor) => setSelectedSupervisor(supervisor)}
                 />
                </FormControl>
               <FormMessage />

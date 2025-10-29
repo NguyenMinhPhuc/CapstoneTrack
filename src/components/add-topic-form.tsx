@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -71,11 +70,11 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const newTopicData = {
+    const newTopicData: Omit<ProjectTopic, 'id'> = {
       ...values,
       supervisorId,
       supervisorName,
-      maxStudents: parseInt(values.maxStudents, 10),
+      maxStudents: parseInt(values.maxStudents, 10) as 1 | 2,
       status: 'pending' as const, // Set default status to pending for approval
       createdAt: serverTimestamp(),
     };

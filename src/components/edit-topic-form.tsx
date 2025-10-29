@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -72,9 +71,9 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const topicRef = doc(firestore, 'projectTopics', topic.id);
-    const updatedData = {
+    const updatedData: Partial<ProjectTopic> = {
         ...values,
-        maxStudents: parseInt(values.maxStudents, 10),
+        maxStudents: parseInt(values.maxStudents, 10) as 1 | 2,
         status: 'pending' // Reset status to pending on edit
     };
 
