@@ -223,7 +223,7 @@ export default function EarlyInternshipRegistrationPage() {
                             </CardHeader>
                             <CardContent className="text-sm space-y-2">
                                 {isRejected && reg.statusNote && (
-                                     <Alert variant="destructive" className="text-destructive-foreground bg-destructive/10 border-destructive/30">
+                                     <Alert variant="destructive">
                                         <XCircle className="h-4 w-4" />
                                         <AlertTitle>Lý do từ chối</AlertTitle>
                                         <AlertDescription>{reg.statusNote}</AlertDescription>
