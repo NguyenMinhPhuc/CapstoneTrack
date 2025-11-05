@@ -1,7 +1,6 @@
-
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Table,
   TableBody,
@@ -14,8 +13,6 @@ import {
   Card,
   CardContent,
   CardHeader,
-  CardTitle,
-  CardDescription,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -23,7 +20,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, Activity, FileUp, FileSignature } from 'lucide-react';
+import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Query } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession } from '@/lib/types';
@@ -46,6 +43,9 @@ interface GraduationGuidanceTableProps {
   supervisorId: string;
   userRole: 'admin' | 'supervisor';
 }
+
+type SortKey = 'studentName' | 'projectTitle' | 'proposalStatus' | 'reportStatus';
+type SortDirection = 'asc' | 'desc';
 
 const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
   not_submitted: 'outline',
@@ -87,6 +87,8 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   const [selectedSessionId, setSelectedSessionId] = useState('all');
   const [proposalStatusFilter, setProposalStatusFilter] = useState('all');
   const [reportStatusFilter, setReportStatusFilter] = useState('all');
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -129,10 +131,42 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
   }, [sessions]);
 
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+        return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+  };
+
   const filteredRegistrations = useMemo(() => {
     if (!registrations) return [];
     
-    return registrations.filter(reg => {
+    let sortableRegistrations = [...registrations];
+
+    if (sortConfig !== null) {
+      sortableRegistrations.sort((a, b) => {
+        const aValue = a[sortConfig.key] || '';
+        const bValue = b[sortConfig.key] || '';
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+
+    return sortableRegistrations.filter(reg => {
       const term = searchTerm.toLowerCase();
       const searchMatch = reg.studentName.toLowerCase().includes(term) ||
                           reg.studentId.toLowerCase().includes(term) ||
@@ -144,7 +178,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
       return searchMatch && proposalMatch && reportMatch;
     });
 
-  }, [registrations, searchTerm, proposalStatusFilter, reportStatusFilter]);
+  }, [registrations, searchTerm, proposalStatusFilter, reportStatusFilter, sortConfig]);
 
   return (
     <Card>
@@ -214,11 +248,27 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
             <TableHeader>
               <TableRow>
                 <TableHead>STT</TableHead>
-                <TableHead>Sinh viên</TableHead>
-                <TableHead>Đề tài</TableHead>
+                <TableHead>
+                    <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentName')}>
+                        Sinh viên {getSortIcon('studentName')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('projectTitle')}>
+                        Đề tài {getSortIcon('projectTitle')}
+                    </Button>
+                </TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
-                <TableHead>TT Thuyết minh</TableHead>
-                <TableHead>TT Báo cáo</TableHead>
+                <TableHead>
+                     <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('proposalStatus')}>
+                        TT Thuyết minh {getSortIcon('proposalStatus')}
+                    </Button>
+                </TableHead>
+                <TableHead>
+                    <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('reportStatus')}>
+                        TT Báo cáo {getSortIcon('reportStatus')}
+                    </Button>
+                </TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
             </TableHeader>
