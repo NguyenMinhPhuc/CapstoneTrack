@@ -150,7 +150,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     () => query(collection(firestore, 'projectTopics'), where('supervisorId', '==', supervisorId)),
     [firestore, supervisorId]
   );
-  const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
+  const { data: topics, isLoading: isLoadingTopics, forceRefresh: forceRefreshTopics } = useCollection<ProjectTopic>(topicsQuery);
   
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -162,7 +162,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     () => query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', supervisorId)),
     [firestore, supervisorId]
   );
-  const { data: allRegistrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
+  const { data: allRegistrations, isLoading: isLoadingRegs, forceRefresh: forceRefreshRegs } = useCollection<DefenseRegistration>(registrationsQuery);
   
   useEffect(() => {
     setSelectedRowIds([]);
@@ -187,7 +187,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       const map = new Map<string, DefenseRegistration[]>();
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
-              // Ensure we only count students who have actually selected a topic from this supervisor
               if (reg.projectTitle && reg.supervisorId === supervisorId) {
                   const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
                   if (!map.has(key)) {
@@ -292,7 +291,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
         if (approvedCount + 1 >= topic.maxStudents) {
             batch.update(topicRef, { status: 'taken' });
         }
-    } else { // 'reject' or 'cancel' have the same logic of clearing the student's topic registration
+    } else { 
         batch.update(regDocRef, { 
             projectRegistrationStatus: action === 'reject' ? 'rejected' : null,
             projectTitle: '',
@@ -314,6 +313,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             ? 'Đã xác nhận hướng dẫn sinh viên.'
             : (action === 'reject' ? 'Đã từ chối hướng dẫn.' : 'Đã hủy đăng ký cho sinh viên.');
         toast({ title: 'Thành công', description: successMessage });
+        forceRefreshTopics();
+        forceRefreshRegs();
     } catch (error: any) {
          toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
          const contextualError = new FirestorePermissionError({
