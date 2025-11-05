@@ -1,6 +1,9 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 import {
   Table,
   TableBody,
@@ -27,7 +30,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2 } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2, FileDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, useDoc } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship, Student, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
@@ -90,6 +93,7 @@ export function EarlyInternshipTable() {
   const [companyFilter, setCompanyFilter] = useState('all');
   const [supervisorFilter, setSupervisorFilter] = useState('all');
   const [batchFilter, setBatchFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
   const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
@@ -124,7 +128,7 @@ export function EarlyInternshipTable() {
     if (!allReports || !internships) return data;
 
     internships.forEach(internship => {
-      const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id);
+      const reportsForInternship = allReports.filter(r => r.earlyInternshipId === internship.id && r.status === 'approved');
       const totalHours = reportsForInternship.reduce((sum, report) => sum + report.hours, 0);
       data.set(internship.id, {
         totalHours,
@@ -229,10 +233,11 @@ export function EarlyInternshipTable() {
       const companyMatch = companyFilter === 'all' || internship.companyName === companyFilter;
       const supervisorMatch = supervisorFilter === 'all' || internship.supervisorName === supervisorFilter;
       const batchMatch = batchFilter === 'all' || internship.batch === batchFilter;
+      const statusMatch = statusFilter === 'all' || internship.status === statusFilter;
 
-      return searchMatch && companyMatch && supervisorMatch && batchMatch;
+      return searchMatch && companyMatch && supervisorMatch && batchMatch && statusMatch;
     });
-  }, [internships, searchTerm, companyFilter, supervisorFilter, batchFilter, sortConfig, progressData]);
+  }, [internships, searchTerm, companyFilter, supervisorFilter, batchFilter, statusFilter, sortConfig, progressData]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -248,7 +253,6 @@ export function EarlyInternshipTable() {
     }
     return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
   };
-
   
   const handleSelectAll = (checked: boolean | 'indeterminate') => {
     setSelectedRowIds(checked ? (filteredInternships || []).map(i => i.studentId) : []);
@@ -322,6 +326,33 @@ export function EarlyInternshipTable() {
     }
   };
 
+  const exportToExcel = () => {
+    const dataToExport = filteredInternships.map((item, index) => {
+      const progress = progressData.get(item.id);
+      return {
+        'STT': index + 1,
+        'MSSV': item.studentIdentifier,
+        'Họ và Tên': item.studentName,
+        'Công ty': item.companyName,
+        'GVHD': item.supervisorName,
+        'Đợt ĐK': item.batch,
+        'Ngày bắt đầu': toDate(item.startDate) ? format(toDate(item.startDate)!, 'dd/MM/yyyy') : 'N/A',
+        'Tổng giờ': progress ? progress.totalHours.toFixed(0) : '0',
+        'Trạng thái': statusLabel[item.status]
+      };
+    });
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'ThucTapSom');
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 30 }, { wch: 25 },
+      { wch: 10 }, { wch: 15 }, { wch: 10 }, { wch: 15 }
+    ];
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(data, 'BaoCao_ThucTapSom.xlsx');
+  };
 
   if (isLoading) {
     return (
@@ -349,31 +380,7 @@ export function EarlyInternshipTable() {
                 <CardDescription>Các sinh viên đang hoặc đã hoàn thành thực tập sớm.</CardDescription>
             </div>
              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-                {selectedRowIds.length > 0 && (
-                  <>
-                    <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
-                        <DialogTrigger asChild>
-                           <Button variant="outline" size="sm">
-                                <FilePlus2 className="mr-2 h-4 w-4" />
-                                Thêm vào đợt ({selectedRowIds.length})
-                            </Button>
-                        </DialogTrigger>
-                        <AddStudentsToSessionDialog
-                            studentIds={selectedRowIds}
-                            allStudents={allStudents || []}
-                            onFinished={() => {
-                                setIsAddToSessionDialogOpen(false);
-                                setSelectedRowIds([]);
-                            }}
-                          />
-                    </Dialog>
-                    <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
-                        <Trash2 className="mr-2 h-4 w-4" />
-                        Xóa ({selectedRowIds.length})
-                    </Button>
-                  </>
-                )}
-                 <div className="relative w-full sm:w-auto">
+                <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
@@ -383,6 +390,17 @@ export function EarlyInternshipTable() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                   />
                 </div>
+                 <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="Lọc theo trạng thái" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    {Object.entries(statusLabel).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                  <Select value={batchFilter} onValueChange={setBatchFilter}>
                   <SelectTrigger className="w-full sm:w-[150px]">
                     <SelectValue placeholder="Lọc theo đợt" />
@@ -416,8 +434,36 @@ export function EarlyInternshipTable() {
                     ))}
                   </SelectContent>
                 </Select>
+                 <Button onClick={exportToExcel} variant="outline" className="w-full sm:w-auto">
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Xuất Excel
+                </Button>
             </div>
             </div>
+             {selectedRowIds.length > 0 && (
+              <div className="flex items-center gap-2 mt-4">
+                  <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
+                      <DialogTrigger asChild>
+                         <Button variant="outline" size="sm">
+                              <FilePlus2 className="mr-2 h-4 w-4" />
+                              Thêm vào đợt ({selectedRowIds.length})
+                          </Button>
+                      </DialogTrigger>
+                      <AddStudentsToSessionDialog
+                          studentIds={selectedRowIds}
+                          allStudents={allStudents || []}
+                          onFinished={() => {
+                              setIsAddToSessionDialogOpen(false);
+                              setSelectedRowIds([]);
+                          }}
+                        />
+                  </Dialog>
+                  <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      Xóa ({selectedRowIds.length})
+                  </Button>
+              </div>
+            )}
         </CardHeader>
         <CardContent>
             <Table>
