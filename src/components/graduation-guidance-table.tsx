@@ -1,14 +1,7 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Card,
   CardContent,
@@ -20,10 +13,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown } from 'lucide-react';
+import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection, query, where, Query } from 'firebase/firestore';
-import type { DefenseRegistration, GraduationDefenseSession } from '@/lib/types';
+import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
+import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import {
@@ -38,6 +31,15 @@ import {
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { Button } from './ui/button';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { Book, Target, CheckCircle } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { ViewProgressDialog } from './view-progress-dialog';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface GraduationGuidanceTableProps {
   supervisorId: string;
@@ -83,11 +85,16 @@ const statusLabel: Record<string, string> = {
 
 export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGuidanceTableProps) {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('all');
   const [proposalStatusFilter, setProposalStatusFilter] = useState('all');
   const [reportStatusFilter, setReportStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
+  const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
+  const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
 
 
   const sessionsQuery = useMemoFirebase(
@@ -180,149 +187,265 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
 
   }, [registrations, searchTerm, proposalStatusFilter, reportStatusFilter, sortConfig]);
 
+  const handleProposalAction = async (registration: DefenseRegistration, action: 'approve' | 'reject') => {
+    const regDocRef = doc(firestore, 'defenseRegistrations', registration.id);
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+    try {
+      await updateDoc(regDocRef, { proposalStatus: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Đã ${action === 'approve' ? 'duyệt' : 'yêu cầu chỉnh sửa'} thuyết minh.`,
+      });
+      setIsProposalDialogOpen(false);
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+    }
+  }
+
+  const handleReportAction = async (registration: DefenseRegistration, action: 'approve' | 'reject') => {
+    const regDocRef = doc(firestore, 'defenseRegistrations', registration.id);
+    const newStatus = action === 'approve' ? 'approved' : 'rejected';
+
+    try {
+      await updateDoc(regDocRef, { reportStatus: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Đã ${action === 'approve' ? 'duyệt' : 'yêu cầu chỉnh sửa'} báo cáo.`,
+      });
+      setIsReportDialogOpen(false);
+    } catch (error: any) {
+       toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+    }
+  }
+
+  const handleViewProposalClick = (registration: DefenseRegistration) => {
+    setSelectedRegistration(registration);
+    setIsProposalDialogOpen(true);
+  }
+
+  const handleViewReportClick = (registration: DefenseRegistration) => {
+    setSelectedRegistration(registration);
+    setIsReportDialogOpen(true);
+  }
+  
+  const handleViewProgressClick = (registration: DefenseRegistration) => {
+    setSelectedRegistration(registration);
+    setIsProgressDialogOpen(true);
+  }
+
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
-          <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
-            <div className="relative w-full sm:w-auto">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Tìm sinh viên, đề tài..."
-                className="pl-8 w-full sm:w-48"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+    <>
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+             <div className="relative w-full sm:w-auto flex-grow">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                    type="search"
+                    placeholder="Tìm sinh viên, đề tài..."
+                    className="pl-8 w-full"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
             </div>
-             <Select value={proposalStatusFilter} onValueChange={setProposalStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Lọc TT Thuyết minh" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả TT Thuyết minh</SelectItem>
-                 {Object.entries(proposalStatusLabel).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-             <Select value={reportStatusFilter} onValueChange={setReportStatusFilter}>
-              <SelectTrigger className="w-full sm:w-[180px]">
-                <SelectValue placeholder="Lọc TT Báo cáo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả TT Báo cáo</SelectItem>
-                 {Object.entries(reportStatusLabel).map(([key, label]) => (
-                    <SelectItem key={key} value={key}>{label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-              <SelectTrigger className="w-full sm:w-[250px]">
-                <SelectValue placeholder="Lọc theo đợt" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Tất cả các đợt</SelectItem>
-                 {Object.entries(groupedSessions).map(([status, sessionList]) =>
-                    sessionList.length > 0 && (
-                        <SelectGroup key={status}>
-                            <SelectLabel>{statusLabel[status] || status}</SelectLabel>
-                            {sessionList.map(session => (
-                                <SelectItem key={session.id} value={session.id}>
-                                    {session.name}
-                                </SelectItem>
-                            ))}
-                        </SelectGroup>
-                    )
-                )}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
+              <Select value={proposalStatusFilter} onValueChange={setProposalStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Lọc TT Thuyết minh" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả TT Thuyết minh</SelectItem>
+                  {Object.entries(proposalStatusLabel).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={reportStatusFilter} onValueChange={setReportStatusFilter}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Lọc TT Báo cáo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả TT Báo cáo</SelectItem>
+                  {Object.entries(reportStatusLabel).map(([key, label]) => (
+                      <SelectItem key={key} value={key}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
+                <SelectTrigger className="w-full sm:w-[250px]">
+                  <SelectValue placeholder="Lọc theo đợt" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Tất cả các đợt</SelectItem>
+                  {Object.entries(groupedSessions).map(([status, sessionList]) =>
+                      sessionList.length > 0 && (
+                          <SelectGroup key={status}>
+                              <SelectLabel>{statusLabel[status] || status}</SelectLabel>
+                              {sessionList.map(session => (
+                                  <SelectItem key={session.id} value={session.id}>
+                                      {session.name}
+                                  </SelectItem>
+                              ))}
+                          </SelectGroup>
+                      )
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-64 w-full" />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>STT</TableHead>
-                <TableHead>
-                    <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentName')}>
-                        Sinh viên {getSortIcon('studentName')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('projectTitle')}>
-                        Đề tài {getSortIcon('projectTitle')}
-                    </Button>
-                </TableHead>
-                <TableHead>Đợt báo cáo</TableHead>
-                <TableHead>
-                     <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('proposalStatus')}>
-                        TT Thuyết minh {getSortIcon('proposalStatus')}
-                    </Button>
-                </TableHead>
-                <TableHead>
-                    <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('reportStatus')}>
-                        TT Báo cáo {getSortIcon('reportStatus')}
-                    </Button>
-                </TableHead>
-                <TableHead className="text-right">Hành động</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredRegistrations.length > 0 ? (
-                filteredRegistrations.map((reg, index) => (
-                  <TableRow key={reg.id}>
-                    <TableCell>{index + 1}</TableCell>
-                    <TableCell>
-                      <div>{reg.studentName}</div>
-                      <div className="text-xs text-muted-foreground">{reg.studentId}</div>
-                    </TableCell>
-                    <TableCell className="max-w-xs truncate">{reg.projectTitle}</TableCell>
-                    <TableCell>{sessionMap.get(reg.sessionId)}</TableCell>
-                    <TableCell>
-                      <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
-                        {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
-                        {reportStatusLabel[reg.reportStatus || 'not_submitted']}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                       <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                           <DropdownMenuItem asChild>
-                            <Link href="/my-topics"><Eye className="mr-2 h-4 w-4" /> Xem chi tiết</Link>
-                          </DropdownMenuItem>
-                          <DropdownMenuItem asChild>
-                            <Link href="/supervisor-grading"><FileSignature className="mr-2 h-4 w-4" /> Chấm điểm</Link>
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="h-24 text-center">
-                    Không có sinh viên nào.
-                  </TableCell>
-                </TableRow>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <Skeleton className="h-64 w-full" />
+          ) : (
+            <div className="border rounded-md">
+              <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
+                <div className="col-span-1">STT</div>
+                <div className="col-span-3">Sinh viên</div>
+                <div className="col-span-4">Đề tài</div>
+                <div className="col-span-2">Trạng thái</div>
+                <div className="col-span-2 text-right">Hành động</div>
+              </div>
+               <Accordion type="multiple" className="w-full">
+                {filteredRegistrations.length > 0 ? (
+                  filteredRegistrations.map((reg, index) => (
+                    <AccordionItem value={reg.id} key={reg.id} className="border-b">
+                      <div className="flex items-center px-4 hover:bg-muted/50">
+                        <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
+                          <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
+                            <div className="col-span-1">{index + 1}</div>
+                            <div className="col-span-3 font-medium">
+                                <div>{reg.studentName}</div>
+                                <div className="text-xs text-muted-foreground">{reg.studentId}</div>
+                            </div>
+                            <div className="col-span-4 truncate" title={reg.projectTitle}>{reg.projectTitle}</div>
+                            <div className="col-span-2 flex flex-col gap-1">
+                              <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
+                              <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                            </div>
+                          </div>
+                        </AccordionTrigger>
+                        <div className="col-span-2 flex justify-end">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </div>
+                      </div>
+                       <AccordionContent>
+                            <div className="p-4 bg-muted/30 border-t space-y-4">
+                               <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
+                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
+                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
+                            </div>
+                        </AccordionContent>
+                    </AccordionItem>
+                  ))
+                ) : (
+                  <div className="text-center py-10 text-muted-foreground">
+                    Không có sinh viên nào phù hợp.
+                  </div>
+                )}
+               </Accordion>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+      {/* Dialog for viewing proposal */}
+       <Dialog open={isProposalDialogOpen} onOpenChange={setIsProposalDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+              {selectedRegistration && (
+                  <>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><FileSignature /> Thuyết minh của sinh viên</DialogTitle>
+                        <DialogDescription>
+                            Xem xét và phê duyệt thuyết minh của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
+                        </DialogDescription>
+                    </DialogHeader>
+                     <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                        {/* Content identical to my-topics-table proposal dialog */}
+                         <div className="space-y-1">
+                            <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.summary || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                            <h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.objectives || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+                         <div className="space-y-1">
+                            <h4 className="font-semibold flex items-center gap-2 text-base"><FileSignature className="h-4 w-4 text-primary" /> Phương pháp & Công nghệ thực hiện</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.implementationPlan || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+                        <div className="space-y-1">
+                             <h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4>
+                            <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.expectedResults || ''}</ReactMarkdown>
+                            </div>
+                        </div>
+                     </div>
+                     <DialogFooter>
+                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>Yêu cầu chỉnh sửa</Button>
+                        <Button onClick={() => handleProposalAction(selectedRegistration, 'approve')}>Duyệt thuyết minh</Button>
+                    </DialogFooter>
+                  </>
               )}
-            </TableBody>
-          </Table>
-        )}
-      </CardContent>
-    </Card>
+          </DialogContent>
+       </Dialog>
+      {/* Dialog for viewing report */}
+       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+          <DialogContent className="sm:max-w-2xl">
+              {selectedRegistration && (
+                  <>
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2"><FileUp /> Báo cáo cuối kỳ</DialogTitle>
+                         <DialogDescription>
+                            Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
+                        </DialogDescription>
+                    </DialogHeader>
+                     <div className="space-y-4 p-4">
+                         <h4 className="font-semibold flex items-center gap-2 text-base"><Link className="h-4 w-4 text-primary" /> Link file báo cáo</h4>
+                          {selectedRegistration.reportLink ? (
+                                <a href={selectedRegistration.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                    {selectedRegistration.reportLink}
+                                </a>
+                            ) : (
+                                <p className="text-sm text-muted-foreground">Sinh viên chưa nộp link báo cáo.</p>
+                            )}
+                     </div>
+                     <DialogFooter>
+                        <Button variant="destructive" onClick={() => handleReportAction(selectedRegistration, 'reject')}>Yêu cầu chỉnh sửa</Button>
+                        <Button onClick={() => handleReportAction(selectedRegistration, 'approve')}>Duyệt Báo cáo</Button>
+                    </DialogFooter>
+                  </>
+              )}
+          </DialogContent>
+       </Dialog>
+       {/* Dialog for viewing progress */}
+       <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+           <DialogContent className="sm:max-w-2xl">
+                {selectedRegistration && (
+                   <ViewProgressDialog
+                        registration={selectedRegistration}
+                        onFinished={() => setIsProgressDialogOpen(false)}
+                   />
+                )}
+           </DialogContent>
+       </Dialog>
+    </>
   );
 }
