@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity } from 'lucide-react';
+import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity, Book, Target, CheckCircle, Link as LinkIcon } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
@@ -34,7 +34,6 @@ import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Book, Target, CheckCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
 import { ViewProgressDialog } from './view-progress-dialog';
@@ -57,10 +56,10 @@ const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' 
 };
 
 const proposalStatusLabel: Record<string, string> = {
-    not_submitted: 'Chưa nộp',
-    pending_approval: 'Chờ duyệt',
-    approved: 'Đã duyệt',
-    rejected: 'Bị từ chối',
+    not_submitted: 'Chưa nộp TM',
+    pending_approval: 'Chờ duyệt TM',
+    approved: 'Đã duyệt TM',
+    rejected: 'TM bị từ chối',
 };
 
 const reportStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
@@ -71,10 +70,10 @@ const reportStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 
 };
 
 const reportStatusLabel: Record<string, string> = {
-    not_submitted: 'Chưa nộp',
-    pending_approval: 'Chờ duyệt',
-    approved: 'Đã duyệt',
-    rejected: 'Bị từ chối',
+    not_submitted: 'Chưa nộp BC',
+    pending_approval: 'Chờ duyệt BC',
+    approved: 'Đã duyệt BC',
+    rejected: 'BC bị từ chối',
 };
 
 const statusLabel: Record<string, string> = {
@@ -302,10 +301,9 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
             <div className="border rounded-md">
               <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
                 <div className="col-span-1">STT</div>
-                <div className="col-span-3">Sinh viên</div>
-                <div className="col-span-4">Đề tài</div>
-                <div className="col-span-2">Trạng thái</div>
-                <div className="col-span-2 text-right">Hành động</div>
+                <div className="col-span-6">Sinh viên</div>
+                <div className="col-span-4">Trạng thái</div>
+                <div className="col-span-1 text-right">Hành động</div>
               </div>
                <Accordion type="multiple" className="w-full">
                 {filteredRegistrations.length > 0 ? (
@@ -315,18 +313,17 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                         <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
                           <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
                             <div className="col-span-1">{index + 1}</div>
-                            <div className="col-span-3 font-medium">
+                            <div className="col-span-6 font-medium">
                                 <div>{reg.studentName}</div>
                                 <div className="text-xs text-muted-foreground">{reg.studentId}</div>
                             </div>
-                            <div className="col-span-4 truncate" title={reg.projectTitle}>{reg.projectTitle}</div>
-                            <div className="col-span-2 flex flex-col gap-1">
+                            <div className="col-span-4 flex flex-col items-start gap-1">
                               <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
                               <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <div className="col-span-2 flex justify-end">
+                        <div className="col-span-1 flex justify-end">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -343,6 +340,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                       </div>
                        <AccordionContent>
                             <div className="p-4 bg-muted/30 border-t space-y-4">
+                               <div className="space-y-1"><h4 className="font-semibold text-base">{reg.projectTitle || "Chưa có tên đề tài"}</h4></div>
                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
                                 <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
                                 <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
@@ -351,7 +349,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                     </AccordionItem>
                   ))
                 ) : (
-                  <div className="text-center py-10 text-muted-foreground">
+                  <div className="text-center py-10 text-muted-foreground col-span-12">
                     Không có sinh viên nào phù hợp.
                   </div>
                 )}
@@ -374,7 +372,10 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                      <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
                         {/* Content identical to my-topics-table proposal dialog */}
                          <div className="space-y-1">
-                            <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
+                            <h3 className="font-semibold text-lg">{selectedRegistration.projectTitle}</h3>
+                        </div>
+                        <div className="space-y-1">
+                             <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.summary || ''}</ReactMarkdown>
                             </div>
@@ -397,6 +398,14 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.expectedResults || ''}</ReactMarkdown>
                             </div>
                         </div>
+                        {selectedRegistration.proposalLink && (
+                            <div className="space-y-1">
+                                <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file toàn văn</h4>
+                                <a href={selectedRegistration.proposalLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
+                                    {selectedRegistration.proposalLink}
+                                </a>
+                            </div>
+                        )}
                      </div>
                      <DialogFooter>
                         <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>Yêu cầu chỉnh sửa</Button>
