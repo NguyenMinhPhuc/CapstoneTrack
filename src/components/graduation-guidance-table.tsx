@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   Card,
   CardContent,
@@ -13,7 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity, Book, Target, CheckCircle, Link as LinkIcon } from 'lucide-react';
+import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity, Book, Target, CheckCircle, Link as LinkIcon, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
@@ -39,6 +39,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ViewProgressDialog } from './view-progress-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { Separator } from './ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Check, ChevronsUpDown } from 'lucide-react';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
 
 interface GraduationGuidanceTableProps {
@@ -95,6 +98,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const [isSessionPopoverOpen, setIsSessionPopoverOpen] = useState(false);
 
 
   const sessionsQuery = useMemoFirebase(
@@ -272,26 +276,60 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                   ))}
                 </SelectContent>
               </Select>
-              <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-                <SelectTrigger className="w-full sm:w-[250px]">
-                  <SelectValue placeholder="Lọc theo đợt" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tất cả các đợt</SelectItem>
-                  {Object.entries(groupedSessions).map(([status, sessionList]) =>
-                      sessionList.length > 0 && (
-                          <SelectGroup key={status}>
-                              <SelectLabel>{statusLabel[status] || status}</SelectLabel>
-                              {sessionList.map(session => (
-                                  <SelectItem key={session.id} value={session.id}>
-                                      {session.name}
-                                  </SelectItem>
-                              ))}
-                          </SelectGroup>
-                      )
-                  )}
-                </SelectContent>
-              </Select>
+              <Popover open={isSessionPopoverOpen} onOpenChange={setIsSessionPopoverOpen}>
+                  <PopoverTrigger asChild>
+                      <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={isSessionPopoverOpen}
+                          className="w-full sm:w-[250px] justify-between"
+                      >
+                          {selectedSessionId === 'all'
+                              ? "Tất cả các đợt"
+                              : sessionMap.get(selectedSessionId) || "Chọn đợt..."}
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[250px] p-0">
+                      <Command>
+                          <CommandInput placeholder="Tìm đợt báo cáo..." />
+                          <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                          <CommandList>
+                              <CommandGroup>
+                                  <CommandItem
+                                      value="all"
+                                      onSelect={() => {
+                                          setSelectedSessionId('all');
+                                          setIsSessionPopoverOpen(false);
+                                      }}
+                                  >
+                                      <Check className={cn("mr-2 h-4 w-4", selectedSessionId === 'all' ? "opacity-100" : "opacity-0")} />
+                                      Tất cả các đợt
+                                  </CommandItem>
+                                  {Object.entries(groupedSessions).map(([status, sessionList]) => (
+                                      sessionList.length > 0 && (
+                                          <CommandGroup key={status} heading={statusLabel[status as keyof typeof statusLabel] || status}>
+                                              {sessionList.map(session => (
+                                                  <CommandItem
+                                                      key={session.id}
+                                                      value={session.name}
+                                                      onSelect={() => {
+                                                          setSelectedSessionId(session.id);
+                                                          setIsSessionPopoverOpen(false);
+                                                      }}
+                                                  >
+                                                      <Check className={cn("mr-2 h-4 w-4", selectedSessionId === session.id ? "opacity-100" : "opacity-0")} />
+                                                      {session.name}
+                                                  </CommandItem>
+                                              ))}
+                                          </CommandGroup>
+                                      )
+                                  ))}
+                              </CommandGroup>
+                          </CommandList>
+                      </Command>
+                  </PopoverContent>
+              </Popover>
             </div>
           </div>
         </CardHeader>
@@ -304,26 +342,26 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                 <div className="w-1/12 p-4">STT</div>
                 <div className="w-6/12 p-4">Sinh viên</div>
                 <div className="w-4/12 p-4">Trạng thái</div>
-                <div className="w-1/12 text-right p-4">Hành động</div>
+                <div className="w-1/12 p-4 text-right">Hành động</div>
               </div>
                <Accordion type="multiple" className="w-full">
                 {filteredRegistrations.length > 0 ? (
                   filteredRegistrations.map((reg, index) => (
                     <AccordionItem value={reg.id} key={reg.id} className="border-b">
                       <div className="flex items-center hover:bg-muted/50">
-                        <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
-                          <div className="flex w-full text-left text-sm items-center">
+                         <div className="flex w-full text-left text-sm items-center">
                             <div className="w-1/12 p-4">{index + 1}</div>
-                            <div className="w-6/12 font-medium p-4">
-                                <div>{reg.studentName}</div>
-                                <div className="text-xs text-muted-foreground">{reg.studentId}</div>
-                            </div>
+                            <AccordionTrigger className="w-6/12 py-4 px-4 text-left font-medium hover:no-underline flex-1">
+                                <div>
+                                  <div>{reg.studentName}</div>
+                                  <div className="text-xs text-muted-foreground">{reg.studentId}</div>
+                                </div>
+                            </AccordionTrigger>
                             <div className="w-4/12 flex flex-col items-start gap-1 p-4">
                               <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
                               <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
                             </div>
-                          </div>
-                        </AccordionTrigger>
+                         </div>
                         <div className="w-1/12 flex justify-end px-4">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
