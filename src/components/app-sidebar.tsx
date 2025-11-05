@@ -300,16 +300,6 @@ export function AppSidebar() {
                                         <Link href="/admin/supervisors"><UserSquare /><span>Quản lý GVHD</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/users")} tooltip="User Management">
-                                        <Link href="/admin/users"><Shield /><span>Quản lý Tài khoản</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/settings")} tooltip="Settings">
-                                        <Link href="/admin/settings"><Settings /><span>Cài đặt hệ thống</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
                             </SidebarMenu>
                          </CollapsibleContent>
                     </SidebarGroup>
@@ -346,20 +336,43 @@ export function AppSidebar() {
                     </SidebarGroup>
                  </Collapsible>
                  <div className="px-2 py-2"><SidebarSeparator /></div>
+                 <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Quản lý hệ thống</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/users")} tooltip="User Management">
+                                        <Link href="/admin/users"><Shield /><span>Quản lý Tài khoản</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/settings")} tooltip="Settings">
+                                        <Link href="/admin/settings"><Settings /><span>Cài đặt hệ thống</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/help")} tooltip="Help">
+                                        <Link href="/help"><LifeBuoy /><span>Hướng dẫn</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
                 </>
              )}
         </SidebarMenu>
       </SidebarContent>
       <SidebarFooter>
           <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={isActive("/help")} tooltip="Help">
-                <Link href="/help">
-                  <LifeBuoy />
-                  <span>Hướng dẫn</span>
-                </Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
             <SidebarMenuItem>
                 <SidebarMenuButton asChild isActive={isActive("/profile")} tooltip="Settings">
                     <Link href="/profile"><Settings /><span>Settings</span></Link>
