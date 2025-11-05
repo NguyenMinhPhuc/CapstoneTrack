@@ -30,7 +30,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { Button } from '@/components/ui/button';
-import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2, FileDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Trash2, CheckCircle, Clock, X, ChevronDown, Search, ArrowUpDown, ChevronUp, FilePlus2, FileDown, Check } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError, useDoc } from '@/firebase';
 import { collection, query, where, doc, deleteDoc, writeBatch, updateDoc } from 'firebase/firestore';
 import type { EarlyInternship, Student, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
@@ -59,18 +59,23 @@ import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 import { Progress } from './ui/progress';
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
-  pending_approval: 'Chờ duyệt',
+  pending_admin_approval: 'Chờ Admin duyệt',
+  pending_company_approval: 'Chờ ĐV duyệt',
   ongoing: 'Đang thực tập',
   completed: 'Hoàn thành',
-  rejected: 'Bị từ chối',
+  rejected_by_admin: 'Admin từ chối',
+  rejected_by_company: 'ĐV từ chối',
   cancelled: 'Đã hủy',
 };
 
+
 const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
-  pending_approval: 'secondary',
+  pending_admin_approval: 'secondary',
+  pending_company_approval: 'secondary',
   ongoing: 'default',
   completed: 'outline',
-  rejected: 'destructive',
+  rejected_by_admin: 'destructive',
+  rejected_by_company: 'destructive',
   cancelled: 'destructive',
 };
 
@@ -548,39 +553,54 @@ export function EarlyInternshipTable() {
                         </Badge>
                     </TableCell>
                     <TableCell className="text-right">
-                       <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
+                        {internship.status === 'pending_admin_approval' ? (
+                             <div className="flex justify-end gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleStatusChange(internship.id, 'pending_company_approval')}>
+                                    <Check className="mr-2 h-4 w-4" /> Duyệt
                                 </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem>Sửa thông tin</DropdownMenuItem>
-                                <DropdownMenuSub>
-                                    <DropdownMenuSubTrigger>
-                                        <span>Thay đổi trạng thái</span>
-                                    </DropdownMenuSubTrigger>
-                                    <DropdownMenuPortal>
-                                        <DropdownMenuSubContent>
-                                            <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'ongoing')} disabled={internship.status === 'ongoing'}>
-                                                <Clock className="mr-2 h-4 w-4" />
-                                                <span>{statusLabel.ongoing}</span>
-                                            </DropdownMenuItem>
-                                             <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'completed')} disabled={internship.status === 'completed'}>
-                                                <CheckCircle className="mr-2 h-4 w-4" />
-                                                <span>{statusLabel.completed}</span>
-                                            </DropdownMenuItem>
-                                            <DropdownMenuItem className="text-red-500" onClick={() => handleRejectClick(internship)} disabled={internship.status === 'rejected'}>
-                                                <X className="mr-2 h-4 w-4" />
-                                                <span>{statusLabel.rejected}</span>
-                                            </DropdownMenuItem>
-                                        </DropdownMenuSubContent>
-                                    </DropdownMenuPortal>
-                                </DropdownMenuSub>
-                                <DropdownMenuSeparator />
-                                <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(internship)}>Xóa</DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                                <Button size="sm" variant="destructive" onClick={() => handleRejectClick(internship)}>
+                                    <X className="mr-2 h-4 w-4" /> Từ chối
+                                </Button>
+                            </div>
+                        ) : (
+                           <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem>Sửa thông tin</DropdownMenuItem>
+                                    <DropdownMenuSub>
+                                        <DropdownMenuSubTrigger>
+                                            <span>Thay đổi trạng thái</span>
+                                        </DropdownMenuSubTrigger>
+                                        <DropdownMenuPortal>
+                                            <DropdownMenuSubContent>
+                                                <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'pending_company_approval')} disabled={internship.status === 'pending_company_approval'}>
+                                                    <Clock className="mr-2 h-4 w-4" />
+                                                    <span>{statusLabel.pending_company_approval}</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'ongoing')} disabled={internship.status === 'ongoing'}>
+                                                    <Clock className="mr-2 h-4 w-4" />
+                                                    <span>{statusLabel.ongoing}</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'completed')} disabled={internship.status === 'completed'}>
+                                                    <CheckCircle className="mr-2 h-4 w-4" />
+                                                    <span>{statusLabel.completed}</span>
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-red-500" onClick={() => handleRejectClick(internship)} disabled={internship.status === 'rejected_by_admin'}>
+                                                    <X className="mr-2 h-4 w-4" />
+                                                    <span>{statusLabel.rejected_by_admin}</span>
+                                                </DropdownMenuItem>
+                                            </DropdownMenuSubContent>
+                                        </DropdownMenuPortal>
+                                    </DropdownMenuSub>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(internship)}>Xóa</DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        )}
                     </TableCell>
                 </TableRow>
                 )})}
@@ -608,7 +628,7 @@ export function EarlyInternshipTable() {
                     <RejectionReasonDialog
                         registration={selectedInternship}
                         onConfirm={(reason) => {
-                            handleStatusChange(selectedInternship.id, 'rejected', reason);
+                            handleStatusChange(selectedInternship.id, 'rejected_by_admin', reason);
                             setIsRejectDialogOpen(false);
                             setSelectedInternship(null);
                         }}
