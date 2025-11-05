@@ -149,13 +149,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   return (
     <Card>
       <CardHeader>
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-          <div>
-            <CardTitle>Danh sách Sinh viên</CardTitle>
-            <CardDescription>
-              Các sinh viên đang thực hiện đồ án tốt nghiệp bạn hướng dẫn.
-            </CardDescription>
-          </div>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
             <div className="relative w-full sm:w-auto">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
