@@ -85,6 +85,8 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   const firestore = useFirestore();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSessionId, setSelectedSessionId] = useState('all');
+  const [proposalStatusFilter, setProposalStatusFilter] = useState('all');
+  const [reportStatusFilter, setReportStatusFilter] = useState('all');
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -135,10 +137,14 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
       const searchMatch = reg.studentName.toLowerCase().includes(term) ||
                           reg.studentId.toLowerCase().includes(term) ||
                           (reg.projectTitle && reg.projectTitle.toLowerCase().includes(term));
-      return searchMatch;
+      
+      const proposalMatch = proposalStatusFilter === 'all' || (reg.proposalStatus || 'not_submitted') === proposalStatusFilter;
+      const reportMatch = reportStatusFilter === 'all' || (reg.reportStatus || 'not_submitted') === reportStatusFilter;
+
+      return searchMatch && proposalMatch && reportMatch;
     });
 
-  }, [registrations, searchTerm]);
+  }, [registrations, searchTerm, proposalStatusFilter, reportStatusFilter]);
 
   return (
     <Card>
@@ -156,11 +162,33 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
               <Input
                 type="search"
                 placeholder="Tìm sinh viên, đề tài..."
-                className="pl-8 w-full sm:w-64"
+                className="pl-8 w-full sm:w-48"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
+             <Select value={proposalStatusFilter} onValueChange={setProposalStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Lọc TT Thuyết minh" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả TT Thuyết minh</SelectItem>
+                 {Object.entries(proposalStatusLabel).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+             <Select value={reportStatusFilter} onValueChange={setReportStatusFilter}>
+              <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectValue placeholder="Lọc TT Báo cáo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tất cả TT Báo cáo</SelectItem>
+                 {Object.entries(reportStatusLabel).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>{label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
               <SelectTrigger className="w-full sm:w-[250px]">
                 <SelectValue placeholder="Lọc theo đợt" />
