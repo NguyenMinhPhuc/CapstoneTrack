@@ -35,9 +35,10 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { ViewProgressDialog } from './view-progress-dialog';
 import { useToast } from '@/hooks/use-toast';
+import { Separator } from './ui/separator';
 
 
 interface GraduationGuidanceTableProps {
@@ -370,8 +371,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                         </DialogDescription>
                     </DialogHeader>
                      <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
-                        {/* Content identical to my-topics-table proposal dialog */}
-                         <div className="space-y-1">
+                        <div className="space-y-1">
                             <h3 className="font-semibold text-lg">{selectedRegistration.projectTitle}</h3>
                         </div>
                         <Separator/>
