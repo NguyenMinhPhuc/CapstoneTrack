@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Card,
   CardContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity, Book, Target, CheckCircle, Link as LinkIcon, ChevronDown } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
@@ -338,31 +338,29 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
             <Skeleton className="h-64 w-full" />
           ) : (
             <div className="border rounded-md">
-              <div className="flex w-full text-left text-sm font-semibold items-center bg-muted/50">
-                <div className="w-1/12 p-4">STT</div>
-                <div className="w-6/12 p-4">Sinh viên</div>
-                <div className="w-4/12 p-4">Trạng thái</div>
-                <div className="w-1/12 p-4 text-right">Hành động</div>
+              <div className="flex w-full text-left text-sm font-semibold items-center bg-muted/50 px-4">
+                <div className="w-1/12 py-3">STT</div>
+                <div className="w-5/12 py-3">Sinh viên</div>
+                <div className="w-4/12 py-3">Trạng thái</div>
+                <div className="w-2/12 py-3 text-right">Hành động</div>
               </div>
                <Accordion type="multiple" className="w-full">
                 {filteredRegistrations.length > 0 ? (
                   filteredRegistrations.map((reg, index) => (
                     <AccordionItem value={reg.id} key={reg.id} className="border-b">
-                      <div className="flex items-center hover:bg-muted/50">
-                         <div className="flex w-full text-left text-sm items-center">
-                            <div className="w-1/12 p-4">{index + 1}</div>
-                            <AccordionTrigger className="w-6/12 py-4 px-4 text-left font-medium hover:no-underline flex-1">
-                                <div>
-                                  <div>{reg.studentName}</div>
-                                  <div className="text-xs text-muted-foreground">{reg.studentId}</div>
-                                </div>
-                            </AccordionTrigger>
-                            <div className="w-4/12 flex flex-col items-start gap-1 p-4">
-                              <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
-                              <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                      <div className="flex items-center px-4 hover:bg-muted/50">
+                        <div className="w-1/12">{index + 1}</div>
+                        <AccordionTrigger className="w-5/12 py-4 text-left font-medium hover:no-underline">
+                            <div>
+                                <div>{reg.studentName}</div>
+                                <div className="text-xs text-muted-foreground">{reg.studentId}</div>
                             </div>
-                         </div>
-                        <div className="w-1/12 flex justify-end px-4">
+                        </AccordionTrigger>
+                        <div className="w-4/12 flex flex-col items-start gap-1">
+                          <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
+                          <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                        </div>
+                        <div className="w-2/12 flex justify-end">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
