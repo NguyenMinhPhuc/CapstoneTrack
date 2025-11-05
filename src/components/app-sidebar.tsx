@@ -48,7 +48,7 @@ import { doc } from "firebase/firestore";
 import { Skeleton } from "./ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "./ui/collapsible";
 import { Button } from "./ui/button";
-import type { SystemSettings } from "@/lib/types";
+import type { SystemSettings, Supervisor } from "@/lib/types";
 
 export function AppSidebar() {
   const pathname = usePathname();
@@ -62,6 +62,13 @@ export function AppSidebar() {
 
   const { data: userData, isLoading: isUserDataLoading } = useDoc(userDocRef);
   
+  const supervisorDocRef = useMemoFirebase(() => {
+      if (!user || userData?.role !== 'supervisor') return null;
+      return doc(firestore, 'supervisors', user.uid);
+  }, [user, userData]);
+  const { data: supervisorData, isLoading: isLoadingSupervisorData } = useDoc<Supervisor>(supervisorDocRef);
+
+  
   const settingsDocRef = useMemoFirebase(() => doc(firestore, 'systemSettings', 'features'), [firestore]);
   const { data: settings, isLoading: isLoadingSettings } = useDoc<SystemSettings>(settingsDocRef);
   const isPostDefenseSubmissionEnabled = settings?.enablePostDefenseSubmission ?? false;
@@ -73,7 +80,7 @@ export function AppSidebar() {
     return pathname.startsWith(href);
   }
 
-  const isLoading = isUserLoading || isUserDataLoading || isLoadingSettings;
+  const isLoading = isUserLoading || isUserDataLoading || isLoadingSettings || isLoadingSupervisorData;
 
   if (isLoading) {
       return (
@@ -216,38 +223,84 @@ export function AppSidebar() {
             
             {(userData?.role === 'supervisor' || userData?.role === 'admin') && (
               <>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/my-topics")} tooltip="Đề tài của tôi">
-                        <Link href="/my-topics"><BookUser /><span>Đề tài của tôi</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/graduation-guidance")} tooltip="Hướng dẫn Tốt nghiệp">
-                        <Link href="/graduation-guidance"><GraduationCap /><span>Hướng dẫn Tốt nghiệp</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                 <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/early-internship-guidance")} tooltip="Hướng dẫn TT sớm">
-                        <Link href="/early-internship-guidance"><Clock /><span>Hướng dẫn TT sớm</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/supervisor-grading")} tooltip="Chấm điểm Hướng dẫn">
-                        <Link href="/supervisor-grading"><UserCheck /><span>Chấm điểm Hướng dẫn</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                    <SidebarMenuButton asChild isActive={isActive("/council-grading")} tooltip="Chấm điểm Hội đồng">
-                        <Link href="/council-grading"><ClipboardCheck /><span>Chấm điểm Hội đồng</span></Link>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
+                <div className="px-2 py-2"><SidebarSeparator /></div>
+                 <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Hướng dẫn</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                {(supervisorData?.canGuideGraduation || userData?.role === 'admin') && (
+                                <>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/my-topics")} tooltip="Đề tài của tôi">
+                                        <Link href="/my-topics"><BookUser /><span>Đề tài của tôi</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/graduation-guidance")} tooltip="Hướng dẫn Tốt nghiệp">
+                                        <Link href="/graduation-guidance"><GraduationCap /><span>Hướng dẫn Tốt nghiệp</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                </>
+                                )}
+                                {(supervisorData?.canGuideInternship || userData?.role === 'admin') && (
+                                <>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/internship-guidance")} tooltip="Hướng dẫn Thực tập">
+                                        <Link href="/internship-guidance"><Briefcase /><span>Hướng dẫn Thực tập</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/early-internship-guidance")} tooltip="Hướng dẫn TT sớm">
+                                        <Link href="/early-internship-guidance"><Clock /><span>Hướng dẫn TT sớm</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                </>
+                                )}
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
+                 <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Chấm điểm</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/supervisor-grading")} tooltip="Chấm điểm Hướng dẫn">
+                                        <Link href="/supervisor-grading"><UserCheck /><span>Chấm điểm Hướng dẫn</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/council-grading")} tooltip="Chấm điểm Hội đồng">
+                                        <Link href="/council-grading"><ClipboardCheck /><span>Chấm điểm Hội đồng</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
               </>
             )}
 
-            <div className="px-2 py-2"><SidebarSeparator /></div>
             
              {userData?.role === 'admin' && (
                 <>
+                <div className="px-2 py-2"><SidebarSeparator /></div>
                  <Collapsible asChild defaultOpen>
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
@@ -335,7 +388,6 @@ export function AppSidebar() {
                          </CollapsibleContent>
                     </SidebarGroup>
                  </Collapsible>
-                 <div className="px-2 py-2"><SidebarSeparator /></div>
                  <Collapsible asChild defaultOpen>
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
@@ -358,7 +410,7 @@ export function AppSidebar() {
                                         <Link href="/admin/settings"><Settings /><span>Cài đặt hệ thống</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
+                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/help")} tooltip="Help">
                                         <Link href="/help"><LifeBuoy /><span>Hướng dẫn</span></Link>
                                     </SidebarMenuButton>
