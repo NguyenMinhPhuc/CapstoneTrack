@@ -81,7 +81,7 @@ export function TopicRegistrationList({ session, registration, onRegistrationSuc
     const counts = new Map<string, number>();
     allRegistrations.forEach(reg => {
         if (reg.projectTitle) {
-            // Use a composite key to be more specific, though title is likely unique per session
+            // Use a composite key to be more specific
             const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
             counts.set(key, (counts.get(key) || 0) + 1);
         }
