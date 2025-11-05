@@ -1,4 +1,3 @@
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -114,7 +113,7 @@ export function ProposalSubmissionForm({ registration, allowEditingApproved }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Tóm tắt</FormLabel>
-              <MarkdownToolbar textareaRef={summaryRef} onChange={field.onChange} />
+              <MarkdownToolbar textareaRef={summaryRef} />
               <FormControl>
                 <Textarea
                   ref={summaryRef}
@@ -134,7 +133,7 @@ export function ProposalSubmissionForm({ registration, allowEditingApproved }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Mục tiêu của đề tài</FormLabel>
-              <MarkdownToolbar textareaRef={objectivesRef} onChange={field.onChange} />
+              <MarkdownToolbar textareaRef={objectivesRef} />
               <FormControl>
                 <Textarea
                   ref={objectivesRef}
@@ -154,7 +153,7 @@ export function ProposalSubmissionForm({ registration, allowEditingApproved }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Phương pháp và Công nghệ thực hiện</FormLabel>
-              <MarkdownToolbar textareaRef={implementationPlanRef} onChange={field.onChange} />
+              <MarkdownToolbar textareaRef={implementationPlanRef} />
               <FormControl>
                 <Textarea
                   ref={implementationPlanRef}
@@ -174,7 +173,7 @@ export function ProposalSubmissionForm({ registration, allowEditingApproved }: P
           render={({ field }) => (
             <FormItem>
               <FormLabel>Kết quả mong đợi</FormLabel>
-              <MarkdownToolbar textareaRef={expectedResultsRef} onChange={field.onChange} />
+              <MarkdownToolbar textareaRef={expectedResultsRef} />
               <FormControl>
                 <Textarea
                   ref={expectedResultsRef}

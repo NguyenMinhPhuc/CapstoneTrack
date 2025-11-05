@@ -164,7 +164,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mô tả tóm tắt</FormLabel>
-                    <MarkdownToolbar textareaRef={summaryRef} onChange={field.onChange} />
+                    <MarkdownToolbar textareaRef={summaryRef} />
                     <FormControl>
                       <Textarea
                         ref={summaryRef}
@@ -183,7 +183,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
-                    <MarkdownToolbar textareaRef={objectivesRef} onChange={field.onChange} />
+                    <MarkdownToolbar textareaRef={objectivesRef} />
                     <FormControl>
                       <Textarea
                         ref={objectivesRef}
@@ -202,7 +202,7 @@ export function AddTopicForm({ supervisorId, supervisorName, sessions, onFinishe
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
-                    <MarkdownToolbar textareaRef={expectedResultsRef} onChange={field.onChange} />
+                    <MarkdownToolbar textareaRef={expectedResultsRef} />
                     <FormControl>
                       <Textarea
                         ref={expectedResultsRef}
