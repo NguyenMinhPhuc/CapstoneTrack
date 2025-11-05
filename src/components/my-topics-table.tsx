@@ -65,7 +65,13 @@ import { Checkbox } from './ui/checkbox';
 import { MoveTopicsDialog } from './move-topics-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
-
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface MyTopicsTableProps {
     supervisorId: string;
@@ -188,7 +194,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
               if (reg.projectTitle && reg.supervisorId === supervisorId) {
-                  // Key should be based on what defines a unique topic in a session
                   const key = `${reg.sessionId}-${reg.projectTitle}`;
                   if (!map.has(key)) {
                       map.set(key, []);
