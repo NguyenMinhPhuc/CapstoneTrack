@@ -380,10 +380,6 @@ export function EarlyInternshipTable() {
         <Card>
         <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-            <div>
-                <CardTitle>Danh sách Sinh viên</CardTitle>
-                <CardDescription>Các sinh viên đang hoặc đã hoàn thành thực tập sớm.</CardDescription>
-            </div>
              <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -570,7 +566,6 @@ export function EarlyInternshipTable() {
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                    <DropdownMenuItem>Sửa thông tin</DropdownMenuItem>
                                     <DropdownMenuSub>
                                         <DropdownMenuSubTrigger>
                                             <span>Thay đổi trạng thái</span>
