@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -162,7 +163,7 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mô tả tóm tắt</FormLabel>
-                    <MarkdownToolbar textareaRef={summaryRef} />
+                    <MarkdownToolbar textareaRef={summaryRef} onChange={field.onChange} />
                     <FormControl>
                       <Textarea ref={summaryRef} className="resize-y rounded-t-none" {...field} />
                     </FormControl>
@@ -176,7 +177,7 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
-                    <MarkdownToolbar textareaRef={objectivesRef} />
+                    <MarkdownToolbar textareaRef={objectivesRef} onChange={field.onChange} />
                     <FormControl>
                       <Textarea ref={objectivesRef} className="resize-y rounded-t-none" {...field} />
                     </FormControl>
@@ -190,7 +191,7 @@ export function EditTopicForm({ topic, sessions, onFinished }: EditTopicFormProp
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
-                    <MarkdownToolbar textareaRef={expectedResultsRef} />
+                    <MarkdownToolbar textareaRef={expectedResultsRef} onChange={field.onChange} />
                     <FormControl>
                       <Textarea ref={expectedResultsRef} className="resize-y rounded-t-none" {...field} />
                     </FormControl>

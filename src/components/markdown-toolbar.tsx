@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -6,9 +7,10 @@ import { Bold, Italic, List, ListOrdered } from 'lucide-react';
 
 interface MarkdownToolbarProps {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
+  onChange: (value: string) => void;
 }
 
-export function MarkdownToolbar({ textareaRef }: MarkdownToolbarProps) {
+export function MarkdownToolbar({ textareaRef, onChange }: MarkdownToolbarProps) {
   const applyStyle = (style: 'bold' | 'italic' | 'bullet' | 'number') => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -59,18 +61,8 @@ export function MarkdownToolbar({ textareaRef }: MarkdownToolbarProps) {
 
     const newValue = value.substring(0, start) + newText + value.substring(end);
     
-    // Natively set the value and dispatch an input event
-    const nativeTextareaValueSetter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype,
-      'value'
-    )?.set;
-    nativeTextareaValueSetter?.call(textarea, newValue);
+    onChange(newValue);
 
-    const event = new Event('input', { bubbles: true });
-    textarea.dispatchEvent(event);
-
-
-    // After updating the value, we need to manually set the selection
     setTimeout(() => {
         if (!textarea) return;
         textarea.focus();
