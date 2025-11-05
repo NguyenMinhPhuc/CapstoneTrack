@@ -195,7 +195,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
               if (reg.projectTitle) {
-                  const key = `${'reg.sessionId'}-${reg.projectTitle}`;
+                  const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
                   if (!map.has(key)) {
                       map.set(key, []);
                   }
@@ -514,12 +514,13 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     <div className="col-span-2">Đợt báo cáo</div>
                     <div className="col-span-1 text-center">SL SV</div>
                     <div className="col-span-2">Trạng thái</div>
-                    <div className="col-span-1 text-right pr-2">Hành động</div>
+                    <div className="col-span-1 text-right pr-8">Hành động</div>
                 </div>
                 <Accordion type="multiple" className="w-full">
                     {filteredTopics.length > 0 ? (
                         filteredTopics.map((topic, index) => {
-                            const registeredStudents = registrationsByTopic.get(`${topic.sessionId}-${topic.title}`) || [];
+                            const key = `${topic.sessionId}-${topic.title}-${topic.supervisorId}`;
+                            const registeredStudents = registrationsByTopic.get(key) || [];
                             const registeredCount = registeredStudents.length;
                             return (
                                 <AccordionItem value={topic.id} key={topic.id} className="border-b">
@@ -717,7 +718,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                     <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
                         <p className="text-sm text-muted-foreground">Thông tin dưới đây là bản tóm tắt cuối cùng sinh viên đã nộp.</p>
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>
