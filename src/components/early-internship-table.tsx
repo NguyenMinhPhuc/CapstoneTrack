@@ -552,7 +552,7 @@ export function EarlyInternshipTable() {
                         {internship.status === 'pending_admin_approval' ? (
                              <div className="flex justify-end gap-2">
                                 <Button size="sm" variant="outline" onClick={() => handleStatusChange(internship.id, 'pending_company_approval')}>
-                                    <Check className="mr-2 h-4 w-4" /> Duyệt
+                                    <Check className="mr-2 h-4 w-4" /> Chuyển đơn vị
                                 </Button>
                                 <Button size="sm" variant="destructive" onClick={() => handleRejectClick(internship)}>
                                     <X className="mr-2 h-4 w-4" /> Từ chối
