@@ -300,11 +300,11 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
             <Skeleton className="h-64 w-full" />
           ) : (
             <div className="border rounded-md">
-              <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center bg-muted/50">
-                <div className="col-span-1 p-4">STT</div>
-                <div className="col-span-6 p-4">Sinh viên</div>
-                <div className="col-span-4 p-4">Trạng thái</div>
-                <div className="col-span-1 text-right p-4">Hành động</div>
+              <div className="flex w-full text-left text-sm font-semibold items-center bg-muted/50">
+                <div className="w-1/12 p-4">STT</div>
+                <div className="w-6/12 p-4">Sinh viên</div>
+                <div className="w-4/12 p-4">Trạng thái</div>
+                <div className="w-1/12 text-right p-4">Hành động</div>
               </div>
                <Accordion type="multiple" className="w-full">
                 {filteredRegistrations.length > 0 ? (
@@ -312,19 +312,19 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                     <AccordionItem value={reg.id} key={reg.id} className="border-b">
                       <div className="flex items-center hover:bg-muted/50">
                         <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
-                          <div className="grid grid-cols-12 w-full text-left text-sm items-center py-4 px-4">
-                            <div className="col-span-1">{index + 1}</div>
-                            <div className="col-span-6 font-medium">
+                          <div className="flex w-full text-left text-sm items-center">
+                            <div className="w-1/12 p-4">{index + 1}</div>
+                            <div className="w-6/12 font-medium p-4">
                                 <div>{reg.studentName}</div>
                                 <div className="text-xs text-muted-foreground">{reg.studentId}</div>
                             </div>
-                            <div className="col-span-4 flex flex-col items-start gap-1">
+                            <div className="w-4/12 flex flex-col items-start gap-1 p-4">
                               <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
                               <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <div className="col-span-1 flex justify-end px-4">
+                        <div className="w-1/12 flex justify-end px-4">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -427,19 +427,26 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                             Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
                         </DialogDescription>
                     </DialogHeader>
-                     <div className="space-y-4 p-4">
-                         <h4 className="font-semibold flex items-center gap-2 text-base"><Link className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>
-                          {selectedRegistration.reportLink ? (
+                     <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                        <p className="text-sm text-muted-foreground">Thông tin dưới đây là bản tóm tắt cuối cùng sinh viên đã nộp.</p>
+                        <div className="space-y-1">
+                             <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>
+                            {selectedRegistration.reportLink ? (
                                 <a href={selectedRegistration.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
                                     {selectedRegistration.reportLink}
                                 </a>
                             ) : (
                                 <p className="text-sm text-muted-foreground">Sinh viên chưa nộp link báo cáo.</p>
                             )}
-                     </div>
+                        </div>
+                    </div>
                      <DialogFooter>
-                        <Button variant="destructive" onClick={() => handleReportAction(selectedRegistration, 'reject')}>Yêu cầu chỉnh sửa</Button>
-                        <Button onClick={() => handleReportAction(selectedRegistration, 'approve')}>Duyệt Báo cáo</Button>
+                        <Button variant="destructive" onClick={() => handleReportAction(selectedRegistration, 'reject')}>
+                            Yêu cầu chỉnh sửa
+                        </Button>
+                        <Button onClick={() => handleReportAction(selectedRegistration, 'approve')}>
+                            Duyệt Báo cáo
+                        </Button>
                     </DialogFooter>
                   </>
               )}
