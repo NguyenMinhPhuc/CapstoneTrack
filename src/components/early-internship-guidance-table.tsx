@@ -59,18 +59,22 @@ interface EarlyInternshipGuidanceTableProps {
 }
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
-  pending_approval: 'Chờ duyệt',
+  pending_admin_approval: 'Chờ Admin duyệt',
+  pending_company_approval: 'Chờ duyệt',
   ongoing: 'Đang thực tập',
   completed: 'Hoàn thành',
-  rejected: 'Bị từ chối',
+  rejected_by_admin: 'Admin từ chối',
+  rejected_by_company: 'ĐV từ chối',
   cancelled: 'Đã hủy',
 };
 
 const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
-  pending_approval: 'secondary',
+  pending_admin_approval: 'secondary',
+  pending_company_approval: 'secondary',
   ongoing: 'default',
   completed: 'outline',
-  rejected: 'destructive',
+  rejected_by_admin: 'destructive',
+  rejected_by_company: 'destructive',
   cancelled: 'destructive',
 };
 
@@ -94,7 +98,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   const goalHours = settings?.earlyInternshipGoalHours ?? 700;
 
   const internshipsQuery = useMemoFirebase(
-    () => query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', supervisorId)),
+    () => query(collection(firestore, 'earlyInternships'), where('supervisorId', '==', supervisorId), where('status', 'in', ['pending_company_approval', 'ongoing', 'completed', 'rejected_by_company', 'cancelled'])),
     [firestore, supervisorId]
   );
   
@@ -225,7 +229,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
   };
 
 
-  const handleStatusChange = async (internship: EarlyInternship, status: EarlyInternship['status'], note?: string) => {
+  const handleStatusChange = async (internship: EarlyInternship, status: 'ongoing' | 'rejected_by_company' | 'cancelled' | 'completed', note?: string) => {
     const docRef = doc(firestore, 'earlyInternships', internship.id);
     const dataToUpdate: Partial<EarlyInternship> = { status, statusNote: note || '' };
     
@@ -441,7 +445,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                     </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                    {internship.status === 'pending_approval' && (
+                    {internship.status === 'pending_company_approval' && (
                         <div className="flex justify-end gap-2">
                             <Button size="sm" variant="outline" onClick={() => handleStatusChange(internship, 'ongoing')}>
                                 <Check className="mr-2 h-4 w-4" /> Duyệt
@@ -451,7 +455,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                             </Button>
                         </div>
                     )}
-                    {(internship.status === 'ongoing' || internship.status === 'completed' || internship.status === 'rejected') && (
+                    {(internship.status === 'ongoing' || internship.status === 'completed' || internship.status === 'rejected_by_company') && (
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="relative">
@@ -498,7 +502,7 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
                 <RejectionReasonDialog
                     registration={selectedInternship as any} // Cast as any because the dialog expects DefenseRegistration
                     onConfirm={(reason) => {
-                        handleStatusChange(selectedInternship, 'rejected', reason);
+                        handleStatusChange(selectedInternship, 'rejected_by_company', reason);
                         setIsRejectDialogOpen(false);
                         setSelectedInternship(null);
                     }}
@@ -530,5 +534,3 @@ export function EarlyInternshipGuidanceTable({ supervisorId }: EarlyInternshipGu
     </>
   );
 }
-
-

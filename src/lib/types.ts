@@ -281,7 +281,7 @@ export type EarlyInternship = {
   startDate: any;
   endDate?: any;
   proofLink?: string;
-  status: 'pending_approval' | 'ongoing' | 'completed' | 'rejected' | 'cancelled';
+  status: 'pending_admin_approval' | 'pending_company_approval' | 'ongoing' | 'completed' | 'rejected_by_admin' | 'rejected_by_company' | 'cancelled';
   statusNote?: string;
   batch: string;
 };

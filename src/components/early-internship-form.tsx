@@ -121,7 +121,7 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       startDate: values.startDate,
       endDate: values.endDate,
       proofLink: values.proofLink,
-      status: 'pending_approval' as const,
+      status: 'pending_admin_approval' as const,
       batch: batch,
       createdAt: serverTimestamp(),
     };
@@ -130,7 +130,7 @@ export function EarlyInternshipForm({ user, student, onFinished }: EarlyInternsh
       .then(() => {
         toast({
           title: 'Thành công',
-          description: 'Đã gửi đơn đăng ký đến giáo viên hướng dẫn.',
+          description: 'Đã gửi đơn đăng ký đến quản trị viên để chờ duyệt.',
         });
         onFinished();
       })
