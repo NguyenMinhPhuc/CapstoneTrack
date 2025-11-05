@@ -183,12 +183,13 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
   }, [sessions]);
 
-  const registrationsByTopic = useMemo(() => {
+ const registrationsByTopic = useMemo(() => {
       const map = new Map<string, DefenseRegistration[]>();
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
               if (reg.projectTitle && reg.supervisorId === supervisorId) {
-                  const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
+                  // Key should be based on what defines a unique topic in a session
+                  const key = `${reg.sessionId}-${reg.projectTitle}`;
                   if (!map.has(key)) {
                       map.set(key, []);
                   }
@@ -206,7 +207,6 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     return topics.filter(topic => {
       const sessionMatch = sessionFilter === 'all' || topic.sessionId === sessionFilter;
       const statusMatch = statusFilter === 'all' || topic.status === statusFilter;
-
       return sessionMatch && statusMatch;
     });
   }, [topics, sessionFilter, statusFilter]);
@@ -285,7 +285,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     if (action === 'approve') {
         batch.update(regDocRef, { projectRegistrationStatus: 'approved' });
 
-        const registrationsForThisTopic = allRegistrations?.filter(r => r.sessionId === topic.sessionId && r.projectTitle === topic.title) || [];
+        const key = `${topic.sessionId}-${topic.title}`;
+        const registrationsForThisTopic = registrationsByTopic.get(key) || [];
         const approvedCount = registrationsForThisTopic.filter(r => r.projectRegistrationStatus === 'approved').length;
 
         if (approvedCount + 1 >= topic.maxStudents) {
@@ -515,7 +516,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                 <Accordion type="multiple" className="w-full">
                     {filteredTopics.length > 0 ? (
                         filteredTopics.map((topic, index) => {
-                            const key = `${topic.sessionId}-${topic.title}-${topic.supervisorId}`;
+                            const key = `${topic.sessionId}-${topic.title}`;
                             const registeredStudents = registrationsByTopic.get(key) || [];
                             const registeredCount = registeredStudents.length;
                             return (
