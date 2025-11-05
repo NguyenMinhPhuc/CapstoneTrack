@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -57,6 +58,12 @@ import { Dialog, DialogContent, DialogTrigger } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
 import { AddStudentsToSessionDialog } from './add-students-to-session-dialog';
 import { Progress } from './ui/progress';
+import { UserCheck as UserCheckIcon, UserX } from 'lucide-react';
+
+
+interface EarlyInternshipGuidanceTableProps {
+  supervisorId: string;
+}
 
 const statusLabel: Record<EarlyInternship['status'], string> = {
   pending_admin_approval: 'Chờ Admin duyệt',
@@ -68,6 +75,15 @@ const statusLabel: Record<EarlyInternship['status'], string> = {
   cancelled: 'Đã hủy',
 };
 
+const dropdownStatusLabel: Record<EarlyInternship['status'], string> = {
+  pending_admin_approval: 'Chờ Admin duyệt',
+  pending_company_approval: 'Chuyển đơn vị',
+  ongoing: 'Đang thực tập',
+  completed: 'Hoàn thành',
+  rejected_by_admin: 'Admin từ chối',
+  rejected_by_company: 'ĐV từ chối',
+  cancelled: 'Đã hủy',
+};
 
 const statusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
   pending_admin_approval: 'secondary',
@@ -574,19 +590,19 @@ export function EarlyInternshipTable() {
                                             <DropdownMenuSubContent>
                                                 <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'pending_company_approval')} disabled={internship.status === 'pending_company_approval'}>
                                                     <Clock className="mr-2 h-4 w-4" />
-                                                    <span>{statusLabel.pending_company_approval}</span>
+                                                    <span>{dropdownStatusLabel.pending_company_approval}</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'ongoing')} disabled={internship.status === 'ongoing'}>
                                                     <Clock className="mr-2 h-4 w-4" />
-                                                    <span>{statusLabel.ongoing}</span>
+                                                    <span>{dropdownStatusLabel.ongoing}</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem onClick={() => handleStatusChange(internship.id, 'completed')} disabled={internship.status === 'completed'}>
                                                     <CheckCircle className="mr-2 h-4 w-4" />
-                                                    <span>{statusLabel.completed}</span>
+                                                    <span>{dropdownStatusLabel.completed}</span>
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem className="text-red-500" onClick={() => handleRejectClick(internship)} disabled={internship.status === 'rejected_by_admin'}>
                                                     <X className="mr-2 h-4 w-4" />
-                                                    <span>{statusLabel.rejected_by_admin}</span>
+                                                    <span>{dropdownStatusLabel.rejected_by_admin}</span>
                                                 </DropdownMenuItem>
                                             </DropdownMenuSubContent>
                                         </DropdownMenuPortal>
