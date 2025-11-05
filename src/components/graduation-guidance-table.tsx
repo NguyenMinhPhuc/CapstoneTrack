@@ -31,7 +31,7 @@ import {
 import { Badge } from './ui/badge';
 import Link from 'next/link';
 import { Button } from './ui/button';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -299,19 +299,19 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
             <Skeleton className="h-64 w-full" />
           ) : (
             <div className="border rounded-md">
-              <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
-                <div className="col-span-1">STT</div>
-                <div className="col-span-6">Sinh viên</div>
-                <div className="col-span-4">Trạng thái</div>
-                <div className="col-span-1 text-right">Hành động</div>
+              <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center bg-muted/50">
+                <div className="col-span-1 p-4">STT</div>
+                <div className="col-span-6 p-4">Sinh viên</div>
+                <div className="col-span-4 p-4">Trạng thái</div>
+                <div className="col-span-1 text-right p-4">Hành động</div>
               </div>
                <Accordion type="multiple" className="w-full">
                 {filteredRegistrations.length > 0 ? (
                   filteredRegistrations.map((reg, index) => (
                     <AccordionItem value={reg.id} key={reg.id} className="border-b">
-                      <div className="flex items-center px-4 hover:bg-muted/50">
+                      <div className="flex items-center hover:bg-muted/50">
                         <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
-                          <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
+                          <div className="grid grid-cols-12 w-full text-left text-sm items-center py-4 px-4">
                             <div className="col-span-1">{index + 1}</div>
                             <div className="col-span-6 font-medium">
                                 <div>{reg.studentName}</div>
@@ -323,7 +323,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                             </div>
                           </div>
                         </AccordionTrigger>
-                        <div className="col-span-1 flex justify-end">
+                        <div className="col-span-1 flex justify-end px-4">
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon">
@@ -374,6 +374,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                          <div className="space-y-1">
                             <h3 className="font-semibold text-lg">{selectedRegistration.projectTitle}</h3>
                         </div>
+                        <Separator/>
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
@@ -421,13 +422,13 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
               {selectedRegistration && (
                   <>
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2"><FileUp /> Báo cáo cuối kỳ</DialogTitle>
+                        <DialogTitle className="flex items-center gap-2"><FileUp /> Báo cáo cuối kỳ của sinh viên</DialogTitle>
                          <DialogDescription>
                             Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
                         </DialogDescription>
                     </DialogHeader>
                      <div className="space-y-4 p-4">
-                         <h4 className="font-semibold flex items-center gap-2 text-base"><Link className="h-4 w-4 text-primary" /> Link file báo cáo</h4>
+                         <h4 className="font-semibold flex items-center gap-2 text-base"><Link className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>
                           {selectedRegistration.reportLink ? (
                                 <a href={selectedRegistration.reportLink} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-500 hover:underline break-all">
                                     {selectedRegistration.reportLink}
