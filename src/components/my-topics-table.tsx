@@ -29,13 +29,6 @@ import { useToast } from '@/hooks/use-toast';
 import { AddTopicForm } from './add-topic-form';
 import { EditTopicForm } from './edit-topic-form';
 import { Badge } from './ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -106,10 +99,10 @@ const registrationStatusVariant: Record<string, 'secondary' | 'default' | 'destr
 };
 
 const proposalStatusLabel: Record<string, string> = {
-    not_submitted: 'Chưa nộp',
-    pending_approval: 'Chờ duyệt',
-    approved: 'Đã duyệt',
-    rejected: 'Bị từ chối',
+    not_submitted: 'Chưa nộp TM',
+    pending_approval: 'Chờ duyệt TM',
+    approved: 'Đã duyệt TM',
+    rejected: 'TM bị từ chối',
 };
 
 const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
@@ -120,10 +113,10 @@ const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' 
 };
 
 const reportStatusLabel: Record<string, string> = {
-    not_submitted: 'Chưa nộp',
-    pending_approval: 'Chờ duyệt',
-    approved: 'Đã duyệt',
-    rejected: 'Bị từ chối',
+    not_submitted: 'Chưa nộp BC',
+    pending_approval: 'Chờ duyệt BC',
+    approved: 'Đã duyệt BC',
+    rejected: 'BC bị từ chối',
 };
 
 const reportStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
@@ -194,7 +187,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       const map = new Map<string, DefenseRegistration[]>();
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
-              if (reg.projectTitle) {
+              // Ensure we only count students who have actually selected a topic from this supervisor
+              if (reg.projectTitle && reg.supervisorId === supervisorId) {
                   const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
                   if (!map.has(key)) {
                       map.set(key, []);
@@ -204,7 +198,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           });
       }
       return map;
-  }, [allRegistrations]);
+  }, [allRegistrations, supervisorId]);
 
 
   const filteredTopics = useMemo(() => {
@@ -213,6 +207,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     return topics.filter(topic => {
       const sessionMatch = sessionFilter === 'all' || topic.sessionId === sessionFilter;
       const statusMatch = statusFilter === 'all' || topic.status === statusFilter;
+
       return sessionMatch && statusMatch;
     });
   }, [topics, sessionFilter, statusFilter]);
@@ -524,7 +519,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             const registeredCount = registeredStudents.length;
                             return (
                                 <AccordionItem value={topic.id} key={topic.id} className="border-b">
-                                    <div className="flex items-center px-4 hover:bg-muted/50">
+                                     <div className="flex items-center px-4 hover:bg-muted/50">
                                         <div className="flex items-center gap-2 py-4">
                                             <Checkbox
                                                 checked={selectedRowIds.includes(topic.id)}
@@ -632,6 +627,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     )}
                 </Accordion>
             </div>
+           {filteredTopics.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground">
+                    Không tìm thấy đề tài nào phù hợp.
+                </div>
+            )}
         </CardContent>
       </Card>
 
