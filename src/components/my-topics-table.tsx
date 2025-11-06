@@ -555,10 +555,48 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                     </div>
                                     <AccordionContent>
                                         <div className="p-4 bg-muted/30 border-t space-y-4">
-                                           <div className="space-y-1"><h4 className="font-semibold text-base">{topic.title || "Chưa có tên đề tài"}</h4></div>
-                                           <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.summary || ''}</ReactMarkdown></div></div>
-                                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.objectives || ''}</ReactMarkdown></div></div>
-                                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults || ''}</ReactMarkdown></div></div>
+                                            <h4 className="font-semibold text-sm">Danh sách Sinh viên đăng ký ({registeredCount})</h4>
+                                            {registeredStudents.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {registeredStudents.map(reg => (
+                                                        <div key={reg.id} className="flex items-center justify-between p-2 border rounded-md bg-background">
+                                                            <div>
+                                                                <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
+                                                                <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                                                                     <Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>
+                                                                        {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
+                                                                    </Badge>
+                                                                     <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
+                                                                        {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
+                                                                    </Badge>
+                                                                     <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
+                                                                        {reportStatusLabel[reg.reportStatus || 'not_submitted']}
+                                                                    </Badge>
+                                                                </p>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4"/>Xem tiến độ</DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><FileSignature className="mr-2 h-4 w-4"/>Duyệt thuyết minh</DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><FileUp className="mr-2 h-4 w-4"/>Duyệt báo cáo</DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+
+                                                                {reg.projectRegistrationStatus === 'pending' ? (
+                                                                    <>
+                                                                    <Button size="sm" variant="outline" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}><Check className="h-4 w-4"/></Button>
+                                                                    <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}><X className="h-4 w-4"/></Button>
+                                                                    </>
+                                                                ) : (
+                                                                    <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>Hủy ĐK</Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : <p className="text-xs text-muted-foreground text-center py-2">Chưa có sinh viên nào đăng ký đề tài này.</p>}
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
@@ -662,14 +700,10 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                 </a>
                             </div>
                         )}
-                    </div>
+                     </div>
                      <DialogFooter>
-                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>
-                            Yêu cầu chỉnh sửa
-                        </Button>
-                        <Button onClick={() => handleProposalAction(selectedRegistration, 'approve')}>
-                            Duyệt thuyết minh
-                        </Button>
+                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>Yêu cầu chỉnh sửa</Button>
+                        <Button onClick={() => handleProposalAction(selectedRegistration, 'approve')}>Duyệt thuyết minh</Button>
                     </DialogFooter>
                   </>
               )}

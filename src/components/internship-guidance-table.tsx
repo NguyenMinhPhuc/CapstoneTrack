@@ -107,10 +107,6 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
         conditions.push(where('internshipSupervisorId', '==', supervisorId));
     }
     
-    // We want to see both students who are pending approval and those who are actively reporting
-    const statusesToWatch: InternshipRegistrationStatus[] = ['pending', 'approved', 'rejected'];
-    conditions.push(where('internshipRegistrationStatus', 'in', statusesToWatch));
-    
     if (selectedSessionId !== 'all') {
       conditions.push(where('sessionId', '==', selectedSessionId));
     }
@@ -141,6 +137,9 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
     if (!registrations) return [];
     
     return registrations.filter(reg => {
+      // Only show registrations that have an internship company, meaning they have at least started the process.
+      if (!reg.internship_companyName) return false;
+
       const term = searchTerm.toLowerCase();
       const searchMatch = reg.studentName.toLowerCase().includes(term) ||
                           reg.studentId.toLowerCase().includes(term) ||
