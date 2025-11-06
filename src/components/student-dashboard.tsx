@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -51,6 +50,7 @@ const earlyInternshipStatusLabel: Record<EarlyInternship['status'], string> = {
 
 const earlyInternshipStatusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
   pending_admin_approval: 'secondary',
+  pending_company_approval: 'secondary',
   ongoing: 'default',
   completed: 'outline',
   rejected_by_admin: 'destructive',
@@ -95,7 +95,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   const activeEarlyInternship = useMemo(() => {
     if (!earlyInternships || earlyInternships.length === 0) return null;
-    return [...earlyInternships].sort((a, b) => (b.startDate?.toDate() || 0) - (a.startDate?.toDate() || 0))[0];
+    return [...earlyInternships].sort((a, b) => ((b.startDate?.toDate()?.getTime() || 0) - (a.startDate?.toDate()?.getTime() || 0)))[0];
   }, [earlyInternships]);
 
   const earlyInternshipReportsQuery = useMemoFirebase(
@@ -135,48 +135,57 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     const findActiveRegistration = async () => {
       setIsLoading(true);
       try {
-        const sessionsQuery = query(
-          collection(firestore, 'graduationDefenseSessions'),
-          where('status', 'in', ['ongoing', 'upcoming'])
-        );
-        const sessionsSnapshot = await getDocs(sessionsQuery);
-
-        if (sessionsSnapshot.empty) {
-          setIsLoading(false);
-          return;
+        // 1. Find all registrations for the current student in active sessions.
+        const activeSessionIds = availableSessions?.map(s => s.id) || [];
+        if (activeSessionIds.length === 0) {
+            setIsLoading(false);
+            return;
         }
-        
-        const sessionData = sessionsSnapshot.docs.map(d => ({ id: d.id, ...d.data() } as GraduationDefenseSession))
-            .sort((a,b) => (a.status === 'ongoing' ? -1 : 1) - (b.status === 'ongoing' ? -1 : 1))[0]; // Prioritize ongoing session
-
-        setActiveSession(sessionData);
 
         const registrationQuery = query(
           collection(firestore, 'defenseRegistrations'),
-          where('sessionId', '==', sessionData.id),
-          where('studentDocId', '==', user.uid)
+          where('studentDocId', '==', user.uid),
+          where('sessionId', 'in', activeSessionIds)
         );
         const registrationSnapshot = await getDocs(registrationQuery);
 
         if (!registrationSnapshot.empty) {
-          setActiveRegistration({ id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration);
+          // 2. A registration exists. Now get that specific session's data.
+          const regData = { id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration;
+          setActiveRegistration(regData);
+
+          const sessionData = availableSessions?.find(s => s.id === regData.sessionId);
+          if (sessionData) {
+            setActiveSession(sessionData);
+          }
+        } else {
+          // 3. No registration found, but we might still have an active session to show generally.
+          const currentSession = availableSessions?.find(s => s.status === 'ongoing') || availableSessions?.[0] || null;
+          setActiveSession(currentSession);
         }
+
       } catch (error) {
         console.error("Error finding active registration:", error);
       } finally {
         setIsLoading(false);
       }
     };
-
-    findActiveRegistration();
-  }, [user, firestore]);
+    
+    if(!isLoadingSessions) {
+        findActiveRegistration();
+    }
+  }, [user, firestore, availableSessions, isLoadingSessions]);
   
   const toDate = (timestamp: any): Date | null => {
     if (!timestamp) return null;
     if (timestamp && typeof timestamp.toDate === 'function') {
         return timestamp.toDate();
     }
-    return timestamp;
+    // Handle cases where it might already be a Date object
+    if (timestamp instanceof Date) {
+        return timestamp;
+    }
+    return null;
   };
   
     const reportSubmission = useMemo(() => {
@@ -375,7 +384,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                     </div>
                      <div className="space-y-1">
                         <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái</p>
-                         <Badge variant={earlyInternshipStatusVariant[activeEarlyInternship.status]}>
+                         <Badge variant={earlyInternshipStatusVariant[activeEarlyInternship.status] || 'secondary'}>
                             {earlyInternshipStatusLabel[activeEarlyInternship.status]}
                         </Badge>
                     </div>
