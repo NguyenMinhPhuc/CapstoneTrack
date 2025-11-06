@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -66,11 +67,11 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
     
     let dataToUpdate: any = {};
     if (values.reportType === 'graduation' || values.reportType === 'both') {
-      dataToUpdate.graduationStatus = 'withdrawn' as const;
+      dataToUpdate.graduationStatus = 'not_yet_reporting' as const;
       dataToUpdate.graduationStatusNote = values.statusNote || '';
     }
     if (values.reportType === 'internship' || values.reportType === 'both') {
-      dataToUpdate.internshipStatus = 'withdrawn' as const;
+      dataToUpdate.internshipStatus = 'not_yet_reporting' as const;
       dataToUpdate.internshipStatusNote = values.statusNote || '';
     }
 
@@ -84,7 +85,7 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
         await batch.commit();
         toast({
             title: 'Thành công',
-            description: `Đã cập nhật trạng thái "Bỏ báo cáo" cho ${registrations.length} sinh viên.`,
+            description: `Đã cập nhật trạng thái "Chưa báo cáo" cho ${registrations.length} sinh viên.`,
         });
         onFinished();
     } catch(error) {
@@ -101,7 +102,7 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
   return (
     <DialogContent className="sm:max-w-md">
         <DialogHeader>
-        <DialogTitle>Cập nhật trạng thái "Bỏ báo cáo"</DialogTitle>
+        <DialogTitle>Cập nhật trạng thái "Chưa báo cáo"</DialogTitle>
         <DialogDescription>
             Nhập ghi chú cho {registrations.length} sinh viên đã chọn.
         </DialogDescription>
@@ -170,7 +171,7 @@ export function WithdrawRegistrationForm({ registrations, onFinished }: Withdraw
                  <DialogFooter>
                     <Button type="button" variant="outline" onClick={onFinished}>Hủy</Button>
                     <Button type="submit" variant="destructive" disabled={form.formState.isSubmitting}>
-                        {form.formState.isSubmitting ? "Đang lưu..." : "Xác nhận Bỏ báo cáo"}
+                        {form.formState.isSubmitting ? "Đang lưu..." : "Xác nhận Chưa báo cáo"}
                     </Button>
                 </DialogFooter>
             </form>

@@ -67,7 +67,7 @@ export type Student = {
     internshipStatus: 'achieved' | 'not_achieved';
 }
 
-export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting' | 'completed';
+export type ReportStatus = 'reporting' | 'exempted' | 'not_yet_reporting' | 'not_reporting' | 'completed';
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
 export type FinalReportStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';

@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -66,7 +67,7 @@ const registrationStatusVariant: Record<InternshipRegistrationStatus, 'secondary
 const reportStatusLabel: Record<ReportStatus, string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
-    withdrawn: 'Bỏ báo cáo',
+    not_yet_reporting: 'Chưa báo cáo',
     not_reporting: 'Chưa ĐK',
     completed: 'Hoàn thành',
 };
@@ -74,7 +75,7 @@ const reportStatusLabel: Record<ReportStatus, string> = {
 const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     reporting: 'default',
     exempted: 'secondary',
-    withdrawn: 'destructive',
+    not_yet_reporting: 'outline',
     not_reporting: 'outline',
     completed: 'default',
 };
@@ -153,6 +154,10 @@ export function InternshipApprovalTable() {
         internshipRegistrationStatus: newStatus,
         internshipStatusNote: newStatus === 'rejected' ? reason : '',
      };
+
+    if (newStatus === 'approved') {
+        dataToUpdate.internshipStatus = 'not_yet_reporting';
+    }
     
     updateDoc(registrationDocRef, dataToUpdate)
       .then(() => {
