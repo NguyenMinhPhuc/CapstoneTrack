@@ -565,7 +565,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                         <div key={reg.id} className="flex items-center justify-between p-2 border rounded-md bg-background">
                                                             <div>
                                                                 <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
-                                                                <p className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                                                                <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
                                                                      <Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>
                                                                         {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
                                                                     </Badge>
@@ -575,7 +575,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                                      <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
                                                                         {reportStatusLabel[reg.reportStatus || 'not_submitted']}
                                                                     </Badge>
-                                                                </p>
+                                                                </div>
                                                             </div>
                                                             <div className="flex items-center gap-1">
                                                                 <DropdownMenu>
