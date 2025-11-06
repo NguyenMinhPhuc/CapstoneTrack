@@ -25,7 +25,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -42,7 +41,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -126,7 +124,7 @@ export function StudentManagementTable() {
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [classFilter, setClassFilter] = useState('all');
+  const [classFilter, setClassFilter] = useState<string[]>([]);
   const [courseFilter, setCourseFilter] = useState('all');
   const [graduationStatusFilter, setGraduationStatusFilter] = useState('all');
   const [internshipStatusFilter, setInternshipStatusFilter] = useState('all');
@@ -255,7 +253,7 @@ export function StudentManagementTable() {
       const emailMatch = student.email?.toLowerCase().includes(term);
       const classMatchFilter = student.className?.toLowerCase().includes(term);
       
-      const classFilterMatch = classFilter === 'all' || student.className === classFilter;
+      const classFilterMatch = classFilter.length === 0 || (student.className && classFilter.includes(student.className));
       const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
       const gradStatusMatch = graduationStatusFilter === 'all' || (student.graduationStatus || 'not_achieved') === graduationStatusFilter;
       const internStatusMatch = internshipStatusFilter === 'all' || (student.internshipStatus || 'not_achieved') === internshipStatusFilter;
@@ -730,21 +728,35 @@ export function StudentManagementTable() {
                             </Command>
                         </PopoverContent>
                     </Popover>
-                    <Popover open={isClassPopoverOpen} onOpenChange={setIsClassPopoverOpen}>
+                     <Popover open={isClassPopoverOpen} onOpenChange={setIsClassPopoverOpen}>
                         <PopoverTrigger asChild>
-                           <Button variant="outline" role="combobox" className="w-[150px] justify-between h-9 text-sm font-normal">
-                                {classFilter === 'all' ? 'Tất cả lớp' : classFilter}
+                            <Button variant="outline" role="combobox" className="w-[180px] justify-between h-9 text-sm font-normal">
+                                {classFilter.length === 0 ? "Tất cả các lớp" : classFilter.length === 1 ? classFilter[0] : `${classFilter.length} lớp đã chọn`}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                             </Button>
                         </PopoverTrigger>
-                         <PopoverContent className="w-[150px] p-0">
+                        <PopoverContent className="w-[180px] p-0">
                             <Command>
                                 <CommandInput placeholder="Tìm lớp..." />
-                                <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                                <CommandEmpty>Không tìm thấy lớp.</CommandEmpty>
                                 <CommandGroup>
-                                     <CommandItem onSelect={() => {setClassFilter('all'); setIsClassPopoverOpen(false);}}>Tất cả các lớp</CommandItem>
+                                    <CommandItem onSelect={() => { setClassFilter([]); setIsClassPopoverOpen(false); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", classFilter.length === 0 ? "opacity-100" : "opacity-0")} />
+                                        Tất cả các lớp
+                                    </CommandItem>
                                     {uniqueClasses.map(className => (
-                                        <CommandItem key={className} onSelect={() => {setClassFilter(className); setIsClassPopoverOpen(false);}}>{className}</CommandItem>
+                                        <CommandItem
+                                            key={className}
+                                            onSelect={() => {
+                                                const newSelection = classFilter.includes(className)
+                                                    ? classFilter.filter(item => item !== className)
+                                                    : [...classFilter, className];
+                                                setClassFilter(newSelection);
+                                            }}
+                                        >
+                                            <Check className={cn("mr-2 h-4 w-4", classFilter.includes(className) ? "opacity-100" : "opacity-0")} />
+                                            {className}
+                                        </CommandItem>
                                     ))}
                                 </CommandGroup>
                             </Command>
@@ -981,6 +993,8 @@ export function StudentManagementTable() {
 
 
 
+
+    
 
     
 
