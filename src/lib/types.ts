@@ -123,6 +123,8 @@ export type DefenseRegistration = {
   internship_acceptanceLetterLink?: string;
   internship_feedbackFormLink?: string;
   internship_reportLink?: string;
+  internship_positionId?: string;
+  internship_positionTitle?: string;
 }
 
 // Represents a student's registration for a specific graduation defense session.
@@ -255,6 +257,13 @@ export type WeeklyProgressReport = {
     reviewDate?: any;
 }
 
+export type InternshipPosition = {
+  id: string;
+  title: string;
+  description?: string;
+  quantity: number;
+}
+
 export type InternshipCompany = {
   id: string;
   name: string;
@@ -266,6 +275,7 @@ export type InternshipCompany = {
   contactEmail?: string;
   contactPhone?: string;
   isLHU?: boolean;
+  positions?: InternshipPosition[];
   createdAt?: any;
 };
 
