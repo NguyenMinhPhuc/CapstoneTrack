@@ -113,7 +113,10 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
     if (registrationType === 'from_list' && selectedCompanyId) {
       const company = sessionCompanies.find(c => c.id === selectedCompanyId);
       setSelectedCompany(company || null);
-       form.setValue('internship_positionId', ''); // Reset position when company changes
+      // Only reset if there are positions to select from.
+      if (company?.positions && company.positions.length > 0) {
+        form.setValue('internship_positionId', ''); 
+      }
     } else {
       setSelectedCompany(null);
     }
