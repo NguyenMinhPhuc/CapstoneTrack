@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -53,7 +54,7 @@ import {
 import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown, KeyRound, ChevronsUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
+import type { Student, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -638,6 +639,7 @@ export function StudentManagementTable() {
                         </DialogTrigger>
                          <AssignMajorDialog
                             studentIds={selectedRowIds}
+                            allStudents={students || []}
                             onFinished={handleDialogFinished}
                           />
                       </Dialog>
@@ -976,3 +978,6 @@ export function StudentManagementTable() {
 
 
 
+
+
+    
