@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -88,7 +89,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
   const isRejected = registration.internshipRegistrationStatus === 'rejected';
   const isPending = registration.internshipRegistrationStatus === 'pending';
   
-  const areCompanyFieldsDisabled = isApproved || isPending;
+  const areCompanyFieldsDisabled = isApproved || isPending || isRejected;
 
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -156,6 +157,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
         internship_commitmentFormLink: values.internship_commitmentFormLink,
     };
     
+    // Only update company info if the form is not locked
     if (!areCompanyFieldsDisabled) {
         dataToUpdate.internshipStatus = 'reporting';
         dataToUpdate.internshipRegistrationStatus = 'pending' as InternshipRegistrationStatus;
@@ -224,15 +226,19 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
 
   return (
     <Form {...form}>
-       {isRejected && registration.internshipStatusNote && (
-            <Alert variant="destructive" className="mb-6">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Đăng ký bị từ chối</AlertTitle>
-                <AlertDescription>
-                    <p>Lý do: {registration.internshipStatusNote}</p>
-                    <p className="mt-2">Vui lòng kiểm tra lại thông tin, chỉnh sửa và nộp lại.</p>
-                </AlertDescription>
-            </Alert>
+       {isRejected && (
+            <div className="space-y-4">
+                <Alert variant="destructive">
+                    <XCircle className="h-4 w-4" />
+                    <AlertTitle>Đăng ký bị từ chối</AlertTitle>
+                    <AlertDescription>
+                        {registration.internshipStatusNote ? `Lý do: ${registration.internshipStatusNote}` : 'Đơn đăng ký của bạn đã bị từ chối.'}
+                    </AlertDescription>
+                </Alert>
+                <Button onClick={() => form.setValue('registrationType', 'self_arranged')} className="w-full">
+                    Đăng ký lại
+                </Button>
+            </div>
         )}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
@@ -560,8 +566,8 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
         </div>
 
 
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isApproved}>
-          {isApproved ? 'Đơn đã được duyệt' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isApproved || isRejected}>
+          {isApproved ? 'Đơn đã được duyệt' : (isPending ? 'Đang chờ duyệt' : (isRejected ? 'Đơn đã bị từ chối' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký')))}
         </Button>
       </form>
     </Form>

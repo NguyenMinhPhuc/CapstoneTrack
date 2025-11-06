@@ -46,11 +46,14 @@ function GraduationGradingView({
 
 
     const projectGroups = useMemo(() => {
+        // Only include students whose final report has been approved
         const groups = new Map<string, DefenseRegistration[]>();
         registrations.forEach(reg => {
-            const projectKey = reg.projectTitle || `_individual_${reg.id}`;
-            if (!groups.has(projectKey)) groups.set(projectKey, []);
-            groups.get(projectKey)!.push(reg);
+            if (reg.reportStatus === 'approved') {
+                const projectKey = reg.projectTitle || `_individual_${reg.id}`;
+                if (!groups.has(projectKey)) groups.set(projectKey, []);
+                groups.get(projectKey)!.push(reg);
+            }
         });
         return Array.from(groups.entries()).map(([projectTitle, students]) => ({ projectTitle, students }));
     }, [registrations]);
@@ -72,8 +75,8 @@ function GraduationGradingView({
         setIsDialogOpen(true);
     };
 
-    if (registrations.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn đồ án tốt nghiệp nào trong đợt này.</p>;
+    if (projectGroups.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Chưa có sinh viên nào có báo cáo đã được duyệt để chấm điểm.</p>;
     }
 
     return (
@@ -140,6 +143,11 @@ function InternshipGradingView({
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
     
+    // Only show students whose internship registration is approved
+    const validRegistrations = useMemo(() => {
+        return registrations.filter(reg => reg.internshipRegistrationStatus === 'approved');
+    }, [registrations]);
+
     const getEvaluationForInternship = (student: DefenseRegistration) => {
         return evaluations.find(e => 
             e.registrationId === student.id &&
@@ -156,14 +164,14 @@ function InternshipGradingView({
         setIsDialogOpen(true);
     };
 
-    if (registrations.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn thực tập cho sinh viên nào trong đợt này.</p>;
+    if (validRegistrations.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào có đăng ký thực tập đã được duyệt.</p>;
     }
 
     return (
         <>
             <CardContent className="space-y-4">
-                {registrations.map(student => {
+                {validRegistrations.map(student => {
                     const evaluation = getEvaluationForInternship(student);
                     return (
                         <div key={student.id} className="border rounded-lg p-4 flex items-center justify-between">
