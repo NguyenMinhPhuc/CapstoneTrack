@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship } from '@/lib/types';
+import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship, InternshipPosition } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import {
@@ -30,7 +28,7 @@ import {
 } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Building, Mail, Phone, User, XCircle } from 'lucide-react';
+import { Building, Mail, Phone, User, XCircle, Briefcase } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 
@@ -81,6 +79,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
   const { toast } = useToast();
   const firestore = useFirestore();
   const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<InternshipPosition | null>(null);
 
   const isApproved = registration.internshipRegistrationStatus === 'approved';
   const isRejected = registration.internshipRegistrationStatus === 'rejected';
@@ -108,12 +107,13 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
 
   const registrationType = useWatch({ control: form.control, name: 'registrationType' });
   const selectedCompanyId = useWatch({ control: form.control, name: 'selectedCompanyId' });
+  const internship_positionId = useWatch({ control: form.control, name: 'internship_positionId' });
+
 
   useEffect(() => {
     if (registrationType === 'from_list' && selectedCompanyId) {
       const company = sessionCompanies.find(c => c.id === selectedCompanyId);
       setSelectedCompany(company || null);
-      // Only reset if there are positions to select from.
       if (company?.positions && company.positions.length > 0) {
         form.setValue('internship_positionId', ''); 
       }
@@ -121,6 +121,15 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
       setSelectedCompany(null);
     }
   }, [selectedCompanyId, registrationType, sessionCompanies, form]);
+  
+  useEffect(() => {
+      if (selectedCompany && internship_positionId) {
+          const position = selectedCompany.positions?.find(p => p.id === internship_positionId);
+          setSelectedPosition(position || null);
+      } else {
+          setSelectedPosition(null);
+      }
+  }, [selectedCompany, internship_positionId]);
   
   useEffect(() => {
       if (registrationType === 'early_internship' && earlyInternshipData) {
@@ -279,6 +288,15 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                             <CardDescription>{selectedCompany.website ? <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedCompany.website}</a> : 'Không có website'}</CardDescription>
                         </CardHeader>
                         <CardContent className="space-y-4">
+                             {selectedCompany.description && (
+                                <>
+                                  <div className="space-y-1">
+                                      <p className="font-medium text-sm">Mô tả công ty</p>
+                                      <p className="text-sm text-muted-foreground">{selectedCompany.description}</p>
+                                  </div>
+                                  <Separator />
+                                </>
+                            )}
                             {selectedCompany.positions && selectedCompany.positions.length > 0 && (
                                 <FormField
                                     control={form.control}
@@ -304,6 +322,22 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                                         </FormItem>
                                     )}
                                 />
+                            )}
+                            {selectedPosition && (
+                                <Card className="bg-muted/50">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <Briefcase className="h-4 w-4" />
+                                            {selectedPosition.title}
+                                        </CardTitle>
+                                        <CardDescription>Số lượng: {selectedPosition.quantity}</CardDescription>
+                                    </CardHeader>
+                                    {selectedPosition.description && (
+                                        <CardContent>
+                                            <p className="text-sm text-muted-foreground">{selectedPosition.description}</p>
+                                        </CardContent>
+                                    )}
+                                </Card>
                             )}
                              <div className="space-y-3 text-sm">
                                 <div className="flex items-start gap-3">
@@ -481,8 +515,8 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
         </div>
 
 
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {isApproved ? 'Lưu thay đổi' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || (isApproved && !isRejected)}>
+          {isApproved ? 'Đã duyệt' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
         </Button>
       </form>
     </Form>
