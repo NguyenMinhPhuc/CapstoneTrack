@@ -25,6 +25,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import {
     AlertDialog,
@@ -48,6 +49,7 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown, KeyRound, ChevronsUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
@@ -993,6 +995,8 @@ export function StudentManagementTable() {
 
 
 
+
+    
 
     
 
