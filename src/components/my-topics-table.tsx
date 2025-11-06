@@ -65,6 +65,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+
 
 interface MyTopicsTableProps {
     supervisorId: string;
@@ -187,6 +189,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
               if (reg.projectTitle) {
+                  // A composite key is more specific to avoid collisions between different sessions
                   const key = `${reg.sessionId}-${reg.projectTitle}`;
                   if (!map.has(key)) {
                       map.set(key, []);
