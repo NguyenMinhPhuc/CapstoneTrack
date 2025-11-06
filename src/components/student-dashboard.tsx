@@ -14,7 +14,7 @@ import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
 import { Button } from './ui/button';
 import { Progress } from './ui/progress';
-import { differenceInWeeks, startOfWeek, format, isWithinInterval, sub } from 'date-fns';
+import { differenceInWeeks, startOfWeek, format, isWithinInterval, sub, add } from 'date-fns';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { Dialog, DialogTrigger, DialogContent } from './ui/dialog';
 import { ViewStudentEarlyInternshipProgressDialog } from './view-student-early-internship-progress-dialog';
@@ -40,18 +40,21 @@ const internshipRegStatusConfig = {
 }
 
 const earlyInternshipStatusLabel: Record<EarlyInternship['status'], string> = {
-  pending_approval: 'Chờ duyệt',
+  pending_admin_approval: 'Chờ duyệt',
+  pending_company_approval: 'Chờ duyệt',
   ongoing: 'Đang thực tập',
   completed: 'Hoàn thành',
-  rejected: 'Bị từ chối',
+  rejected_by_admin: 'Admin từ chối',
+  rejected_by_company: 'ĐV từ chối',
   cancelled: 'Đã hủy',
 };
 
 const earlyInternshipStatusVariant: Record<EarlyInternship['status'], 'secondary' | 'default' | 'outline' | 'destructive'> = {
-  pending_approval: 'secondary',
+  pending_admin_approval: 'secondary',
   ongoing: 'default',
   completed: 'outline',
-  rejected: 'destructive',
+  rejected_by_admin: 'destructive',
+  rejected_by_company: 'destructive',
   cancelled: 'destructive',
 };
 
@@ -113,7 +116,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
 
   const weeklyProgress = useMemo(() => {
-    const totalWeeksInSemester = 15; // Set a fixed 15-week duration
+    const totalWeeks = 15; // Set a fixed 15-week duration
     if (!activeSession || !pastReports) {
       return { totalWeeks: totalWeeksInSemester, reportedWeeks: 0 };
     }
@@ -168,8 +171,8 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     findActiveRegistration();
   }, [user, firestore]);
   
-  const toDate = (timestamp: any): Date | undefined => {
-    if (!timestamp) return undefined;
+  const toDate = (timestamp: any): Date | null => {
+    if (!timestamp) return null;
     if (timestamp && typeof timestamp.toDate === 'function') {
         return timestamp.toDate();
     }
@@ -195,20 +198,66 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
     const canSubmitReport = (reportSubmission?.isWindowOpen || settings?.forceOpenReportSubmission);
 
-    const graduationTimelineSteps = [
-        { name: "Đăng ký đề tài", status: activeRegistration?.projectRegistrationStatus === 'approved' ? 'completed' : (activeRegistration?.projectTitle ? 'current' : 'pending') },
-        { name: "Nộp thuyết minh", status: activeRegistration?.proposalStatus === 'approved' ? 'completed' : (activeRegistration?.projectRegistrationStatus === 'approved' ? 'current' : 'pending') },
-        { name: "Thực hiện & Báo cáo tuần", status: activeRegistration?.proposalStatus === 'approved' && (!canSubmitReport) ? 'current' : (activeRegistration?.proposalStatus === 'approved' ? 'completed' : 'pending') },
-        { name: "Nộp báo cáo tốt nghiệp", status: activeRegistration?.reportStatus === 'approved' ? 'completed' : (canSubmitReport && activeRegistration?.proposalStatus === 'approved' ? 'current' : 'pending') },
-        { name: "Báo cáo trước hội đồng", status: activeRegistration?.reportStatus === 'approved' ? 'current' : 'pending' },
+     const graduationTimelineSteps = [
+        { 
+            name: "Đăng ký đề tài", 
+            status: activeRegistration?.projectRegistrationStatus === 'approved' ? 'completed' : (activeRegistration?.projectTitle ? 'current' : 'pending'),
+            date: toDate(activeSession?.registrationDeadline),
+            description: "Hạn chót"
+        },
+        { 
+            name: "Nộp thuyết minh", 
+            status: activeRegistration?.proposalStatus === 'approved' ? 'completed' : (activeRegistration?.projectRegistrationStatus === 'approved' ? 'current' : 'pending'),
+            date: toDate(activeSession?.registrationDeadline) ? add(toDate(activeSession?.registrationDeadline)!, { weeks: 2}) : null,
+            description: "Hạn chót (dự kiến)"
+        },
+        { 
+            name: "Thực hiện & Báo cáo tuần", 
+            status: activeRegistration?.proposalStatus === 'approved' && (!canSubmitReport) ? 'current' : (activeRegistration?.proposalStatus === 'approved' ? 'completed' : 'pending')
+        },
+        { 
+            name: "Nộp báo cáo tốt nghiệp", 
+            status: activeRegistration?.reportStatus === 'approved' ? 'completed' : (canSubmitReport && activeRegistration?.proposalStatus === 'approved' ? 'current' : 'pending'),
+            date: reportSubmission?.endDate || null,
+            description: "Hạn chót"
+        },
+        { 
+            name: "Báo cáo trước hội đồng", 
+            status: activeRegistration?.reportStatus === 'approved' ? 'current' : 'pending',
+            date: toDate(activeSession?.expectedReportDate),
+            description: "Ngày báo cáo (dự kiến)"
+        },
     ];
 
     const internshipTimelineSteps = [
-        { name: "Đăng ký thực tập", status: activeRegistration?.internshipRegistrationStatus === 'approved' ? 'completed' : (activeRegistration?.internship_companyName ? 'current' : 'pending') },
-        { name: "Nộp giấy tờ thực tập", status: activeRegistration?.internship_acceptanceLetterLink ? 'completed' : (activeRegistration?.internshipRegistrationStatus === 'approved' ? 'current' : 'pending') },
-        { name: "Tiến hành thực tập", status: activeRegistration?.internship_acceptanceLetterLink && !canSubmitReport ? 'current' : (activeRegistration?.internship_acceptanceLetterLink ? 'completed' : 'pending') },
-        { name: "Nộp báo cáo & giấy tờ", status: activeRegistration?.internship_reportLink ? 'completed' : (canSubmitReport && activeRegistration?.internship_acceptanceLetterLink ? 'current' : 'pending') },
-        { name: "Báo cáo trước hội đồng", status: activeRegistration?.internship_reportLink ? 'current' : 'pending' },
+        { 
+            name: "Đăng ký thực tập", 
+            status: activeRegistration?.internshipRegistrationStatus === 'approved' ? 'completed' : (activeRegistration?.internship_companyName ? 'current' : 'pending'),
+            date: toDate(activeSession?.registrationDeadline),
+            description: "Hạn chót"
+        },
+        { 
+            name: "Nộp giấy tờ thực tập", 
+            status: activeRegistration?.internship_acceptanceLetterLink ? 'completed' : (activeRegistration?.internshipRegistrationStatus === 'approved' ? 'current' : 'pending'),
+            date: toDate(activeSession?.registrationDeadline) ? add(toDate(activeSession?.registrationDeadline)!, { weeks: 2}) : null,
+            description: "Hạn chót (dự kiến)"
+        },
+        { 
+            name: "Tiến hành thực tập", 
+            status: activeRegistration?.internship_acceptanceLetterLink && !canSubmitReport ? 'current' : (activeRegistration?.internship_acceptanceLetterLink ? 'completed' : 'pending')
+        },
+        { 
+            name: "Nộp báo cáo & giấy tờ", 
+            status: activeRegistration?.internship_reportLink ? 'completed' : (canSubmitReport && activeRegistration?.internship_acceptanceLetterLink ? 'current' : 'pending'),
+            date: reportSubmission?.endDate || null,
+            description: "Hạn chót"
+        },
+        { 
+            name: "Báo cáo trước hội đồng", 
+            status: activeRegistration?.internship_reportLink ? 'current' : 'pending',
+            date: toDate(activeSession?.expectedReportDate),
+            description: "Ngày báo cáo (dự kiến)"
+        },
     ];
 
 

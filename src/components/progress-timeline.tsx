@@ -3,12 +3,15 @@
 
 import { cn } from "@/lib/utils";
 import { Check, Dot } from "lucide-react";
+import { format } from "date-fns";
 
 type StepStatus = 'completed' | 'current' | 'pending';
 
 interface Step {
     name: string;
     status: StepStatus;
+    date?: Date | null;
+    description?: string;
 }
 
 interface ProgressTimelineProps {
@@ -23,7 +26,7 @@ export function ProgressTimeline({ steps }: ProgressTimelineProps) {
                 const isCurrent = step.status === 'current';
                 
                 return (
-                    <li key={index} className="mb-6 ml-6">
+                    <li key={index} className="mb-8 ml-6">
                         <span className={cn(
                             "absolute -left-3 flex h-6 w-6 items-center justify-center rounded-full ring-8 ring-background dark:ring-gray-900",
                             isCompleted ? "bg-primary text-primary-foreground" : 
@@ -40,6 +43,11 @@ export function ProgressTimeline({ steps }: ProgressTimelineProps) {
                         )}>
                             {step.name}
                         </h3>
+                        {step.date && (
+                             <time className="block mb-2 text-sm font-normal leading-none text-muted-foreground">
+                                {step.description ? `${step.description}: ` : ''}{format(step.date, 'dd/MM/yyyy')}
+                            </time>
+                        )}
                     </li>
                 );
             })}
