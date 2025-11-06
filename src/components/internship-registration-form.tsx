@@ -16,7 +16,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship, InternshipPosition } from '@/lib/types';
+import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship, InternshipPosition, Supervisor } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import {
@@ -81,7 +81,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
   const firestore = useFirestore();
   const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<InternshipPosition | null>(null);
-  const [selectedSupervisor, setSelectedSupervisor] = useState<any>(null);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
 
   const isApproved = registration.internshipRegistrationStatus === 'approved';
@@ -560,8 +560,8 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
         </div>
 
 
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || (isApproved && !isRejected)}>
-          {isApproved ? 'Đã duyệt' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isApproved}>
+          {isApproved ? 'Đơn đã được duyệt' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
         </Button>
       </form>
     </Form>

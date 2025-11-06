@@ -15,13 +15,6 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent } from './ui/dialog';
 import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
 
 interface SupervisorGradingDashboardProps {
   supervisorId: string;
@@ -34,7 +27,6 @@ interface SessionAssignments {
   internshipRegistrations: DefenseRegistration[];
 }
 
-// Component for grading Graduation Projects
 function GraduationGradingView({
     registrations,
     rubric,
@@ -51,6 +43,7 @@ function GraduationGradingView({
     const [selectedGroup, setSelectedGroup] = useState<ProjectGroup | null>(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
+
 
     const projectGroups = useMemo(() => {
         const groups = new Map<string, DefenseRegistration[]>();
@@ -89,34 +82,21 @@ function GraduationGradingView({
                 {projectGroups.map(group => {
                     const evaluation = getEvaluationForGroup(group);
                     return (
-                        <div key={group.projectTitle} className="border rounded-lg p-4 space-y-3">
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <h4 className="font-semibold truncate cursor-default">
-                                            {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
-                                        </h4>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                            <div className="space-y-2 pl-4 border-l-2">
-                                {group.students.map(student => (
-                                    <p key={student.id} className="text-sm text-muted-foreground">{student.studentName} ({student.studentId})</p>
-                                ))}
+                        <div key={group.projectTitle} className="border rounded-lg p-4 flex items-center justify-between">
+                            <div>
+                                <h4 className="font-semibold">{group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}</h4>
+                                <div className="text-xs text-muted-foreground">
+                                    {group.students.map(s => `${s.studentName} (${s.studentId})`).join(', ')}
+                                </div>
                             </div>
-                            <Separator />
                             <div className="flex items-center gap-2">
                                 {evaluation && (
                                     <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
                                         {evaluation.totalScore.toFixed(2)}
                                     </Badge>
                                 )}
-                                <Button className="w-full" variant="secondary" disabled={!rubric} onClick={() => handleGradeClick(group)}>
-                                    <GraduationCap className="mr-2 h-4 w-4" />
-                                    {evaluation ? 'Sửa điểm Đồ án' : 'Chấm điểm Đồ án'}
+                                <Button className="w-32" variant="outline" disabled={!rubric} onClick={() => handleGradeClick(group)}>
+                                    {evaluation ? 'Sửa điểm' : 'Chấm điểm'}
                                 </Button>
                             </div>
                         </div>
@@ -197,9 +177,8 @@ function InternshipGradingView({
                                         {evaluation.totalScore.toFixed(2)}
                                     </Badge>
                                 )}
-                                <Button variant="outline" size="sm" disabled={!rubric} onClick={() => handleGradeClick(student)}>
-                                    <Briefcase className="mr-2 h-4 w-4" />
-                                    {evaluation ? 'Sửa điểm TT' : 'Chấm Thực tập'}
+                                <Button className="w-32" variant="outline" size="sm" disabled={!rubric} onClick={() => handleGradeClick(student)}>
+                                    {evaluation ? 'Sửa điểm' : 'Chấm Thực tập'}
                                 </Button>
                             </div>
                         </div>
@@ -296,7 +275,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     fetchAssignments();
   }, [allSessions, isLoadingSessions, supervisorId, firestore, userRole]);
   
-
+  
   const SessionAccordionItem = ({ sessionData }: { sessionData: SessionAssignments }) => {
     const { session, graduationRegistrations, internshipRegistrations } = sessionData;
 
@@ -330,7 +309,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                 {/* Graduation Section */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2"><GraduationCap /> Đồ án Tốt nghiệp bạn hướng dẫn</CardTitle>
+                        <CardTitle className="text-base flex items-center gap-2"><GraduationCap /> Đồ án Tốt nghiệp</CardTitle>
                         <CardDescription className="text-xs">Rubric sử dụng: {getRubricName(supervisorGraduationRubric, isLoadingSupGradRubric)}</CardDescription>
                     </CardHeader>
                     {isLoadingRubrics ? (
@@ -349,7 +328,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                 {/* Internship Section */}
                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2"><Briefcase /> Thực tập Doanh nghiệp bạn hướng dẫn</CardTitle>
+                        <CardTitle className="text-base flex items-center gap-2"><Briefcase /> Thực tập Doanh nghiệp</CardTitle>
                         <CardDescription className="text-xs">Rubric sử dụng (dành cho đơn vị): {getRubricName(companyInternshipRubric, isLoadingCompInternRubric)}</CardDescription>
                     </CardHeader>
                     {isLoadingRubrics ? (

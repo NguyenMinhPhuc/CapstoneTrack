@@ -107,8 +107,10 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
         conditions.push(where('internshipSupervisorId', '==', supervisorId));
     }
     
-    conditions.push(where('internshipStatus', '==', 'reporting'));
-
+    // We want to see both students who are pending approval and those who are actively reporting
+    const statusesToWatch: InternshipRegistrationStatus[] = ['pending', 'approved', 'rejected'];
+    conditions.push(where('internshipRegistrationStatus', 'in', statusesToWatch));
+    
     if (selectedSessionId !== 'all') {
       conditions.push(where('sessionId', '==', selectedSessionId));
     }
@@ -124,7 +126,7 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
     if (!sessions) return new Map();
     return new Map(sessions.map(s => [s.id, s.name]));
   }, [sessions]);
-
+  
   const groupedSessions = useMemo(() => {
     if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
     return sessions.reduce((acc, session) => {
@@ -235,7 +237,7 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
                   <TableHead>Công ty Thực tập</TableHead>
                   <TableHead>Đợt báo cáo</TableHead>
                   <TableHead>Trạng thái ĐK</TableHead>
-                  <TableHead>Trạng thái BC</TableHead>
+                   <TableHead>Trạng thái BC</TableHead>
                   <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
