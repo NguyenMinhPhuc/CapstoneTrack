@@ -23,7 +23,7 @@ import { DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui
 import { ScrollArea } from './ui/scroll-area';
 import { Switch } from './ui/switch';
 import { SupervisorCombobox } from './supervisor-combobox';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Separator } from './ui/separator';
 import { PlusCircle, Trash2 } from 'lucide-react';
 import { v4 as uuidv4 } from 'uuid';
@@ -73,6 +73,21 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
       positions: company.positions?.map(p => ({...p, id: p.id || uuidv4()})) || [],
     },
   });
+
+  useEffect(() => {
+    form.reset({
+      name: company.name || '',
+      address: company.address || '',
+      website: company.website || '',
+      description: company.description || '',
+      contactName: company.contactName || '',
+      contactEmail: company.contactEmail || '',
+      contactPhone: company.contactPhone || '',
+      isLHU: company.isLHU || false,
+      supervisorId: company.supervisorId || '',
+      positions: company.positions?.map(p => ({...p, id: p.id || uuidv4()})) || [],
+    });
+  }, [company, form]);
   
   const { fields, append, remove } = useFieldArray({
     control: form.control,
