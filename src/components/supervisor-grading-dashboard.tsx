@@ -143,9 +143,9 @@ function InternshipGradingView({
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
     
-    // Only show students whose internship registration is approved
+    // Only show students who are in 'reporting' status
     const validRegistrations = useMemo(() => {
-        return registrations.filter(reg => reg.internshipRegistrationStatus === 'approved');
+        return registrations.filter(reg => reg.internshipStatus === 'reporting');
     }, [registrations]);
 
     const getEvaluationForInternship = (student: DefenseRegistration) => {
@@ -165,7 +165,7 @@ function InternshipGradingView({
     };
 
     if (validRegistrations.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào có đăng ký thực tập đã được duyệt.</p>;
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào đang ở trạng thái báo cáo để chấm điểm.</p>;
     }
 
     return (
@@ -243,11 +243,9 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
 
         const baseGradQuery = [
             where('sessionId', '==', session.id),
-            where('graduationStatus', '==', 'reporting')
         ];
         const baseInternQuery = [
             where('sessionId', '==', session.id),
-            where('internshipStatus', '==', 'reporting')
         ];
 
         if (userRole === 'admin') {

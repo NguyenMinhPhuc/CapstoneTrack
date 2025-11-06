@@ -83,7 +83,7 @@ function SubcommitteeGradingView({
     }, [registrations, subcommittee.id]);
 
     const projectGroups = useMemo(() => {
-        const reportingStudents = studentsInSubcommittee.filter(reg => reg.graduationStatus === 'reporting');
+        const reportingStudents = studentsInSubcommittee.filter(reg => reg.graduationStatus === 'reporting' && reg.reportStatus === 'approved');
         const groups = new Map<string, DefenseRegistration[]>();
         reportingStudents.forEach(reg => {
             const projectKey = reg.projectTitle || `_individual_${reg.id}`;
