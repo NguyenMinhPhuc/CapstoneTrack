@@ -32,8 +32,12 @@ export function ResourceList() {
 
   const { graduationResources, internshipResources } = useMemo(() => {
     if (!resources) return { graduationResources: [], internshipResources: [] };
-    const graduation = resources.filter(r => r.category === 'graduation');
-    const internship = resources.filter(r => r.category === 'internship');
+    const graduation = resources
+      .filter(r => r.category === 'graduation')
+      .sort((a, b) => a.name.localeCompare(b.name));
+    const internship = resources
+      .filter(r => r.category === 'internship')
+      .sort((a, b) => a.name.localeCompare(b.name));
     return { graduationResources: graduation, internshipResources: internship };
   }, [resources]);
   
