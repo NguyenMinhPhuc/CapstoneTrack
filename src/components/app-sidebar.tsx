@@ -305,7 +305,7 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
                             <div className="flex items-center justify-between w-full">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Quản lý chung</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">QL Tốt nghiệp</p>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
                                      <ChevronDown className="h-4 w-4" />
                                 </Button>
@@ -323,36 +323,6 @@ export function AppSidebar() {
                                         <Link href="/admin/topics"><BookA /><span>Quản lý Đề tài</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/resources")} tooltip="Resource Management">
-                                        <Link href="/admin/resources"><Library /><span>Quản lý Tài nguyên</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/rubrics")} tooltip="Rubric Management">
-                                        <Link href="/admin/rubrics"><ClipboardCheck /><span>Quản lý Rubric</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/grade-reports")} tooltip="Grade Reports">
-                                        <Link href="/admin/grade-reports"><BookCheck /><span>Bảng điểm</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/submission-reports")} tooltip="Submission Reports">
-                                        <Link href="/admin/submission-reports"><Package /><span>Hồ sơ đã nộp</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/students")} tooltip="Student Management">
-                                        <Link href="/admin/students"><Users /><span>Quản lý Sinh viên</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
-                                 <SidebarMenuItem>
-                                    <SidebarMenuButton asChild isActive={isActive("/admin/supervisors")} tooltip="Supervisor Management">
-                                        <Link href="/admin/supervisors"><UserSquare /><span>Quản lý GVHD</span></Link>
-                                    </SidebarMenuButton>
-                                </SidebarMenuItem>
                             </SidebarMenu>
                          </CollapsibleContent>
                     </SidebarGroup>
@@ -361,7 +331,7 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
                             <div className="flex items-center justify-between w-full">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Quản lý Thực tập</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">QL Thực tập</p>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
                                      <ChevronDown className="h-4 w-4" />
                                 </Button>
@@ -392,7 +362,43 @@ export function AppSidebar() {
                     <SidebarGroup>
                         <CollapsibleTrigger asChild>
                             <div className="flex items-center justify-between w-full">
-                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">Quản lý hệ thống</p>
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">QL chung</p>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
+                                     <ChevronDown className="h-4 w-4" />
+                                </Button>
+                            </div>
+                        </CollapsibleTrigger>
+                         <CollapsibleContent asChild>
+                            <SidebarMenu>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/students")} tooltip="Student Management">
+                                        <Link href="/admin/students"><Users /><span>Quản lý Sinh viên</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/supervisors")} tooltip="Supervisor Management">
+                                        <Link href="/admin/supervisors"><UserSquare /><span>Quản lý GVHD</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/grade-reports")} tooltip="Grade Reports">
+                                        <Link href="/admin/grade-reports"><BookCheck /><span>Bảng điểm</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/submission-reports")} tooltip="Submission Reports">
+                                        <Link href="/admin/submission-reports"><Package /><span>Hồ sơ đã nộp</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                            </SidebarMenu>
+                         </CollapsibleContent>
+                    </SidebarGroup>
+                 </Collapsible>
+                 <Collapsible asChild defaultOpen>
+                    <SidebarGroup>
+                        <CollapsibleTrigger asChild>
+                            <div className="flex items-center justify-between w-full">
+                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider group-data-[collapsible=icon]:hidden px-2">QL Hệ thống</p>
                                 <Button variant="ghost" size="icon" className="h-6 w-6 group-data-[collapsible=icon]:hidden">
                                      <ChevronDown className="h-4 w-4" />
                                 </Button>
@@ -403,6 +409,16 @@ export function AppSidebar() {
                                 <SidebarMenuItem>
                                     <SidebarMenuButton asChild isActive={isActive("/admin/users")} tooltip="User Management">
                                         <Link href="/admin/users"><Shield /><span>Quản lý Tài khoản</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/resources")} tooltip="Resource Management">
+                                        <Link href="/admin/resources"><Library /><span>Quản lý Tài nguyên</span></Link>
+                                    </SidebarMenuButton>
+                                </SidebarMenuItem>
+                                 <SidebarMenuItem>
+                                    <SidebarMenuButton asChild isActive={isActive("/admin/rubrics")} tooltip="Rubric Management">
+                                        <Link href="/admin/rubrics"><ClipboardCheck /><span>Quản lý Rubric</span></Link>
                                     </SidebarMenuButton>
                                 </SidebarMenuItem>
                                 <SidebarMenuItem>
