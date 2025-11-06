@@ -118,13 +118,13 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const weeklyProgress = useMemo(() => {
     const totalWeeks = 15; // Set a fixed 15-week duration
     if (!activeSession || !pastReports) {
-      return { totalWeeks: totalWeeksInSemester, reportedWeeks: 0 };
+      return { totalWeeks: totalWeeks, reportedWeeks: 0 };
     }
     
     const reportedWeeks = pastReports.length;
 
     return {
-      totalWeeks: totalWeeksInSemester,
+      totalWeeks: totalWeeks,
       reportedWeeks,
     };
   }, [activeSession, pastReports]);
