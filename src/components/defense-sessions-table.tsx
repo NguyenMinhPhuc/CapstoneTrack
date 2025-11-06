@@ -48,6 +48,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown, Copy, GraduationCap, Briefcase } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
@@ -586,5 +587,6 @@ export function DefenseSessionsTable() {
     </div>
   );
 }
+
 
 
