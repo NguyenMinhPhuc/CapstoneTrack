@@ -88,7 +88,7 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
         website: values.website || '',
         description: values.description || '',
         isLHU: values.isLHU,
-        positions: values.positions || [],
+        positions: values.positions?.map(p => ({...p})) || [], // Ensure IDs are included
         createdAt: serverTimestamp(),
     };
 
