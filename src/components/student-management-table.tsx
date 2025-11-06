@@ -74,6 +74,13 @@ import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -122,6 +129,7 @@ export function StudentManagementTable() {
   const [courseFilter, setCourseFilter] = useState('all');
   const [graduationStatusFilter, setGraduationStatusFilter] = useState('all');
   const [internshipStatusFilter, setInternshipStatusFilter] = useState('all');
+  const [majorFilter, setMajorFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
@@ -137,6 +145,17 @@ export function StudentManagementTable() {
   );
   
   const { data: students, isLoading } = useCollection<Student>(studentsCollectionRef);
+  
+  const uniqueMajors = useMemo(() => {
+    if (!students) return [];
+    const majorSet = new Set<string>();
+    students.forEach(student => {
+        if (student.major) {
+            majorSet.add(student.major);
+        }
+    });
+    return Array.from(majorSet).sort();
+  }, [students]);
 
   const uniqueCourses = useMemo(() => {
     if (!students) return [];
@@ -239,10 +258,12 @@ export function StudentManagementTable() {
       const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
       const gradStatusMatch = graduationStatusFilter === 'all' || (student.graduationStatus || 'not_achieved') === graduationStatusFilter;
       const internStatusMatch = internshipStatusFilter === 'all' || (student.internshipStatus || 'not_achieved') === internshipStatusFilter;
+      const majorMatch = majorFilter === 'all' || student.major === majorFilter;
 
-      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch && gradStatusMatch && internStatusMatch;
+
+      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch && gradStatusMatch && internStatusMatch && majorMatch;
     });
-  }, [students, searchTerm, classFilter, courseFilter, graduationStatusFilter, internshipStatusFilter, sortConfig]);
+  }, [students, searchTerm, classFilter, courseFilter, graduationStatusFilter, internshipStatusFilter, sortConfig, majorFilter]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -418,7 +439,7 @@ export function StudentManagementTable() {
     setIsAssignClassDialogOpen(false);
     setIsAddToSessionDialogOpen(false);
     setSelectedRowIds([]);
-  }
+  };
 
   const exportToExcel = () => {
     const dataToExport = filteredStudents.map((student, index) => ({
@@ -666,6 +687,17 @@ export function StudentManagementTable() {
                           <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    <Select value={majorFilter} onValueChange={setMajorFilter}>
+                        <SelectTrigger className="w-[180px] h-9 text-sm">
+                          <SelectValue placeholder="Lọc theo ngành" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả các ngành</SelectItem>
+                          {uniqueMajors.map(major => (
+                            <SelectItem key={major} value={major}>{major}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     <Popover open={isCoursePopoverOpen} onOpenChange={setIsCoursePopoverOpen}>
                         <PopoverTrigger asChild>
                             <Button variant="outline" role="combobox" className="w-[150px] justify-between h-9 text-sm font-normal">
@@ -754,17 +786,17 @@ export function StudentManagementTable() {
               </TableHead>
               <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>
-                <Button variant="ghost" onClick={() => requestSort('firstName')} className="px-0 hover:bg-transparent">
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('firstName')}>
                     Họ và Tên {getSortIcon('firstName')}
                 </Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0 hover:bg-transparent">
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentId')}>
                     MSSV {getSortIcon('studentId')}
                 </Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" onClick={() => requestSort('className')} className="px-0 hover:bg-transparent">
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('className')}>
                     Lớp {getSortIcon('className')}
                 </Button>
               </TableHead>
@@ -927,6 +959,7 @@ export function StudentManagementTable() {
 
 
     
+
 
 
 
