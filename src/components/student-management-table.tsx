@@ -109,7 +109,7 @@ const statusColorClass: Record<Student['status'], string> = {
   graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
 };
 
-type SortKey = 'firstName' | 'studentId' | 'className' | 'email' | 'status' | 'createdAt';
+type SortKey = 'firstName' | 'studentId' | 'className' | 'email' | 'status' | 'createdAt' | 'major';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -812,10 +812,14 @@ export function StudentManagementTable() {
                     Lớp {getSortIcon('className')}
                 </Button>
               </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('major')}>
+                    Chuyên ngành {getSortIcon('major')}
+                </Button>
+              </TableHead>
               <TableHead>TT Học tập</TableHead>
               <TableHead>TT Tốt nghiệp</TableHead>
               <TableHead>TT Thực tập</TableHead>
-              <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -832,6 +836,7 @@ export function StudentManagementTable() {
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
+                <TableCell>{student.major || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
                 <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -862,9 +867,6 @@ export function StudentManagementTable() {
                 </TableCell>
                 <TableCell>
                     <Badge variant={student.internshipStatus === 'achieved' ? 'default' : 'outline'}>{completionStatusLabel[student.internshipStatus || 'not_achieved']}</Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                    {student.createdAt?.toDate && format(student.createdAt.toDate(), 'PPP')}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
@@ -979,5 +981,7 @@ export function StudentManagementTable() {
 
 
 
+
+    
 
     
