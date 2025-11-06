@@ -7,7 +7,7 @@ import type { User } from 'firebase/auth';
 import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon, Briefcase } from 'lucide-react';
+import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon, Briefcase, AlertCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -135,12 +135,12 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     const findActiveRegistration = async () => {
       setIsLoading(true);
       try {
-        // 1. Find all registrations for the current student in active sessions.
-        const activeSessionIds = availableSessions?.map(s => s.id) || [];
-        if (activeSessionIds.length === 0) {
+        if (!availableSessions || availableSessions.length === 0) {
             setIsLoading(false);
             return;
         }
+        
+        const activeSessionIds = availableSessions.map(s => s.id);
 
         const registrationQuery = query(
           collection(firestore, 'defenseRegistrations'),
@@ -150,17 +150,15 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         const registrationSnapshot = await getDocs(registrationQuery);
 
         if (!registrationSnapshot.empty) {
-          // 2. A registration exists. Now get that specific session's data.
           const regData = { id: registrationSnapshot.docs[0].id, ...registrationSnapshot.docs[0].data() } as DefenseRegistration;
           setActiveRegistration(regData);
 
-          const sessionData = availableSessions?.find(s => s.id === regData.sessionId);
+          const sessionData = availableSessions.find(s => s.id === regData.sessionId);
           if (sessionData) {
             setActiveSession(sessionData);
           }
         } else {
-          // 3. No registration found, but we might still have an active session to show generally.
-          const currentSession = availableSessions?.find(s => s.status === 'ongoing') || availableSessions?.[0] || null;
+          const currentSession = availableSessions.find(s => s.status === 'ongoing') || availableSessions[0] || null;
           setActiveSession(currentSession);
         }
 
@@ -181,7 +179,6 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     if (timestamp && typeof timestamp.toDate === 'function') {
         return timestamp.toDate();
     }
-    // Handle cases where it might already be a Date object
     if (timestamp instanceof Date) {
         return timestamp;
     }
@@ -280,7 +277,10 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                     <Skeleton className="h-40 w-full" />
                 </div>
                 <div className="lg:col-span-2 space-y-8">
-                    <Skeleton className="h-80 w-full" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                         <Skeleton className="h-80 w-full" />
+                         <Skeleton className="h-80 w-full" />
+                    </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                          <Skeleton className="h-64 w-full" />
                          <Skeleton className="h-64 w-full" />
@@ -420,92 +420,96 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         
         {/* Right Column */}
         <div className="lg:col-span-2 space-y-8">
-          {activeRegistration ? (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Book /> Thông tin Học phần
-                </CardTitle>
-                <CardDescription>
-                  Đây là thông tin về đề tài tốt nghiệp và thực tập bạn đã đăng ký trong đợt <span className="font-semibold">{activeSession?.name}</span>.
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {/* Graduation Project Section */}
-                {activeRegistration.graduationStatus === 'reporting' && (
-                  <div className='space-y-4'>
-                    <div>
-                      <p className="text-sm text-muted-foreground">Tên đề tài</p>
-                      <h3 className="text-xl font-semibold">{activeRegistration.projectTitle || "Chưa đăng ký đề tài"}</h3>
-                    </div>
-                    <Separator />
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                        <div className="space-y-1">
-                            <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> GVHD</p>
-                            <p className="font-medium">{activeRegistration.supervisorName || "Chưa có"}</p>
-                        </div>
-                        <div className="space-y-1">
-                            <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái đăng ký</p>
-                            <Badge variant={regStatus.variant}>{regStatus.label}</Badge>
-                        </div>
-                    </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <GraduationCap /> Tốt nghiệp
+                        </CardTitle>
+                        <CardDescription>Thông tin về đề tài tốt nghiệp trong đợt <span className="font-semibold">{activeSession?.name}</span>.</CardDescription>
+                    </CardHeader>
+                    {activeRegistration && activeRegistration.graduationStatus === 'reporting' ? (
+                        <>
+                            <CardContent className="space-y-4 flex-grow">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Tên đề tài</p>
+                                    <h3 className="text-lg font-semibold">{activeRegistration.projectTitle || "Chưa đăng ký đề tài"}</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> GVHD</p>
+                                        <p className="font-medium">{activeRegistration.supervisorName || "Chưa có"}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái ĐK</p>
+                                        <Badge variant={regStatus.variant}>{regStatus.label}</Badge>
+                                    </div>
+                                </div>
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <p className="font-medium text-sm">Tiến độ báo cáo tuần</p>
+                                        <p className="text-sm text-muted-foreground">{weeklyProgress.reportedWeeks}/{weeklyProgress.totalWeeks} tuần</p>
+                                    </div>
+                                    <Progress value={(weeklyProgress.reportedWeeks / weeklyProgress.totalWeeks) * 100} />
+                                </div>
+                            </CardContent>
+                            <CardFooter className="flex flex-col sm:flex-row gap-2">
+                                <Button asChild variant="outline" className="w-full"><Link href="/topic-registration"><Book className="mr-2 h-4 w-4"/> Quản lý Đề tài</Link></Button>
+                                <Button asChild variant="outline" className="w-full"><Link href="/progress-report"><Activity className="mr-2 h-4 w-4"/> Báo cáo Tiến độ</Link></Button>
+                            </CardFooter>
+                        </>
+                    ) : (
+                        <CardContent>
+                            <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Chưa đăng ký</AlertTitle>
+                                <AlertDescription>Bạn chưa đăng ký báo cáo tốt nghiệp trong đợt này.</AlertDescription>
+                            </Alert>
+                        </CardContent>
+                    )}
+                </Card>
 
-                    <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                            <p className="font-medium">Tiến độ báo cáo hàng tuần</p>
-                            <p className="text-sm text-muted-foreground">{weeklyProgress.reportedWeeks}/{weeklyProgress.totalWeeks} tuần</p>
-                        </div>
-                        <Progress value={(weeklyProgress.reportedWeeks / weeklyProgress.totalWeeks) * 100} />
-                    </div>
-                  </div>
-                )}
-                 
-                 {/* Internship Section */}
-                 {activeRegistration.internshipStatus === 'reporting' && (
-                    <div className="space-y-4 pt-4 border-t">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Đơn vị thực tập</p>
-                          <h3 className="text-xl font-semibold">{activeRegistration.internship_companyName || "Chưa đăng ký"}</h3>
-                        </div>
-                        <div className="grid grid-cols-2 gap-4 text-sm">
-                            <div className="space-y-1">
-                                <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> NHD tại ĐV</p>
-                                <p className="font-medium">{activeRegistration.internship_companySupervisorName || "Chưa có"}</p>
-                            </div>
-                            <div className="space-y-1">
-                                <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái đăng ký</p>
-                                <Badge variant={internshipRegStatus.variant}>{internshipRegStatus.label}</Badge>
-                            </div>
-                        </div>
-                    </div>
-                )}
+                <Card className="flex flex-col">
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Briefcase /> Thực tập
+                        </CardTitle>
+                        <CardDescription>Thông tin về đơn vị thực tập trong đợt <span className="font-semibold">{activeSession?.name}</span>.</CardDescription>
+                    </CardHeader>
+                     {activeRegistration && activeRegistration.internshipStatus === 'reporting' ? (
+                        <>
+                            <CardContent className="space-y-4 flex-grow">
+                                <div>
+                                    <p className="text-sm text-muted-foreground">Đơn vị thực tập</p>
+                                    <h3 className="text-lg font-semibold">{activeRegistration.internship_companyName || "Chưa đăng ký"}</h3>
+                                </div>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground flex items-center gap-1.5"><UserCheck /> NHD tại ĐV</p>
+                                        <p className="font-medium">{activeRegistration.internship_companySupervisorName || "Chưa có"}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-muted-foreground flex items-center gap-1.5"><Info /> Trạng thái ĐK</p>
+                                        <Badge variant={internshipRegStatus.variant}>{internshipRegStatus.label}</Badge>
+                                    </div>
+                                </div>
+                            </CardContent>
+                             <CardFooter>
+                                <Button asChild className="w-full"><Link href="/internship-registration"><Briefcase className="mr-2 h-4 w-4"/> Quản lý Thực tập</Link></Button>
+                            </CardFooter>
+                        </>
+                     ) : (
+                        <CardContent>
+                           <Alert variant="destructive">
+                                <AlertCircle className="h-4 w-4" />
+                                <AlertTitle>Chưa đăng ký</AlertTitle>
+                                <AlertDescription>Bạn chưa đăng ký báo cáo thực tập trong đợt này.</AlertDescription>
+                            </Alert>
+                        </CardContent>
+                     )}
+                </Card>
+            </div>
 
-
-              </CardContent>
-               <CardFooter className="flex flex-col sm:flex-row gap-2">
-                    <Button asChild variant="outline" className="w-full">
-                        <Link href="/topic-registration"><Book className="mr-2 h-4 w-4"/> Quản lý Đề tài</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full">
-                        <Link href="/internship-registration"><Briefcase className="mr-2 h-4 w-4"/> Đăng ký Thực tập</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full">
-                         <Link href="/progress-report"><Activity className="mr-2 h-4 w-4"/> Báo cáo Tiến độ</Link>
-                    </Button>
-                    <Button asChild variant="outline" className="w-full">
-                        <Link href="/report-submission"><FileUp className="mr-2 h-4 w-4"/> Nộp Báo cáo</Link>
-                    </Button>
-               </CardFooter>
-            </Card>
-          ) : (
-             <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Chưa tham gia đợt báo cáo</AlertTitle>
-                <AlertDescription>
-                    Bạn hiện chưa được thêm vào một đợt báo cáo nào đang diễn ra. Vui lòng liên hệ quản trị viên để được hỗ trợ.
-                </AlertDescription>
-             </Alert>
-          )}
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <Card>
                     <CardHeader>
