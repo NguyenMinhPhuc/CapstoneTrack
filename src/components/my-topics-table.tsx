@@ -587,13 +587,17 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                                                     </DropdownMenuContent>
                                                                 </DropdownMenu>
 
-                                                                {reg.projectRegistrationStatus === 'pending' ? (
+                                                                {reg.projectRegistrationStatus === 'pending' && (
                                                                     <>
-                                                                    <Button size="sm" variant="outline" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}><Check className="h-4 w-4"/></Button>
-                                                                    <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}><X className="h-4 w-4"/></Button>
+                                                                        <Button size="sm" variant="outline" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}><Check className="h-4 w-4"/></Button>
+                                                                        <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}><X className="h-4 w-4"/></Button>
                                                                     </>
-                                                                ) : (
+                                                                )}
+                                                                {reg.projectRegistrationStatus === 'approved' && (
                                                                     <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>Hủy ĐK</Button>
+                                                                )}
+                                                                {reg.projectRegistrationStatus === 'rejected' && (
+                                                                     <Button size="sm" variant="secondary" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>Duyệt lại</Button>
                                                                 )}
                                                             </div>
                                                         </div>

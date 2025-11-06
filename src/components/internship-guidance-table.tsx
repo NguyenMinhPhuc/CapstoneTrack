@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -76,7 +77,7 @@ const registrationStatusVariant: Record<InternshipRegistrationStatus, 'secondary
 const reportStatusLabel: Record<ReportStatus, string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
-    withdrawn: 'Bỏ báo cáo',
+    not_yet_reporting: 'Chưa báo cáo',
     not_reporting: 'Chưa ĐK',
     completed: 'Hoàn thành',
 };
@@ -84,7 +85,7 @@ const reportStatusLabel: Record<ReportStatus, string> = {
 const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     reporting: 'default',
     exempted: 'secondary',
-    withdrawn: 'destructive',
+    not_yet_reporting: 'outline',
     not_reporting: 'outline',
     completed: 'default',
 };
@@ -167,6 +168,10 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
         internshipRegistrationStatus: newStatus,
         internshipStatusNote: newStatus === 'rejected' ? reason : '',
      };
+
+    if (newStatus === 'approved') {
+        dataToUpdate.internshipStatus = 'not_yet_reporting';
+    }
     
     updateDoc(registrationDocRef, dataToUpdate)
       .then(() => {
@@ -291,7 +296,7 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
                             </Badge>
                         </TableCell>
                       <TableCell className="text-right">
-                         {reg.internshipRegistrationStatus === 'pending' ? (
+                         {(reg.internshipRegistrationStatus === 'pending' || reg.internshipRegistrationStatus === 'rejected') ? (
                             <div className="flex justify-end gap-2">
                                 <Button size="sm" variant="outline" onClick={() => handleStatusChange(reg.id, 'approved')}>
                                     <Check className="mr-2 h-4 w-4" /> Duyệt
@@ -320,8 +325,8 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
                                      <DropdownMenuItem onClick={() => handleReportStatusChange(reg.id, 'completed')} disabled={reg.internshipStatus === 'completed'}>
                                         Đánh dấu Hoàn thành
                                     </DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleReportStatusChange(reg.id, 'withdrawn')} disabled={reg.internshipStatus === 'withdrawn'}>
-                                        Bỏ báo cáo
+                                    <DropdownMenuItem onClick={() => handleReportStatusChange(reg.id, 'not_yet_reporting')} disabled={reg.internshipStatus === 'not_yet_reporting'}>
+                                        Chuyển sang 'Chưa báo cáo'
                                     </DropdownMenuItem>
                                   </>
                                 )}
