@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -109,6 +109,16 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
     [firestore]
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
+  
+  useEffect(() => {
+    if (sessions && selectedSessionId === 'all') {
+      const ongoingSession = sessions.find(s => s.status === 'ongoing');
+      if (ongoingSession) {
+        setSelectedSessionId(ongoingSession.id);
+      }
+    }
+  }, [sessions, selectedSessionId]);
+
 
   const registrationsQuery = useMemoFirebase(() => {
     let q: Query = collection(firestore, 'defenseRegistrations');
@@ -301,9 +311,11 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
                                 <Button size="sm" variant="outline" onClick={() => handleStatusChange(reg.id, 'approved')}>
                                     <Check className="mr-2 h-4 w-4" /> Duyệt
                                 </Button>
-                                <Button size="sm" variant="destructive" onClick={() => handleRejectClick(reg)}>
-                                    <X className="mr-2 h-4 w-4" /> Từ chối
-                                </Button>
+                                {reg.internshipRegistrationStatus !== 'rejected' && (
+                                    <Button size="sm" variant="destructive" onClick={() => handleRejectClick(reg)}>
+                                        <X className="mr-2 h-4 w-4" /> Từ chối
+                                    </Button>
+                                )}
                             </div>
                          ) : (
                             <DropdownMenu>
