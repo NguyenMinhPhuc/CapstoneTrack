@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -71,6 +72,8 @@ import { StudentStatusDetailsDialog } from './student-status-details-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -124,6 +127,8 @@ export function StudentManagementTable() {
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [isClassPopoverOpen, setIsClassPopoverOpen] = useState(false);
+  const [isCoursePopoverOpen, setIsCoursePopoverOpen] = useState(false);
 
 
   const studentsCollectionRef = useMemoFirebase(
@@ -325,7 +330,7 @@ export function StudentManagementTable() {
         description: 'Không thể cập nhật trạng thái hoàn thành.',
       });
     }
-  }
+  };
 
   const handleStatusChange = async (studentId: string, newStatus: Student['status']) => {
     const studentDocRef = doc(firestore, 'students', studentId);
@@ -647,58 +652,60 @@ export function StudentManagementTable() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <ScrollArea className="h-[40vh]">
-                            <DropdownMenuLabel>Lọc theo niên khóa</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem
-                                checked={courseFilter === 'all'}
-                                onCheckedChange={() => setCourseFilter('all')}
-                            >
-                                Tất cả niên khóa
-                            </DropdownMenuCheckboxItem>
-                            {uniqueCourses.map(course => (
-                                <DropdownMenuCheckboxItem
-                                    key={course}
-                                    checked={courseFilter === course}
-                                    onCheckedChange={() => setCourseFilter(course)}
-                                >
-                                    Khóa {course}
-                                </DropdownMenuCheckboxItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                             <DropdownMenuLabel>Lọc theo lớp</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem
-                                checked={classFilter === 'all'}
-                                onCheckedChange={() => setClassFilter('all')}
-                            >
-                                Tất cả các lớp
-                            </DropdownMenuCheckboxItem>
-                            {uniqueClasses.map(className => (
-                                <DropdownMenuCheckboxItem
-                                    key={className}
-                                    checked={classFilter === className}
-                                    onCheckedChange={() => setClassFilter(className)}
-                                >
-                                    {className}
-                                </DropdownMenuCheckboxItem>
-                            ))}
-                             <DropdownMenuSeparator />
-                             <DropdownMenuLabel>Trạng thái Tốt nghiệp</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'all'} onCheckedChange={() => setGraduationStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'achieved'} onCheckedChange={() => setGraduationStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'not_achieved'} onCheckedChange={() => setGraduationStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
+                          <DropdownMenuLabel>Trạng thái TN</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'all'} onCheckedChange={() => setGraduationStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'achieved'} onCheckedChange={() => setGraduationStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'not_achieved'} onCheckedChange={() => setGraduationStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
 
-                             <DropdownMenuSeparator />
-                             <DropdownMenuLabel>Trạng thái Thực tập</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'all'} onCheckedChange={() => setInternshipStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'achieved'} onCheckedChange={() => setInternshipStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
-                          </ScrollArea>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Trạng thái TT</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'all'} onCheckedChange={() => setInternshipStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'achieved'} onCheckedChange={() => setInternshipStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    <Popover open={isCoursePopoverOpen} onOpenChange={setIsCoursePopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-[150px] justify-between h-9 text-sm font-normal">
+                                {courseFilter === 'all' ? 'Tất cả khóa' : `Khóa ${courseFilter}`}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[150px] p-0">
+                             <Command>
+                                <CommandInput placeholder="Tìm khóa..." />
+                                <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                                <CommandGroup>
+                                    <CommandItem onSelect={() => {setCourseFilter('all'); setIsCoursePopoverOpen(false);}}>Tất cả khóa</CommandItem>
+                                    {uniqueCourses.map(course => (
+                                        <CommandItem key={course} onSelect={() => {setCourseFilter(course); setIsCoursePopoverOpen(false);}}>Khóa {course}</CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                    <Popover open={isClassPopoverOpen} onOpenChange={setIsClassPopoverOpen}>
+                        <PopoverTrigger asChild>
+                           <Button variant="outline" role="combobox" className="w-[150px] justify-between h-9 text-sm font-normal">
+                                {classFilter === 'all' ? 'Tất cả lớp' : classFilter}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                         <PopoverContent className="w-[150px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Tìm lớp..." />
+                                <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                                <CommandGroup>
+                                     <CommandItem onSelect={() => {setClassFilter('all'); setIsClassPopoverOpen(false);}}>Tất cả các lớp</CommandItem>
+                                    {uniqueClasses.map(className => (
+                                        <CommandItem key={className} onSelect={() => {setClassFilter(className); setIsClassPopoverOpen(false);}}>{className}</CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <Button onClick={exportToExcel} variant="outline" className="w-full">
@@ -920,6 +927,7 @@ export function StudentManagementTable() {
 
 
     
+
 
 
 
