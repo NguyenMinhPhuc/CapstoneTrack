@@ -46,11 +46,10 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown, Copy } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, ListFilter, CalendarClock, CalendarCheck, CalendarX, Package, ArrowUpDown, Copy, GraduationCap, Briefcase } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import type { DefenseSession } from '@/lib/types';
@@ -62,6 +61,7 @@ import { Input } from './ui/input';
 import { Badge } from './ui/badge';
 import { EditDefenseSessionForm } from './edit-defense-session-form';
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from './ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 
 type SessionStatus = 'upcoming' | 'ongoing' | 'completed';
 type SessionStatusLabel = 'Sắp diễn ra' | 'Đang thực hiện' | 'Hoàn thành';
@@ -112,6 +112,7 @@ export function DefenseSessionsTable() {
   const [sessionToDelete, setSessionToDelete] = useState<DefenseSession | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [sessionTypeFilter, setSessionTypeFilter] = useState('all');
   const [academicYearFilter, setAcademicYearFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>({ key: 'startDate', direction: 'desc' });
 
@@ -197,9 +198,11 @@ export function DefenseSessionsTable() {
         const sessionDate = toDate(session.startDate);
         const academicYearMatch = academicYearFilter === 'all' || (sessionDate ? getAcademicYear(sessionDate) === academicYearFilter : false);
 
-        return searchMatch && statusMatch && academicYearMatch;
+        const sessionTypeMatch = sessionTypeFilter === 'all' || session.sessionType === sessionTypeFilter;
+
+        return searchMatch && statusMatch && academicYearMatch && sessionTypeMatch;
     });
-  }, [sessions, searchTerm, statusFilter, academicYearFilter, sortConfig]);
+  }, [sessions, searchTerm, statusFilter, academicYearFilter, sortConfig, sessionTypeFilter]);
 
     const requestSort = (key: SortKey) => {
         let direction: SortDirection = 'asc';
@@ -354,9 +357,14 @@ export function DefenseSessionsTable() {
               </CardContent>
           </Card>
       </div>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+      <Tabs defaultValue="all" onValueChange={setSessionTypeFilter}>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <TabsList>
+                <TabsTrigger value="all">Tất cả</TabsTrigger>
+                <TabsTrigger value="graduation"><GraduationCap className="mr-2 h-4 w-4"/>Tốt nghiệp</TabsTrigger>
+                <TabsTrigger value="internship"><Briefcase className="mr-2 h-4 w-4"/>Thực tập</TabsTrigger>
+                <TabsTrigger value="combined">Kết hợp</TabsTrigger>
+            </TabsList>
             <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
                 <div className="flex w-full sm:w-auto gap-2">
                     <div className="relative w-full sm:w-auto">
@@ -442,8 +450,8 @@ export function DefenseSessionsTable() {
                 </Dialog>
             </div>
           </div>
-        </CardHeader>
-        <CardContent>
+        <Card className="mt-4">
+        <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
@@ -549,6 +557,7 @@ export function DefenseSessionsTable() {
           </Table>
         </CardContent>
       </Card>
+    </Tabs>
        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-lg">
           {selectedSession && (
@@ -577,4 +586,5 @@ export function DefenseSessionsTable() {
     </div>
   );
 }
+
 
