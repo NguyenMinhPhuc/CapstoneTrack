@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -22,11 +21,12 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, FileUp, Check, X } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, GraduationDefenseSession, InternshipRegistrationStatus } from '@/lib/types';
+import type { DefenseRegistration, GraduationDefenseSession, InternshipRegistrationStatus, ReportStatus } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { Input } from './ui/input';
 import {
@@ -44,6 +44,17 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+
 
 interface InternshipGuidanceTableProps {
   supervisorId: string;
@@ -62,7 +73,7 @@ const registrationStatusVariant: Record<InternshipRegistrationStatus, 'secondary
   rejected: 'destructive',
 };
 
-const reportStatusLabel: Record<DefenseRegistration['internshipStatus'], string> = {
+const reportStatusLabel: Record<ReportStatus, string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
     withdrawn: 'Bỏ báo cáo',
@@ -70,7 +81,7 @@ const reportStatusLabel: Record<DefenseRegistration['internshipStatus'], string>
     completed: 'Hoàn thành',
 };
 
-const reportStatusVariant: Record<DefenseRegistration['internshipStatus'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
+const reportStatusVariant: Record<ReportStatus, 'default' | 'secondary' | 'destructive' | 'outline'> = {
     reporting: 'default',
     exempted: 'secondary',
     withdrawn: 'destructive',
@@ -172,6 +183,24 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
         });
         errorEmitter.emit('permission-error', contextualError);
       });
+  };
+
+  const handleReportStatusChange = async (registrationId: string, newStatus: ReportStatus) => {
+    const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
+    try {
+      await updateDoc(registrationDocRef, { internshipStatus: newStatus });
+      toast({
+        title: 'Thành công',
+        description: `Trạng thái báo cáo của sinh viên đã được cập nhật.`,
+      });
+    } catch (error) {
+      console.error("Error updating report status:", error);
+      toast({
+        variant: 'destructive',
+        title: 'Lỗi',
+        description: 'Không thể cập nhật trạng thái báo cáo.',
+      });
+    }
   };
 
   const handleRejectClick = (registration: DefenseRegistration) => {
@@ -282,7 +311,22 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
                                 <DropdownMenuItem asChild>
                                   <Link href="/supervisor-grading"><FileUp className="mr-2 h-4 w-4" /> Chấm điểm</Link>
                                 </DropdownMenuItem>
-                                 <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleRejectClick(reg); }}>
+                                {userRole === 'admin' && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={() => handleReportStatusChange(reg.id, 'reporting')} disabled={reg.internshipStatus === 'reporting'}>
+                                        Xác nhận Báo cáo
+                                    </DropdownMenuItem>
+                                     <DropdownMenuItem onClick={() => handleReportStatusChange(reg.id, 'completed')} disabled={reg.internshipStatus === 'completed'}>
+                                        Đánh dấu Hoàn thành
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleReportStatusChange(reg.id, 'withdrawn')} disabled={reg.internshipStatus === 'withdrawn'}>
+                                        Bỏ báo cáo
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem onSelect={(e) => { e.preventDefault(); handleRejectClick(reg); }}>
                                     <X className="mr-2 h-4 w-4" /> Yêu cầu sửa
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
