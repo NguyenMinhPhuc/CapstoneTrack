@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -94,8 +95,8 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     () => query(collection(firestore, 'earlyInternships'), where('studentId', '==', user.uid)),
     [firestore, user.uid]
   );
-  const { data: earlyInternships, isLoading: isLoadingEarlyInternships } = useCollection<EarlyInternship>(earlyInternshipsQuery);
-
+  const { data: earlyInternships, isLoading: isLoadingEarlyInternships } = useCollection<EarlyInternship>(earlyInternshipQuery);
+  
   const activeEarlyInternship = useMemo(() => {
     if (!earlyInternships || earlyInternships.length === 0) return null;
     return [...earlyInternships].sort((a, b) => ((b.startDate?.toDate()?.getTime() || 0) - (a.startDate?.toDate()?.getTime() || 0)))[0];
