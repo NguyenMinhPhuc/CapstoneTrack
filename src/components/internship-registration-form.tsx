@@ -1,4 +1,5 @@
 
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -38,6 +39,7 @@ const formSchema = z.object({
   
   // From list
   selectedCompanyId: z.string().optional(),
+  internship_positionId: z.string().optional(),
 
   // Self-arranged
   internship_companyName: z.string().optional(),
@@ -93,6 +95,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
     defaultValues: {
       registrationType: registration.internship_companyName ? 'self_arranged' : 'from_list',
       selectedCompanyId: '',
+      internship_positionId: registration.internship_positionId || '',
       internship_companyName: registration.internship_companyName || '',
       internship_companyAddress: registration.internship_companyAddress || '',
       internship_companySupervisorName: registration.internship_companySupervisorName || '',
@@ -110,10 +113,11 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
     if (registrationType === 'from_list' && selectedCompanyId) {
       const company = sessionCompanies.find(c => c.id === selectedCompanyId);
       setSelectedCompany(company || null);
+       form.setValue('internship_positionId', ''); // Reset position when company changes
     } else {
       setSelectedCompany(null);
     }
-  }, [selectedCompanyId, registrationType, sessionCompanies]);
+  }, [selectedCompanyId, registrationType, sessionCompanies, form]);
   
   useEffect(() => {
       if (registrationType === 'early_internship' && earlyInternshipData) {
@@ -146,18 +150,28 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                 dataToUpdate.internship_companyAddress = company.address;
                 dataToUpdate.internship_companySupervisorName = company.contactName;
                 dataToUpdate.internship_companySupervisorPhone = company.contactPhone;
+
+                const position = company.positions?.find(p => p.id === values.internship_positionId);
+                 if (position) {
+                    dataToUpdate.internship_positionId = position.id;
+                    dataToUpdate.internship_positionTitle = position.title;
+                }
             }
         } else if (values.registrationType === 'self_arranged') {
             dataToUpdate.internship_companyName = values.internship_companyName;
             dataToUpdate.internship_companyAddress = values.internship_companyAddress;
             dataToUpdate.internship_companySupervisorName = values.internship_companySupervisorName;
             dataToUpdate.internship_companySupervisorPhone = values.internship_companySupervisorPhone;
+            dataToUpdate.internship_positionId = ''; // Clear position for self-arranged
+            dataToUpdate.internship_positionTitle = ''; // Clear position for self-arranged
         } else if (values.registrationType === 'early_internship' && earlyInternshipData) {
              dataToUpdate.internship_companyName = earlyInternshipData.companyName;
              dataToUpdate.internship_companyAddress = earlyInternshipData.companyAddress;
              dataToUpdate.internship_companySupervisorName = earlyInternshipData.supervisorName;
              dataToUpdate.internshipSupervisorId = earlyInternshipData.supervisorId;
              dataToUpdate.internshipSupervisorName = earlyInternshipData.supervisorName;
+             dataToUpdate.internship_positionId = ''; // Clear position for early internship
+             dataToUpdate.internship_positionTitle = ''; // Clear position for early internship
         }
     }
 
@@ -261,36 +275,64 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                             <CardTitle>{selectedCompany.name}</CardTitle>
                             <CardDescription>{selectedCompany.website ? <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedCompany.website}</a> : 'Không có website'}</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                             <div className="flex items-start gap-3">
-                                <Building className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Địa chỉ</p>
-                                    <p className="text-muted-foreground">{selectedCompany.address || 'Chưa có thông tin'}</p>
+                        <CardContent className="space-y-4">
+                            {selectedCompany.positions && selectedCompany.positions.length > 0 && (
+                                <FormField
+                                    control={form.control}
+                                    name="internship_positionId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Chọn Vị trí Thực tập</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={areCompanyFieldsDisabled}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Chọn một vị trí..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {selectedCompany.positions?.map((pos) => (
+                                                        <SelectItem key={pos.id} value={pos.id}>
+                                                            {pos.title} (Số lượng: {pos.quantity})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+                             <div className="space-y-3 text-sm">
+                                <div className="flex items-start gap-3">
+                                    <Building className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                    <div>
+                                        <p className="font-medium">Địa chỉ</p>
+                                        <p className="text-muted-foreground">{selectedCompany.address || 'Chưa có thông tin'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                            <Separator />
-                            <div className="flex items-start gap-3">
-                                <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Người liên hệ</p>
-                                    <p className="text-muted-foreground">{selectedCompany.contactName || 'Chưa có thông tin'}</p>
+                                <Separator />
+                                <div className="flex items-start gap-3">
+                                    <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                    <div>
+                                        <p className="font-medium">Người liên hệ</p>
+                                        <p className="text-muted-foreground">{selectedCompany.contactName || 'Chưa có thông tin'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                             <div className="flex items-start gap-3">
-                                <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Số điện thoại</p>
-                                    <p className="text-muted-foreground">{selectedCompany.contactPhone || 'Chưa có thông tin'}</p>
+                                <div className="flex items-start gap-3">
+                                    <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                    <div>
+                                        <p className="font-medium">Số điện thoại</p>
+                                        <p className="text-muted-foreground">{selectedCompany.contactPhone || 'Chưa có thông tin'}</p>
+                                    </div>
                                 </div>
-                            </div>
-                             <div className="flex items-start gap-3">
-                                <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Email</p>
-                                    <p className="text-muted-foreground">{selectedCompany.contactEmail || 'Chưa có thông tin'}</p>
+                                <div className="flex items-start gap-3">
+                                    <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                    <div>
+                                        <p className="font-medium">Email</p>
+                                        <p className="text-muted-foreground">{selectedCompany.contactEmail || 'Chưa có thông tin'}</p>
+                                    </div>
                                 </div>
-                            </div>
+                             </div>
                         </CardContent>
                     </Card>
                 )}
