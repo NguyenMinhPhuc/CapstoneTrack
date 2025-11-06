@@ -160,32 +160,35 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
             const company = sessionCompanies.find(c => c.id === values.selectedCompanyId);
             if (company) {
                 dataToUpdate.internship_companyName = company.name;
-                dataToUpdate.internship_companyAddress = company.address;
+                dataToUpdate.internship_companyAddress = company.address || '';
                 const position = company.positions?.find(p => p.id === values.internship_positionId);
                  if (position) {
-                    dataToUpdate.internship_positionId = position.id;
-                    dataToUpdate.internship_positionTitle = position.title;
-                    dataToUpdate.internship_companySupervisorName = position.supervisorName; // LHU Supervisor
-                    dataToUpdate.internshipSupervisorId = position.supervisorId; // LHU Supervisor
-                    dataToUpdate.internshipSupervisorName = position.supervisorName; // LHU Supervisor
+                    dataToUpdate.internship_positionId = position.id || '';
+                    dataToUpdate.internship_positionTitle = position.title || '';
+                    dataToUpdate.internship_companySupervisorName = position.supervisorName || ''; // LHU Supervisor
+                    dataToUpdate.internshipSupervisorId = position.supervisorId || ''; // LHU Supervisor
+                    dataToUpdate.internshipSupervisorName = position.supervisorName || ''; // LHU Supervisor
+                    dataToUpdate.internship_companySupervisorPhone = ''; // Reset this as it belongs to external contact
                 } else {
-                    dataToUpdate.internship_companySupervisorName = company.contactName; // External contact
-                    dataToUpdate.internship_companySupervisorPhone = company.contactPhone;
+                    dataToUpdate.internship_companySupervisorName = company.contactName || ''; // External contact
+                    dataToUpdate.internship_companySupervisorPhone = company.contactPhone || '';
+                    dataToUpdate.internship_positionId = '';
+                    dataToUpdate.internship_positionTitle = '';
                 }
             }
         } else if (values.registrationType === 'self_arranged') {
-            dataToUpdate.internship_companyName = values.internship_companyName;
-            dataToUpdate.internship_companyAddress = values.internship_companyAddress;
-            dataToUpdate.internship_companySupervisorName = values.internship_companySupervisorName;
-            dataToUpdate.internship_companySupervisorPhone = values.internship_companySupervisorPhone;
+            dataToUpdate.internship_companyName = values.internship_companyName || '';
+            dataToUpdate.internship_companyAddress = values.internship_companyAddress || '';
+            dataToUpdate.internship_companySupervisorName = values.internship_companySupervisorName || '';
+            dataToUpdate.internship_companySupervisorPhone = values.internship_companySupervisorPhone || '';
             dataToUpdate.internship_positionId = ''; // Clear position for self-arranged
             dataToUpdate.internship_positionTitle = ''; // Clear position for self-arranged
         } else if (values.registrationType === 'early_internship' && earlyInternshipData) {
-             dataToUpdate.internship_companyName = earlyInternshipData.companyName;
-             dataToUpdate.internship_companyAddress = earlyInternshipData.companyAddress;
-             dataToUpdate.internship_companySupervisorName = earlyInternshipData.supervisorName;
-             dataToUpdate.internshipSupervisorId = earlyInternshipData.supervisorId;
-             dataToUpdate.internshipSupervisorName = earlyInternshipData.supervisorName;
+             dataToUpdate.internship_companyName = earlyInternshipData.companyName || '';
+             dataToUpdate.internship_companyAddress = earlyInternshipData.companyAddress || '';
+             dataToUpdate.internship_companySupervisorName = earlyInternshipData.supervisorName || '';
+             dataToUpdate.internshipSupervisorId = earlyInternshipData.supervisorId || '';
+             dataToUpdate.internshipSupervisorName = earlyInternshipData.supervisorName || '';
              dataToUpdate.internship_positionId = ''; // Clear position for early internship
              dataToUpdate.internship_positionTitle = ''; // Clear position for early internship
         }
