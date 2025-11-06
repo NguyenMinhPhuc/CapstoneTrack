@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -81,6 +79,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { AssignMajorDialog } from './assign-major-dialog';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -121,6 +120,7 @@ export function StudentManagementTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignClassDialogOpen, setIsAssignClassDialogOpen] = useState(false);
+  const [isAssignMajorDialogOpen, setIsAssignMajorDialogOpen] = useState(false);
   const [isAddToSessionDialogOpen, setIsAddToSessionDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
@@ -437,6 +437,7 @@ export function StudentManagementTable() {
 
   const handleDialogFinished = () => {
     setIsAssignClassDialogOpen(false);
+    setIsAssignMajorDialogOpen(false);
     setIsAddToSessionDialogOpen(false);
     setSelectedRowIds([]);
   };
@@ -621,13 +622,24 @@ export function StudentManagementTable() {
                             Xếp lớp ({selectedRowIds.length})
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
-                          <AssignClassDialog
+                         <AssignClassDialog
                             studentIds={selectedRowIds}
                             allStudents={students || []}
                             onFinished={handleDialogFinished}
                           />
-                        </DialogContent>
+                      </Dialog>
+                      
+                       <Dialog open={isAssignMajorDialogOpen} onOpenChange={setIsAssignMajorDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            Gán ngành ({selectedRowIds.length})
+                          </Button>
+                        </DialogTrigger>
+                         <AssignMajorDialog
+                            studentIds={selectedRowIds}
+                            onFinished={handleDialogFinished}
+                          />
                       </Dialog>
 
                       <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
@@ -637,13 +649,11 @@ export function StudentManagementTable() {
                             Thêm vào đợt ({selectedRowIds.length})
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
                           <AddStudentsToSessionDialog
                             studentIds={selectedRowIds}
                             allStudents={students || []}
                             onFinished={handleDialogFinished}
                           />
-                        </DialogContent>
                       </Dialog>
 
                       <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
@@ -959,6 +969,7 @@ export function StudentManagementTable() {
 
 
     
+
 
 
 
