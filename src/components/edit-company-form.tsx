@@ -99,18 +99,20 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const companyDocRef = doc(firestore, 'internshipCompanies', company.id);
     
+    const positionsToSave = values.positions?.map(p => ({
+      id: p.id || uuidv4(),
+      title: p.title,
+      quantity: p.quantity,
+      description: p.description || ''
+    })) || [];
+    
      let dataToUpdate: any = {
         name: values.name,
         address: values.address || '',
         website: values.website || '',
         description: values.description || '',
         isLHU: values.isLHU,
-        positions: values.positions?.map(p => ({
-            id: p.id,
-            title: p.title,
-            quantity: p.quantity,
-            description: p.description || ''
-        })) || [],
+        positions: positionsToSave,
     };
 
     if (values.isLHU) {
