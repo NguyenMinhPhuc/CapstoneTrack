@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
@@ -7,7 +8,7 @@ import type { User } from 'firebase/auth';
 import type { Student, DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport, EarlyInternship, EarlyInternshipWeeklyReport, SystemSettings } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon, Briefcase, AlertCircle } from 'lucide-react';
+import { User as UserIcon, Book, UserCheck, Calendar, Info, FileSignature, FileUp, Activity, Clock, Building, Link as LinkIcon, CalendarIcon, Briefcase, AlertCircle, GraduationCap } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import Link from 'next/link';
@@ -421,14 +422,14 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         {/* Right Column */}
         <div className="lg:col-span-2 space-y-8">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <Card className="flex flex-col">
+                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <GraduationCap /> Tốt nghiệp
                         </CardTitle>
                         <CardDescription>Thông tin về đề tài tốt nghiệp trong đợt <span className="font-semibold">{activeSession?.name}</span>.</CardDescription>
                     </CardHeader>
-                    {activeRegistration && activeRegistration.graduationStatus === 'reporting' ? (
+                    {(activeRegistration && activeRegistration.graduationStatus === 'reporting') ? (
                         <>
                             <CardContent className="space-y-4 flex-grow">
                                 <div>
@@ -469,14 +470,14 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                     )}
                 </Card>
 
-                <Card className="flex flex-col">
+                 <Card className="flex flex-col">
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Briefcase /> Thực tập
                         </CardTitle>
                         <CardDescription>Thông tin về đơn vị thực tập trong đợt <span className="font-semibold">{activeSession?.name}</span>.</CardDescription>
                     </CardHeader>
-                     {activeRegistration && activeRegistration.internshipStatus === 'reporting' ? (
+                     {(activeRegistration && activeRegistration.internshipStatus === 'reporting') ? (
                         <>
                             <CardContent className="space-y-4 flex-grow">
                                 <div>
