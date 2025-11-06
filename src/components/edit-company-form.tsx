@@ -26,8 +26,10 @@ import { SupervisorCombobox } from './supervisor-combobox';
 import { useState } from 'react';
 import { Separator } from './ui/separator';
 import { PlusCircle, Trash2 } from 'lucide-react';
+import { v4 as uuidv4 } from 'uuid';
 
 const positionSchema = z.object({
+  id: z.string(),
   title: z.string().min(1, 'Tên vị trí không được để trống.'),
   quantity: z.coerce.number().min(1, 'Số lượng phải lớn hơn 0.'),
   description: z.string().optional(),
@@ -68,7 +70,7 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
       contactPhone: company.contactPhone || '',
       isLHU: company.isLHU || false,
       supervisorId: company.supervisorId || '',
-      positions: company.positions || [],
+      positions: company.positions?.map(p => ({...p, id: p.id || uuidv4()})) || [],
     },
   });
   
@@ -279,7 +281,7 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ title: '', quantity: 1, description: '' })}
+                      onClick={() => append({ id: uuidv4(), title: '', quantity: 1, description: '' })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Thêm vị trí
@@ -366,5 +368,3 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
     </>
   );
 }
-
-    
