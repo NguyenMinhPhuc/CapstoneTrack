@@ -90,7 +90,7 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
         website: values.website || '',
         description: values.description || '',
         isLHU: values.isLHU,
-        positions: values.positions || [],
+        positions: values.positions?.map(p => ({...p, id: p.id || uuidv4()})) || [],
     };
 
     if (values.isLHU) {
