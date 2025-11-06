@@ -1,3 +1,4 @@
+
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -92,7 +93,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      registrationType: registration.internship_companyName ? 'self_arranged' : 'from_list',
+      registrationType: registration.internship_companyName ? (hasCompletedEarlyInternship && registration.internship_companyName === earlyInternshipData?.companyName ? 'early_internship' : 'self_arranged') : 'from_list',
       selectedCompanyId: '',
       internship_positionId: registration.internship_positionId || '',
       internship_companyName: registration.internship_companyName || '',
@@ -114,7 +115,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
     if (registrationType === 'from_list' && selectedCompanyId) {
       const company = sessionCompanies.find(c => c.id === selectedCompanyId);
       setSelectedCompany(company || null);
-      if (company?.positions && company.positions.length > 0) {
+       if (company?.positions && company.positions.length > 0) {
         form.setValue('internship_positionId', ''); 
       }
     } else {
@@ -160,13 +161,16 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
             if (company) {
                 dataToUpdate.internship_companyName = company.name;
                 dataToUpdate.internship_companyAddress = company.address;
-                dataToUpdate.internship_companySupervisorName = company.contactName;
-                dataToUpdate.internship_companySupervisorPhone = company.contactPhone;
-
                 const position = company.positions?.find(p => p.id === values.internship_positionId);
                  if (position) {
                     dataToUpdate.internship_positionId = position.id;
                     dataToUpdate.internship_positionTitle = position.title;
+                    dataToUpdate.internship_companySupervisorName = position.supervisorName; // LHU Supervisor
+                    dataToUpdate.internshipSupervisorId = position.supervisorId; // LHU Supervisor
+                    dataToUpdate.internshipSupervisorName = position.supervisorName; // LHU Supervisor
+                } else {
+                    dataToUpdate.internship_companySupervisorName = company.contactName; // External contact
+                    dataToUpdate.internship_companySupervisorPhone = company.contactPhone;
                 }
             }
         } else if (values.registrationType === 'self_arranged') {
@@ -332,11 +336,18 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                                         </CardTitle>
                                         <CardDescription>Số lượng: {selectedPosition.quantity}</CardDescription>
                                     </CardHeader>
-                                    {selectedPosition.description && (
-                                        <CardContent>
+                                    <CardContent className="space-y-3">
+                                        {selectedPosition.description && (
                                             <p className="text-sm text-muted-foreground">{selectedPosition.description}</p>
-                                        </CardContent>
-                                    )}
+                                        )}
+                                        {selectedPosition.supervisorName && (
+                                            <div className="flex items-center gap-2 text-sm">
+                                                <User className="h-4 w-4 text-muted-foreground" />
+                                                <span className="text-muted-foreground">GVHD tại trường:</span>
+                                                <span className="font-semibold">{selectedPosition.supervisorName}</span>
+                                            </div>
+                                        )}
+                                    </CardContent>
                                 </Card>
                             )}
                              <div className="space-y-3 text-sm">
@@ -351,7 +362,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                                 <div className="flex items-start gap-3">
                                     <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
                                     <div>
-                                        <p className="font-medium">Người liên hệ</p>
+                                        <p className="font-medium">Người liên hệ (nếu có)</p>
                                         <p className="text-muted-foreground">{selectedCompany.contactName || 'Chưa có thông tin'}</p>
                                     </div>
                                 </div>

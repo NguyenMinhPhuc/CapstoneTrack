@@ -262,6 +262,8 @@ export type InternshipPosition = {
   title: string;
   description?: string;
   quantity: number;
+  supervisorId?: string;
+  supervisorName?: string;
 }
 
 export type InternshipCompany = {
@@ -270,7 +272,6 @@ export type InternshipCompany = {
   address?: string;
   description?: string;
   website?: string;
-  supervisorId?: string; // Add this to link to a supervisor if isLHU is true
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;

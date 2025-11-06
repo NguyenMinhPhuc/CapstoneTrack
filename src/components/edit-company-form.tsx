@@ -33,6 +33,8 @@ const positionSchema = z.object({
   title: z.string().min(1, 'Tên vị trí không được để trống.'),
   quantity: z.coerce.number().min(1, 'Số lượng phải lớn hơn 0.'),
   description: z.string().optional(),
+  supervisorId: z.string().optional(),
+  supervisorName: z.string().optional(),
 });
 
 const formSchema = z.object({
@@ -44,7 +46,6 @@ const formSchema = z.object({
   contactEmail: z.string().email({ message: 'Email không hợp lệ.' }).optional().or(z.literal('')),
   contactPhone: z.string().optional(),
   isLHU: z.boolean().default(false),
-  supervisorId: z.string().optional(),
   positions: z.array(positionSchema).optional(),
 });
 
@@ -56,35 +57,18 @@ interface EditCompanyFormProps {
 export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-   const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
-
+   
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: company.name || '',
-      address: company.address || '',
-      website: company.website || '',
-      description: company.description || '',
-      contactName: company.contactName || '',
-      contactEmail: company.contactEmail || '',
-      contactPhone: company.contactPhone || '',
-      isLHU: company.isLHU || false,
-      supervisorId: company.supervisorId || '',
+      ...company,
       positions: company.positions?.map(p => ({...p, id: p.id || uuidv4()})) || [],
     },
   });
 
   useEffect(() => {
     form.reset({
-      name: company.name || '',
-      address: company.address || '',
-      website: company.website || '',
-      description: company.description || '',
-      contactName: company.contactName || '',
-      contactEmail: company.contactEmail || '',
-      contactPhone: company.contactPhone || '',
-      isLHU: company.isLHU || false,
-      supervisorId: company.supervisorId || '',
+      ...company,
       positions: company.positions?.map(p => ({...p, id: p.id || uuidv4()})) || [],
     });
   }, [company, form]);
@@ -103,7 +87,9 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
       id: p.id || uuidv4(),
       title: p.title,
       quantity: p.quantity,
-      description: p.description || ''
+      description: p.description || '',
+      supervisorId: p.supervisorId || '',
+      supervisorName: p.supervisorName || '',
     })) || [];
     
      let dataToUpdate: any = {
@@ -115,25 +101,12 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
         positions: positionsToSave,
     };
 
-    if (values.isLHU) {
-        if (!selectedSupervisor && !values.supervisorId) {
-             toast({ variant: 'destructive', title: 'Lỗi', description: 'Vui lòng chọn một giáo viên hướng dẫn cho phòng ban LHU.' });
-            return;
-        }
-        dataToUpdate = {
-            ...dataToUpdate,
-            supervisorId: selectedSupervisor?.id || values.supervisorId,
-            contactName: selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : values.contactName,
-            contactEmail: selectedSupervisor?.email || values.contactEmail,
-            contactPhone: '', // Clear phone for LHU department
-        };
-    } else {
+    if (!values.isLHU) {
         dataToUpdate = {
             ...dataToUpdate,
             contactName: values.contactName || '',
             contactEmail: values.contactEmail || '',
             contactPhone: values.contactPhone || '',
-            supervisorId: '', // Clear supervisorId if it's not an LHU dept
         };
     }
 
@@ -154,6 +127,11 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
         errorEmitter.emit('permission-error', contextualError);
       });
   }
+
+  const handleSupervisorSelect = (index: number, supervisor: Supervisor | null) => {
+    form.setValue(`positions.${index}.supervisorId`, supervisor?.id || '');
+    form.setValue(`positions.${index}.supervisorName`, supervisor ? `${supervisor.firstName} ${supervisor.lastName}` : '');
+  };
 
   return (
     <>
@@ -298,12 +276,31 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
                               </FormItem>
                             )}
                           />
+                           {isLHU && (
+                              <FormField
+                                control={form.control}
+                                name={`positions.${index}.supervisorId`}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>Người phụ trách (GVHD)</FormLabel>
+                                    <FormControl>
+                                        <SupervisorCombobox
+                                            value={field.value || null}
+                                            onChange={(supervisorId) => field.onChange(supervisorId || '')}
+                                            onSupervisorSelect={(supervisor) => handleSupervisorSelect(index, supervisor)}
+                                        />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                          )}
                       </div>
                     ))}
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => append({ id: uuidv4(), title: '', quantity: 1, description: '' })}
+                      onClick={() => append({ id: uuidv4(), title: '', quantity: 1, description: '', supervisorId: '', supervisorName: '' })}
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Thêm vị trí
@@ -312,27 +309,7 @@ export function EditCompanyForm({ company, onFinished }: EditCompanyFormProps) {
                 </div>
               <Separator />
 
-               {isLHU ? (
-                 <FormField
-                    control={form.control}
-                    name="supervisorId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Người phụ trách (GVHD)</FormLabel>
-                        <FormControl>
-                           <SupervisorCombobox
-                                value={field.value || null}
-                                onChange={(supervisor) => {
-                                    field.onChange(supervisor?.id || '');
-                                    setSelectedSupervisor(supervisor);
-                                }}
-                            />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-              ) : (
+               {!isLHU && (
                 <>
                   <FormField
                     control={form.control}
