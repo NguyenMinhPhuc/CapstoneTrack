@@ -137,7 +137,6 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
         if (gradSessionIds.length > 0) {
             conditions.push(where('sessionId', 'in', gradSessionIds));
         } else {
-            // No graduation sessions available, so query should return nothing
             conditions.push(where('sessionId', '==', '__impossible_value__'));
         }
     }
@@ -373,67 +372,75 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <>
-                <Accordion type="multiple" className="w-full">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead className="w-10/12">Thông tin</TableHead>
-                                <TableHead className="w-2/12 text-right">Hành động</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                    </Table>
-                    {filteredRegistrations.length > 0 ? (
+            <Accordion type="multiple" className="w-full">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-10/12">Thông tin</TableHead>
+                    <TableHead className="w-2/12 text-right">Hành động</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredRegistrations.length > 0 ? (
                     filteredRegistrations.map((reg, index) => (
-                        <AccordionItem value={reg.id} key={reg.id} className="border-b">
-                        <TableRow className="hover:bg-muted/50">
+                      <AccordionItem value={reg.id} key={reg.id} asChild>
+                        <>
+                          <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
                             <TableCell className="w-10/12 p-0">
-                            <AccordionTrigger className="px-4 py-4 w-full hover:no-underline">
-                                    <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
-                                        <div className="col-span-1 text-center">{index + 1}</div>
-                                        <div className="col-span-4 font-medium">
-                                            <div>{reg.studentName}</div>
-                                            <div className="text-xs text-muted-foreground">{reg.studentId}</div>
-                                        </div>
-                                        <div className="col-span-7 flex flex-wrap items-start gap-1">
-                                        <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
-                                        <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
-                                        </div>
-                                    </div>
-                                </AccordionTrigger>
+                              <AccordionTrigger className="px-4 py-4 w-full hover:no-underline">
+                                <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
+                                  <div className="col-span-1 text-center">{index + 1}</div>
+                                  <div className="col-span-4 font-medium">
+                                    <div>{reg.studentName}</div>
+                                    <div className="text-xs text-muted-foreground">{reg.studentId}</div>
+                                  </div>
+                                  <div className="col-span-7 flex flex-wrap items-start gap-1">
+                                    <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
+                                    <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                                  </div>
+                                </div>
+                              </AccordionTrigger>
                             </TableCell>
                             <TableCell className="w-2/12 text-right">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                        <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </TableCell>
-                        </TableRow>
-                        <AccordionContent>
-                            <div className="p-4 bg-muted/30 border-y space-y-4">
-                                <div className="space-y-1"><h4 className="font-semibold text-base">{reg.projectTitle || "Chưa có tên đề tài"}</h4></div>
-                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
-                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
-                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
-                            </div>
-                        </AccordionContent>
-                        </AccordionItem>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell colSpan={2} className="p-0">
+                              <AccordionContent>
+                                <div className="p-4 bg-muted/30 space-y-4">
+                                  <div className="space-y-1"><h4 className="font-semibold text-base">{reg.projectTitle || "Chưa có tên đề tài"}</h4></div>
+                                  <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
+                                  <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
+                                  <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
+                                </div>
+                              </AccordionContent>
+                            </TableCell>
+                          </TableRow>
+                        </>
+                      </AccordionItem>
                     ))
-                    ) : (
-                    <div className="text-center py-10 text-muted-foreground col-span-12">
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={2} className="text-center h-24">
                         Không có sinh viên nào phù hợp.
-                    </div>
-                    )}
-                </Accordion>
-            </>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </Accordion>
           )}
         </CardContent>
       </Card>
@@ -452,7 +459,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                         <div className="space-y-1">
                             <h3 className="font-semibold text-lg">{selectedRegistration.projectTitle}</h3>
                         </div>
-                        <Separator />
+                        <Separator/>
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
