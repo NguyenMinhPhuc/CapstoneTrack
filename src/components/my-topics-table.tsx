@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -44,14 +43,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Checkbox } from './ui/checkbox';
 import { MoveTopicsDialog } from './move-topics-dialog';
@@ -168,6 +159,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   useEffect(() => {
     setSelectedRowIds([]);
   }, [topics, sessionFilter, statusFilter]);
+  
+  const graduationSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter(s => s.sessionType === 'graduation' || s.sessionType === 'combined');
+  }, [sessions]);
 
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
@@ -175,14 +171,14 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   }, [sessions]);
 
   const groupedSessions = useMemo(() => {
-    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
-    return sessions.reduce((acc, session) => {
+    if (!graduationSessions) return { ongoing: [], upcoming: [], completed: [] };
+    return graduationSessions.reduce((acc, session) => {
       const group = acc[session.status] || [];
       group.push(session);
       acc[session.status] = group;
       return acc;
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
-  }, [sessions]);
+  }, [graduationSessions]);
 
  const registrationsByTopic = useMemo(() => {
       const map = new Map<string, DefenseRegistration[]>();
@@ -481,7 +477,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     <AddTopicForm 
                         supervisorId={supervisorId}
                         supervisorName={supervisorName}
-                        sessions={sessions || []}
+                        sessions={graduationSessions || []}
                         onFinished={() => setIsAddDialogOpen(false)} 
                     />
                 </DialogContent>
@@ -498,7 +494,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         </Button>
                     </DialogTrigger>
                     <MoveTopicsDialog 
-                        sessions={sessions || []}
+                        sessions={graduationSessions || []}
                         topicIds={selectedRowIds}
                         onFinished={handleMoveFinished}
                     />
@@ -653,7 +649,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           {selectedTopic && (
             <EditTopicForm
               topic={selectedTopic}
-              sessions={sessions || []}
+              sessions={graduationSessions || []}
               onFinished={() => setIsEditDialogOpen(false)}
             />
           )}

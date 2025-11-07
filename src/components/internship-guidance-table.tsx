@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -78,7 +77,7 @@ const reportStatusLabel: Record<ReportStatus, string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
     not_yet_reporting: 'Chưa báo cáo',
-    not_reporting: 'Chưa ĐK',
+    not_reporting: 'Không BC',
     completed: 'Hoàn thành',
 };
 
@@ -110,14 +109,20 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
   
+  const internshipSessions = useMemo(() => {
+      if (!sessions) return [];
+      return sessions.filter(s => s.sessionType === 'internship' || s.sessionType === 'combined');
+  }, [sessions]);
+
   useEffect(() => {
-    if (sessions && selectedSessionId === 'all') {
-      const ongoingSession = sessions.find(s => s.status === 'ongoing');
+    // Default to the ongoing session if available
+    if (internshipSessions && selectedSessionId === 'all') {
+      const ongoingSession = internshipSessions.find(s => s.status === 'ongoing');
       if (ongoingSession) {
         setSelectedSessionId(ongoingSession.id);
       }
     }
-  }, [sessions, selectedSessionId]);
+  }, [internshipSessions, selectedSessionId]);
 
 
   const registrationsQuery = useMemoFirebase(() => {
@@ -146,14 +151,14 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
   }, [sessions]);
   
   const groupedSessions = useMemo(() => {
-    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
-    return sessions.reduce((acc, session) => {
+    if (!internshipSessions) return { ongoing: [], upcoming: [], completed: [] };
+    return internshipSessions.reduce((acc, session) => {
       const group = acc[session.status] || [];
       group.push(session);
       acc[session.status] = group;
       return acc;
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
-  }, [sessions]);
+  }, [internshipSessions]);
 
   const filteredRegistrations = useMemo(() => {
     if (!registrations) return [];
