@@ -360,6 +360,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                         <div className="text-xs text-muted-foreground mt-2 space-y-1">
                           <p>Bắt đầu: {toDate(session.startDate) ? format(toDate(session.startDate)!, 'dd/MM/yyyy') : 'N/A'}</p>
                           <p>Hạn ĐK: {toDate(session.registrationDeadline) ? format(toDate(session.registrationDeadline)!, 'dd/MM/yyyy') : 'N/A'}</p>
+                          <p>Ngày BC dự kiến: {toDate(session.expectedReportDate) ? format(toDate(session.expectedReportDate)!, 'dd/MM/yyyy') : 'N/A'}</p>
                         </div>
                       </div>
                     ))}
