@@ -107,6 +107,11 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
 
+  const graduationSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter(s => s.sessionType !== 'internship');
+  }, [sessions]);
+
   const registrationsQuery = useMemoFirebase(() => {
     let q: Query = collection(firestore, 'defenseRegistrations');
     
@@ -133,14 +138,14 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   }, [sessions]);
 
   const groupedSessions = useMemo(() => {
-    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
-    return sessions.reduce((acc, session) => {
+    if (!graduationSessions) return { ongoing: [], upcoming: [], completed: [] };
+    return graduationSessions.reduce((acc, session) => {
       const group = acc[session.status] || [];
       group.push(session);
       acc[session.status] = group;
       return acc;
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
-  }, [sessions]);
+  }, [graduationSessions]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
