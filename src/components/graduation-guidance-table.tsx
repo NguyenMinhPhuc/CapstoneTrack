@@ -6,6 +6,8 @@ import {
   Card,
   CardContent,
   CardHeader,
+  CardTitle,
+  CardDescription
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -13,7 +15,15 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, FileSignature, FileUp, ArrowUpDown, Activity, Book, Target, CheckCircle, Link as LinkIcon, ChevronDown } from 'lucide-react';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { MoreHorizontal, Search, Eye, FileSignature, FileUp, Activity, Book, Target, CheckCircle, Link as LinkIcon, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
@@ -29,7 +39,6 @@ import {
   SelectLabel,
 } from '@/components/ui/select';
 import { Badge } from './ui/badge';
-import Link from 'next/link';
 import { Button } from './ui/button';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 import ReactMarkdown from 'react-markdown';
@@ -38,7 +47,6 @@ import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { ViewProgressDialog } from './view-progress-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Separator } from './ui/separator';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
@@ -109,24 +117,35 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
 
   const graduationSessions = useMemo(() => {
     if (!sessions) return [];
-    return sessions.filter(s => s.sessionType !== 'internship');
+    return sessions.filter(s => s.sessionType === 'graduation' || s.sessionType === 'combined');
   }, [sessions]);
+
 
   const registrationsQuery = useMemoFirebase(() => {
     let q: Query = collection(firestore, 'defenseRegistrations');
     
-    if (userRole === 'supervisor') {
-        q = query(q, where('supervisorId', '==', supervisorId));
-    }
-    
-    q = query(q, where('graduationStatus', '==', 'reporting'));
+    const conditions = [];
 
-    if (selectedSessionId !== 'all') {
-      q = query(q, where('sessionId', '==', selectedSessionId));
+    if (userRole === 'supervisor') {
+        conditions.push(where('supervisorId', '==', supervisorId));
     }
     
-    return q;
-  }, [firestore, supervisorId, selectedSessionId, userRole]);
+    if (selectedSessionId !== 'all') {
+      conditions.push(where('sessionId', '==', selectedSessionId));
+    } else {
+        const gradSessionIds = graduationSessions.map(s => s.id);
+        if (gradSessionIds.length > 0) {
+            conditions.push(where('sessionId', 'in', gradSessionIds));
+        } else {
+            // No graduation sessions available, so query should return nothing
+            conditions.push(where('sessionId', '==', '__impossible_value__'));
+        }
+    }
+    
+    conditions.push(where('graduationStatus', '==', 'reporting'));
+
+    return query(q, ...conditions);
+  }, [firestore, supervisorId, selectedSessionId, userRole, graduationSessions]);
 
   const { data: registrations, isLoading: isLoadingRegistrations } = useCollection<DefenseRegistration>(registrationsQuery);
 
@@ -209,6 +228,12 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
       setIsProposalDialogOpen(false);
     } catch (error: any) {
        toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+        const contextualError = new FirestorePermissionError({
+            path: regDocRef.path,
+            operation: 'update',
+            requestResourceData: { proposalStatus: newStatus }
+        });
+        errorEmitter.emit('permission-error', contextualError);
     }
   }
 
@@ -225,6 +250,12 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
       setIsReportDialogOpen(false);
     } catch (error: any) {
        toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
+        const contextualError = new FirestorePermissionError({
+            path: regDocRef.path,
+            operation: 'update',
+            requestResourceData: { reportStatus: newStatus }
+        });
+        errorEmitter.emit('permission-error', contextualError);
     }
   }
 
@@ -342,65 +373,71 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <div className="border rounded-md">
-              <div className="flex w-full text-left text-sm font-semibold items-center bg-muted/50 px-4">
-                <div className="w-1/12 py-3">STT</div>
-                <div className="w-5/12 py-3">Sinh viên</div>
-                <div className="w-4/12 py-3">Trạng thái</div>
-                <div className="w-2/12 py-3 text-right">Hành động</div>
-              </div>
-               <Accordion type="multiple" className="w-full">
-                {filteredRegistrations.length > 0 ? (
-                  filteredRegistrations.map((reg, index) => (
-                    <AccordionItem value={reg.id} key={reg.id} className="border-b">
-                      <div className="flex items-center px-4 hover:bg-muted/50">
-                        <div className="w-1/12">{index + 1}</div>
-                        <AccordionTrigger className="w-5/12 py-4 text-left font-medium hover:no-underline">
-                            <div>
-                                <div>{reg.studentName}</div>
-                                <div className="text-xs text-muted-foreground">{reg.studentId}</div>
-                            </div>
-                        </AccordionTrigger>
-                        <div className="w-4/12 flex flex-col items-start gap-1">
-                          <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
-                          <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
-                        </div>
-                        <div className="w-2/12 flex justify-end">
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
-                                <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-                        </div>
-                      </div>
-                       <AccordionContent>
-                            <div className="p-4 bg-muted/30 border-t space-y-4">
-                               <div className="space-y-1"><h4 className="font-semibold text-base">{reg.projectTitle || "Chưa có tên đề tài"}</h4></div>
-                               <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
+            <>
+                <Accordion type="multiple" className="w-full">
+                    <Table>
+                        <TableHeader>
+                            <TableRow>
+                                <TableHead className="w-10/12">Thông tin</TableHead>
+                                <TableHead className="w-2/12 text-right">Hành động</TableHead>
+                            </TableRow>
+                        </TableHeader>
+                    </Table>
+                    {filteredRegistrations.length > 0 ? (
+                    filteredRegistrations.map((reg, index) => (
+                        <AccordionItem value={reg.id} key={reg.id} className="border-b">
+                        <TableRow className="hover:bg-muted/50">
+                            <TableCell className="w-10/12 p-0">
+                            <AccordionTrigger className="px-4 py-4 w-full hover:no-underline">
+                                    <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
+                                        <div className="col-span-1 text-center">{index + 1}</div>
+                                        <div className="col-span-4 font-medium">
+                                            <div>{reg.studentName}</div>
+                                            <div className="text-xs text-muted-foreground">{reg.studentId}</div>
+                                        </div>
+                                        <div className="col-span-7 flex flex-wrap items-start gap-1">
+                                        <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
+                                        <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                                        </div>
+                                    </div>
+                                </AccordionTrigger>
+                            </TableCell>
+                            <TableCell className="w-2/12 text-right">
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </TableCell>
+                        </TableRow>
+                        <AccordionContent>
+                            <div className="p-4 bg-muted/30 border-y space-y-4">
+                                <div className="space-y-1"><h4 className="font-semibold text-base">{reg.projectTitle || "Chưa có tên đề tài"}</h4></div>
+                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
                                 <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
                                 <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
                             </div>
                         </AccordionContent>
-                    </AccordionItem>
-                  ))
-                ) : (
-                  <div className="text-center py-10 text-muted-foreground col-span-12">
-                    Không có sinh viên nào phù hợp.
-                  </div>
-                )}
-               </Accordion>
-            </div>
+                        </AccordionItem>
+                    ))
+                    ) : (
+                    <div className="text-center py-10 text-muted-foreground col-span-12">
+                        Không có sinh viên nào phù hợp.
+                    </div>
+                    )}
+                </Accordion>
+            </>
           )}
         </CardContent>
       </Card>
-      {/* Dialog for viewing proposal */}
+      
        <Dialog open={isProposalDialogOpen} onOpenChange={setIsProposalDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
               {selectedRegistration && (
@@ -415,7 +452,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                         <div className="space-y-1">
                             <h3 className="font-semibold text-lg">{selectedRegistration.projectTitle}</h3>
                         </div>
-                        <Separator/>
+                        <Separator />
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
@@ -457,8 +494,8 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
               )}
           </DialogContent>
        </Dialog>
-      {/* Dialog for viewing report */}
-       <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
+       
+        <Dialog open={isReportDialogOpen} onOpenChange={setIsReportDialogOpen}>
           <DialogContent className="sm:max-w-2xl">
               {selectedRegistration && (
                   <>
@@ -493,8 +530,8 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
               )}
           </DialogContent>
        </Dialog>
-       {/* Dialog for viewing progress */}
-       <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
+       
+      <Dialog open={isProgressDialogOpen} onOpenChange={setIsProgressDialogOpen}>
            <DialogContent className="sm:max-w-2xl">
                 {selectedRegistration && (
                    <ViewProgressDialog
