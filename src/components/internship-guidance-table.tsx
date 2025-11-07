@@ -23,7 +23,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, FileUp, Check, X } from 'lucide-react';
+import { MoreHorizontal, Search, FileUp, Check, X, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, InternshipRegistrationStatus, ReportStatus } from '@/lib/types';
@@ -60,6 +60,9 @@ interface InternshipGuidanceTableProps {
   supervisorId: string;
   userRole: 'admin' | 'supervisor';
 }
+
+type SortKey = 'studentName' | 'internship_companyName' | 'sessionId' | 'internshipRegistrationStatus' | 'internshipStatus';
+type SortDirection = 'asc' | 'desc';
 
 const registrationStatusLabel: Record<InternshipRegistrationStatus, string> = {
   pending: 'Chờ duyệt',
@@ -99,9 +102,10 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSessionId, setSelectedSessionId] = useState('all');
+  const [selectedSessionId, setSelectedSessionId] = useState('ongoing');
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -115,7 +119,7 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
   }, [sessions]);
 
   useEffect(() => {
-    // Default to the ongoing session if available
+    // Default to the ongoing session if available and filter is 'all'
     if (internshipSessions && selectedSessionId === 'all') {
       const ongoingSession = internshipSessions.find(s => s.status === 'ongoing');
       if (ongoingSession) {
@@ -134,12 +138,19 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
         conditions.push(where('internshipSupervisorId', '==', supervisorId));
     }
     
-    if (selectedSessionId !== 'all') {
+    if (selectedSessionId === 'ongoing') {
+        const ongoingSessionIds = internshipSessions.filter(s => s.status === 'ongoing').map(s => s.id);
+        if (ongoingSessionIds.length > 0) {
+            conditions.push(where('sessionId', 'in', ongoingSessionIds));
+        } else {
+             conditions.push(where('sessionId', '==', '__impossible_value__'));
+        }
+    } else if (selectedSessionId !== 'all') {
       conditions.push(where('sessionId', '==', selectedSessionId));
     }
     
     return query(q, ...conditions);
-  }, [firestore, supervisorId, selectedSessionId, userRole]);
+  }, [firestore, supervisorId, selectedSessionId, userRole, internshipSessions]);
 
   const { data: registrations, isLoading: isLoadingRegistrations } = useCollection<DefenseRegistration>(registrationsQuery);
 
@@ -160,11 +171,25 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
   }, [internshipSessions]);
 
+  const requestSort = (key: SortKey) => {
+    let direction: SortDirection = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+  
+  const getSortIcon = (key: SortKey) => {
+    if (!sortConfig || sortConfig.key !== key) {
+      return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
+    }
+    return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
+  };
+
   const filteredRegistrations = useMemo(() => {
     if (!registrations) return [];
     
-    return registrations.filter(reg => {
-      // Only show registrations that have an internship company, meaning they have at least started the process.
+    let sortableRegistrations = registrations.filter(reg => {
       if (!reg.internship_companyName) return false;
 
       const term = searchTerm.toLowerCase();
@@ -174,7 +199,24 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
       return searchMatch;
     });
 
-  }, [registrations, searchTerm]);
+    if (sortConfig !== null) {
+      sortableRegistrations.sort((a, b) => {
+        const aValue = a[sortConfig.key] || '';
+        const bValue = b[sortConfig.key] || '';
+        
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    
+    return sortableRegistrations;
+
+  }, [registrations, searchTerm, sortConfig]);
 
   const handleStatusChange = async (registrationId: string, newStatus: InternshipRegistrationStatus, reason?: string) => {
     const registrationDocRef = doc(firestore, 'defenseRegistrations', registrationId);
@@ -281,11 +323,31 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
               <TableHeader>
                 <TableRow>
                   <TableHead>STT</TableHead>
-                  <TableHead>Sinh viên</TableHead>
-                  <TableHead>Công ty Thực tập</TableHead>
-                  <TableHead>Đợt báo cáo</TableHead>
-                  <TableHead>Trạng thái ĐK</TableHead>
-                   <TableHead>Trạng thái BC</TableHead>
+                   <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('studentName')} className="px-0 hover:bg-transparent">
+                      Sinh viên {getSortIcon('studentName')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                    <Button variant="ghost" onClick={() => requestSort('internship_companyName')} className="px-0 hover:bg-transparent">
+                      Công ty Thực tập {getSortIcon('internship_companyName')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('sessionId')} className="px-0 hover:bg-transparent">
+                      Đợt báo cáo {getSortIcon('sessionId')}
+                    </Button>
+                  </TableHead>
+                  <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('internshipRegistrationStatus')} className="px-0 hover:bg-transparent">
+                      Trạng thái ĐK {getSortIcon('internshipRegistrationStatus')}
+                    </Button>
+                  </TableHead>
+                   <TableHead>
+                     <Button variant="ghost" onClick={() => requestSort('internshipStatus')} className="px-0 hover:bg-transparent">
+                      Trạng thái BC {getSortIcon('internshipStatus')}
+                    </Button>
+                  </TableHead>
                   <TableHead className="text-right">Hành động</TableHead>
                 </TableRow>
               </TableHeader>
