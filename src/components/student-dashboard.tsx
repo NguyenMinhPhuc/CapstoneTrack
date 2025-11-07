@@ -351,8 +351,18 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                   <div className="space-y-4">
                     {availableSessions.map((session) => (
                       <div key={session.id} className="p-3 border rounded-lg bg-muted/50">
-                        <div className="flex justify-between items-center">
-                          <p className="font-semibold">{session.name}</p>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <p className="font-semibold">{session.name}</p>
+                            <div className="flex items-center gap-1.5 mt-1.5">
+                                {(session.sessionType === 'graduation' || session.sessionType === 'combined') && (
+                                    <Badge variant="default" className="text-xs"><GraduationCap className="h-3 w-3 mr-1"/>TN</Badge>
+                                )}
+                                {(session.sessionType === 'internship' || session.sessionType === 'combined') && (
+                                    <Badge variant="secondary" className="text-xs"><Briefcase className="h-3 w-3 mr-1"/>TT</Badge>
+                                )}
+                            </div>
+                          </div>
                           <Badge variant={session.status === 'ongoing' ? 'default' : 'secondary'}>
                             {statusLabel[session.status] || session.status}
                           </Badge>
