@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -23,7 +24,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, FileUp, Check, X, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Search, FileUp, Check, X, ArrowUpDown, ChevronUp, ChevronDown, FileDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, InternshipRegistrationStatus, ReportStatus } from '@/lib/types';
@@ -44,16 +45,9 @@ import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { Dialog, DialogContent } from './ui/dialog';
 import { RejectionReasonDialog } from './rejection-reason-dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import { format } from 'date-fns';
 
 
 interface InternshipGuidanceTableProps {
@@ -119,7 +113,7 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
   }, [sessions]);
 
   useEffect(() => {
-    // Default to the ongoing session if available and filter is 'all'
+    // Default to the ongoing session if available
     if (internshipSessions && selectedSessionId === 'all') {
       const ongoingSession = internshipSessions.find(s => s.status === 'ongoing');
       if (ongoingSession) {
@@ -269,6 +263,31 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
     setSelectedRegistration(registration);
     setIsRejectDialogOpen(true);
   };
+  
+  const exportToExcel = () => {
+    const dataToExport = filteredRegistrations.map((reg, index) => ({
+      'STT': index + 1,
+      'MSSV': reg.studentId,
+      'Họ và Tên': reg.studentName,
+      'Công ty Thực tập': reg.internship_companyName || 'Chưa có',
+      'Đợt báo cáo': sessionMap.get(reg.sessionId) || 'N/A',
+      'Trạng thái ĐK': registrationStatusLabel[reg.internshipRegistrationStatus || 'pending'],
+      'Trạng thái BC': reportStatusLabel[reg.internshipStatus || 'not_reporting'],
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'HD_ThucTap');
+    
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 30 }, 
+      { wch: 25 }, { wch: 15 }, { wch: 15 }
+    ];
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, `HD_ThucTap_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   return (
     <>
@@ -312,6 +331,10 @@ export function InternshipGuidanceTable({ supervisorId, userRole }: InternshipGu
                   )}
                 </SelectContent>
               </Select>
+               <Button onClick={exportToExcel} variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Xuất Excel
+              </Button>
             </div>
           </div>
         </CardHeader>

@@ -3,13 +3,33 @@
 
 import React, { useState, useMemo, useEffect } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle, Move, ArrowUpDown, ChevronDown, ChevronUp, FileDown } from 'lucide-react';
+import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
+import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
+import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
+import { Skeleton } from './ui/skeleton';
+import { useToast } from '@/hooks/use-toast';
+import { Badge } from './ui/badge';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import { cn } from '@/lib/utils';
+import { ViewProgressDialog } from './view-progress-dialog';
 import {
   Card,
   CardContent,
@@ -17,18 +37,10 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, FileSignature, FileUp, Activity, Book, Target, CheckCircle, Link as LinkIcon, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
-import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
-import { Skeleton } from './ui/skeleton';
-import { Input } from './ui/input';
+import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { ChevronsUpDown } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -36,19 +48,12 @@ import {
   SelectTrigger,
   SelectValue,
   SelectGroup,
-  SelectLabel,
+  SelectLabel
 } from '@/components/ui/select';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import { cn } from '@/lib/utils';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
-import { ViewProgressDialog } from './view-progress-dialog';
-import { useToast } from '@/hooks/use-toast';
-import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
-import { Check, ChevronsUpDown } from 'lucide-react';
-import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { Input } from './ui/input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 
 interface GraduationGuidanceTableProps {
@@ -107,43 +112,45 @@ function RegistrationRow({ registration, sessionMap, onAction }: { registration:
     return (
       <React.Fragment>
         <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
-          <TableCell className="w-12 p-0">
-            <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
-              <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-            </Button>
-          </TableCell>
-          <TableCell>
-            <div className="font-medium">{registration.studentName}</div>
-            <div className="text-sm text-muted-foreground">{registration.studentId}</div>
-          </TableCell>
-          <TableCell>
-            <p className="font-medium max-w-xs truncate">{registration.projectTitle || 'Chưa có'}</p>
-            <p className="text-xs text-muted-foreground">{sessionMap.get(registration.sessionId)}</p>
-          </TableCell>
-          <TableCell>
-            <div className="flex flex-col gap-1.5 items-start">
-              <Badge variant={propConfig}>{propLabel}</Badge>
-              <Badge variant={reportConfig}>{reportLabel}</Badge>
-            </div>
-          </TableCell>
-          <TableCell className="text-right">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
+            <TableCell className="w-10/12 p-0" colSpan={3}>
+                <Button variant="ghost" onClick={() => setIsOpen(!isOpen)} className="w-full justify-start hover:bg-transparent px-4 py-4 h-auto">
+                    <ChevronDown className={cn("h-4 w-4 transition-transform mr-2", isOpen && "rotate-180")} />
+                    <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
+                        <div className="col-span-4 font-medium">
+                            <p>{registration.studentName}</p>
+                            <p className="text-xs text-muted-foreground">{registration.studentId}</p>
+                        </div>
+                        <div className="col-span-5 truncate" title={registration.projectTitle}>
+                             <p className="font-medium">{registration.projectTitle || 'Chưa có'}</p>
+                             <p className="text-xs text-muted-foreground">{sessionMap.get(registration.sessionId)}</p>
+                        </div>
+                        <div className="col-span-3">
+                             <div className="flex flex-col gap-1.5 items-start">
+                                <Badge variant={propConfig}>{propLabel}</Badge>
+                                <Badge variant={reportConfig}>{reportLabel}</Badge>
+                            </div>
+                        </div>
+                    </div>
                 </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onAction('progress', registration)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onAction('proposal', registration)} disabled={propStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => onAction('report', registration)} disabled={reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </TableCell>
+            </TableCell>
+            <TableCell className="text-right">
+                <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                    <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => onAction('progress', registration)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onAction('proposal', registration)} disabled={propStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => onAction('report', registration)} disabled={reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+                </DropdownMenuContent>
+                </DropdownMenu>
+            </TableCell>
         </TableRow>
-        {isOpen && (
+         {isOpen && (
           <TableRow className="bg-muted/30 hover:bg-muted/40">
-            <TableCell colSpan={5} className="p-0">
+            <TableCell colSpan={4} className="p-0">
               <div className="p-4 space-y-4">
                 <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.summary || ''}</ReactMarkdown></div></div>
                 <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.objectives || ''}</ReactMarkdown></div></div>
@@ -175,11 +182,12 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     [firestore]
   );
   const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
-
+  
   const graduationSessions = useMemo(() => {
     if (!sessions) return [];
     return sessions.filter(s => s.sessionType === 'graduation' || s.sessionType === 'combined');
   }, [sessions]);
+
 
   const registrationsQuery = useMemoFirebase(() => {
     let q: Query = collection(firestore, 'defenseRegistrations');
@@ -334,9 +342,34 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
 
   const getSessionDisplayName = () => {
     if (selectedSessionId === 'all') return "Tất cả các đợt";
-    if (selectedSessionId === 'ongoing') return "Đợt đang thực hiện";
+    if (selectedSessionId === 'ongoing') return "Các đợt đang thực hiện";
     return sessionMap.get(selectedSessionId) || "Chọn đợt...";
   }
+  
+  const exportToExcel = () => {
+    const dataToExport = filteredRegistrations.map((reg, index) => ({
+      'STT': index + 1,
+      'MSSV': reg.studentId,
+      'Họ và Tên': reg.studentName,
+      'Tên đề tài': reg.projectTitle || 'Chưa có',
+      'Đợt báo cáo': sessionMap.get(reg.sessionId) || 'N/A',
+      'Trạng thái TM': proposalStatusLabel[reg.proposalStatus || 'not_submitted'],
+      'Trạng thái BC': reportStatusLabel[reg.reportStatus || 'not_submitted'],
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'HD_TotNghiep');
+    
+    worksheet['!cols'] = [
+      { wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 40 }, 
+      { wch: 25 }, { wch: 15 }, { wch: 15 }
+    ];
+
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(blob, `HD_TotNghiep_${new Date().toISOString().split('T')[0]}.xlsx`);
+  };
 
   return (
     <>
@@ -412,7 +445,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                                       }}
                                   >
                                       <Check className={cn("mr-2 h-4 w-4", selectedSessionId === 'ongoing' ? "opacity-100" : "opacity-0")} />
-                                      Đợt đang thực hiện
+                                      Các đợt đang thực hiện
                                   </CommandItem>
                                   {Object.entries(groupedSessions).map(([status, sessionList]) => (
                                       sessionList.length > 0 && (
@@ -438,6 +471,10 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                       </Command>
                   </PopoverContent>
               </Popover>
+              <Button onClick={exportToExcel} variant="outline">
+                <FileDown className="mr-2 h-4 w-4" />
+                Xuất Excel
+              </Button>
             </div>
           </div>
         </CardHeader>
@@ -445,7 +482,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <Table>
+             <Table>
                 <TableHeader>
                     <TableRow>
                         <TableHead className="w-12"></TableHead>
@@ -579,5 +616,3 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     </>
   );
 }
-
-    
