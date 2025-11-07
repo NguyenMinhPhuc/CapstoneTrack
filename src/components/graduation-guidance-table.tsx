@@ -376,30 +376,27 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-10/12">Thông tin</TableHead>
-                    <TableHead className="w-2/12 text-right">Hành động</TableHead>
+                    <TableHead className="w-[60%]">Thông tin</TableHead>
+                    <TableHead className="w-[40%] text-right">Hành động</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredRegistrations.length > 0 ? (
-                    filteredRegistrations.map((reg, index) => (
+                    filteredRegistrations.map((reg) => (
                       <AccordionItem value={reg.id} key={reg.id} asChild>
                         <>
                           <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
-                            <TableCell className="w-10/12 p-0">
-                              <AccordionTrigger className="px-4 py-4 w-full hover:no-underline">
-                                <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
-                                  <div className="col-span-1 text-center">{index + 1}</div>
-                                  <div className="col-span-4 font-medium">
-                                    <div>{reg.studentName}</div>
-                                    <div className="text-xs text-muted-foreground">{reg.studentId}</div>
+                            <TableCell className="p-0">
+                               <AccordionTrigger className="px-4 py-4 w-full hover:no-underline text-left">
+                                  <div className="flex-1 space-y-1">
+                                    <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
+                                    <p className="text-sm text-muted-foreground">{reg.projectTitle || "Chưa có tên đề tài"}</p>
+                                    <div className="flex flex-wrap items-start gap-1 pt-1">
+                                      <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
+                                      <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                                    </div>
                                   </div>
-                                  <div className="col-span-7 flex flex-wrap items-start gap-1">
-                                    <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
-                                    <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
-                                  </div>
-                                </div>
-                              </AccordionTrigger>
+                               </AccordionTrigger>
                             </TableCell>
                             <TableCell className="w-2/12 text-right">
                               <DropdownMenu>
@@ -420,7 +417,6 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                             <TableCell colSpan={2} className="p-0">
                               <AccordionContent>
                                 <div className="p-4 bg-muted/30 space-y-4">
-                                  <div className="space-y-1"><h4 className="font-semibold text-base">{reg.projectTitle || "Chưa có tên đề tài"}</h4></div>
                                   <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
                                   <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
                                   <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
