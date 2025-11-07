@@ -1,20 +1,6 @@
-
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  CardDescription
-} from '@/components/ui/card';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Table,
   TableBody,
@@ -23,6 +9,19 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from '@/components/ui/card';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { MoreHorizontal, Search, Eye, FileSignature, FileUp, Activity, Book, Target, CheckCircle, Link as LinkIcon, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
@@ -40,7 +39,7 @@ import {
 } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -372,71 +371,74 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-            <Accordion type="multiple" className="w-full">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[60%]">Thông tin</TableHead>
-                    <TableHead className="w-[40%] text-right">Hành động</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
+             <Table>
+                  <TableHeader>
+                      <TableRow>
+                          <TableHead className="w-[10px]"></TableHead>
+                          <TableHead className="w-2/5">Sinh viên & Đề tài</TableHead>
+                          <TableHead className="w-1/5">Trạng thái</TableHead>
+                          <TableHead className="text-right">Hành động</TableHead>
+                      </TableRow>
+                  </TableHeader>
+                  <TableBody>
                   {filteredRegistrations.length > 0 ? (
                     filteredRegistrations.map((reg) => (
-                      <AccordionItem value={reg.id} key={reg.id} asChild>
+                    <Collapsible key={reg.id} asChild>
                         <>
-                          <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
-                            <TableCell className="p-0">
-                               <AccordionTrigger className="px-4 py-4 w-full hover:no-underline text-left">
-                                  <div className="flex-1 space-y-1">
-                                    <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
-                                    <p className="text-sm text-muted-foreground">{reg.projectTitle || "Chưa có tên đề tài"}</p>
-                                    <div className="flex flex-wrap items-start gap-1 pt-1">
-                                      <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
-                                      <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                        <TableRow>
+                            <TableCell className="w-10/12 p-0" colSpan={3}>
+                                <CollapsibleTrigger asChild>
+                                    <div className="flex items-center px-4 py-4 w-full text-left">
+                                        <ChevronDown className="h-4 w-4 mr-2" />
+                                        <div className="flex-1 space-y-1">
+                                            <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
+                                            <p className="text-sm text-muted-foreground">{reg.projectTitle || "Chưa có tên đề tài"}</p>
+                                            <div className="flex flex-wrap items-start gap-1 pt-1">
+                                                <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
+                                                <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
+                                            </div>
+                                        </div>
                                     </div>
-                                  </div>
-                               </AccordionTrigger>
+                                </CollapsibleTrigger>
                             </TableCell>
                             <TableCell className="w-2/12 text-right">
-                              <DropdownMenu>
+                                <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                  <Button variant="ghost" size="icon">
+                                    <Button variant="ghost" size="icon">
                                     <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
+                                    </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
-                                  <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
                                 </DropdownMenuContent>
-                              </DropdownMenu>
+                                </DropdownMenu>
                             </TableCell>
-                          </TableRow>
-                          <TableRow>
-                            <TableCell colSpan={2} className="p-0">
-                              <AccordionContent>
+                        </TableRow>
+                        <TableRow>
+                            <TableCell colSpan={4} className="p-0">
+                                <CollapsibleContent>
                                 <div className="p-4 bg-muted/30 space-y-4">
-                                  <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
-                                  <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
-                                  <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
+                                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
+                                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
+                                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
                                 </div>
-                              </AccordionContent>
+                                </CollapsibleContent>
                             </TableCell>
-                          </TableRow>
+                        </TableRow>
                         </>
-                      </AccordionItem>
+                    </Collapsible>
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={2} className="text-center h-24">
+                      <TableCell colSpan={4} className="text-center h-24">
                         Không có sinh viên nào phù hợp.
                       </TableCell>
                     </TableRow>
                   )}
-                </TableBody>
+                  </TableBody>
               </Table>
-            </Accordion>
           )}
         </CardContent>
       </Card>
