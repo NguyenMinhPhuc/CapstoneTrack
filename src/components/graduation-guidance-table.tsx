@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Table,
   TableBody,
@@ -105,62 +105,62 @@ function RegistrationRow({ registration, sessionMap, onAction }: { registration:
     const reportLabel = reportStatusLabel[reportStatus];
 
     return (
-        <>
-            <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
-                <TableCell>
-                     <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
-                        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
-                    </Button>
-                </TableCell>
-                <TableCell>
-                    <div className="font-medium">{registration.studentName}</div>
-                    <div className="text-sm text-muted-foreground">{registration.studentId}</div>
-                </TableCell>
-                <TableCell>
-                    <p className="font-medium max-w-xs truncate">{registration.projectTitle || 'Chưa có'}</p>
-                    <p className="text-xs text-muted-foreground">{sessionMap.get(registration.sessionId)}</p>
-                </TableCell>
-                <TableCell>
-                    <div className="flex flex-col gap-1.5 items-start">
-                        <Badge variant={propConfig}>{propLabel}</Badge>
-                        <Badge variant={reportConfig}>{reportLabel}</Badge>
-                    </div>
-                </TableCell>
-                <TableCell className="text-right">
-                    <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="icon">
-                        <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => onAction('progress', registration)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onAction('proposal', registration)} disabled={propStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => onAction('report', registration)} disabled={reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
-                    </DropdownMenuContent>
-                    </DropdownMenu>
-                </TableCell>
-            </TableRow>
-            {isOpen && (
-                <TableRow className="bg-muted/30 hover:bg-muted/40">
-                    <TableCell colSpan={5} className="p-0">
-                         <div className="p-4 space-y-4">
-                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.summary || ''}</ReactMarkdown></div></div>
-                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.objectives || ''}</ReactMarkdown></div></div>
-                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.expectedResults || ''}</ReactMarkdown></div></div>
-                        </div>
-                    </TableCell>
-                </TableRow>
-            )}
-        </>
-    )
+      <React.Fragment>
+        <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
+          <TableCell className="w-12 p-0">
+            <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
+              <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+            </Button>
+          </TableCell>
+          <TableCell>
+            <div className="font-medium">{registration.studentName}</div>
+            <div className="text-sm text-muted-foreground">{registration.studentId}</div>
+          </TableCell>
+          <TableCell>
+            <p className="font-medium max-w-xs truncate">{registration.projectTitle || 'Chưa có'}</p>
+            <p className="text-xs text-muted-foreground">{sessionMap.get(registration.sessionId)}</p>
+          </TableCell>
+          <TableCell>
+            <div className="flex flex-col gap-1.5 items-start">
+              <Badge variant={propConfig}>{propLabel}</Badge>
+              <Badge variant={reportConfig}>{reportLabel}</Badge>
+            </div>
+          </TableCell>
+          <TableCell className="text-right">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onAction('progress', registration)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAction('proposal', registration)} disabled={propStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onAction('report', registration)} disabled={reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </TableCell>
+        </TableRow>
+        {isOpen && (
+          <TableRow className="bg-muted/30 hover:bg-muted/40">
+            <TableCell colSpan={5} className="p-0">
+              <div className="p-4 space-y-4">
+                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.summary || ''}</ReactMarkdown></div></div>
+                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.objectives || ''}</ReactMarkdown></div></div>
+                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.expectedResults || ''}</ReactMarkdown></div></div>
+              </div>
+            </TableCell>
+          </TableRow>
+        )}
+      </React.Fragment>
+    );
 }
 
 export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGuidanceTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSessionId, setSelectedSessionId] = useState('all');
+  const [selectedSessionId, setSelectedSessionId] = useState('ongoing'); // Default to ongoing
   const [proposalStatusFilter, setProposalStatusFilter] = useState('all');
   const [reportStatusFilter, setReportStatusFilter] = useState('all');
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
@@ -169,7 +169,6 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] = useState<DefenseRegistration | null>(null);
   const [isSessionPopoverOpen, setIsSessionPopoverOpen] = useState(false);
-
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -182,7 +181,6 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     return sessions.filter(s => s.sessionType === 'graduation' || s.sessionType === 'combined');
   }, [sessions]);
 
-
   const registrationsQuery = useMemoFirebase(() => {
     let q: Query = collection(firestore, 'defenseRegistrations');
     
@@ -192,7 +190,14 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
         conditions.push(where('supervisorId', '==', supervisorId));
     }
     
-    if (selectedSessionId !== 'all') {
+    if (selectedSessionId === 'ongoing') {
+        const ongoingSessionIds = graduationSessions.filter(s => s.status === 'ongoing').map(s => s.id);
+        if (ongoingSessionIds.length > 0) {
+            conditions.push(where('sessionId', 'in', ongoingSessionIds));
+        } else {
+             conditions.push(where('sessionId', '==', '__impossible_value__'));
+        }
+    } else if (selectedSessionId !== 'all') {
       conditions.push(where('sessionId', '==', selectedSessionId));
     } else {
         const gradSessionIds = graduationSessions.map(s => s.id);
@@ -327,6 +332,12 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     if (type === 'progress') setIsProgressDialogOpen(true);
   }
 
+  const getSessionDisplayName = () => {
+    if (selectedSessionId === 'all') return "Tất cả các đợt";
+    if (selectedSessionId === 'ongoing') return "Đợt đang thực hiện";
+    return sessionMap.get(selectedSessionId) || "Chọn đợt...";
+  }
+
   return (
     <>
       <Card>
@@ -373,9 +384,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                           aria-expanded={isSessionPopoverOpen}
                           className="w-full sm:w-[250px] justify-between"
                       >
-                          {selectedSessionId === 'all'
-                              ? "Tất cả các đợt"
-                              : sessionMap.get(selectedSessionId) || "Chọn đợt..."}
+                          {getSessionDisplayName()}
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                   </PopoverTrigger>
@@ -394,6 +403,16 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
                                   >
                                       <Check className={cn("mr-2 h-4 w-4", selectedSessionId === 'all' ? "opacity-100" : "opacity-0")} />
                                       Tất cả các đợt
+                                  </CommandItem>
+                                  <CommandItem
+                                      value="ongoing"
+                                      onSelect={() => {
+                                          setSelectedSessionId('ongoing');
+                                          setIsSessionPopoverOpen(false);
+                                      }}
+                                  >
+                                      <Check className={cn("mr-2 h-4 w-4", selectedSessionId === 'ongoing' ? "opacity-100" : "opacity-0")} />
+                                      Đợt đang thực hiện
                                   </CommandItem>
                                   {Object.entries(groupedSessions).map(([status, sessionList]) => (
                                       sessionList.length > 0 && (
@@ -426,30 +445,30 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
           {isLoading ? (
             <Skeleton className="h-64 w-full" />
           ) : (
-             <Table>
-                  <TableHeader>
-                      <TableRow>
-                          <TableHead className="w-12"></TableHead>
-                          <TableHead className="w-1/3"><Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentName')}>Sinh viên {getSortIcon('studentName')}</Button></TableHead>
-                          <TableHead><Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('projectTitle')}>Đề tài {getSortIcon('projectTitle')}</Button></TableHead>
-                          <TableHead>Trạng thái</TableHead>
-                          <TableHead className="text-right">Hành động</TableHead>
-                      </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredRegistrations.length > 0 ? (
-                        filteredRegistrations.map((reg) => (
-                            <RegistrationRow key={reg.id} registration={reg} sessionMap={sessionMap} onAction={handleActionClick} />
-                        ))
-                    ) : (
-                        <TableRow>
-                            <TableCell colSpan={5} className="h-24 text-center">
-                                Không có sinh viên nào.
-                            </TableCell>
-                        </TableRow>
-                    )}
-                  </TableBody>
-              </Table>
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead className="w-12"></TableHead>
+                        <TableHead><Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentName')}>Sinh viên {getSortIcon('studentName')}</Button></TableHead>
+                        <TableHead><Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('projectTitle')}>Đề tài {getSortIcon('projectTitle')}</Button></TableHead>
+                        <TableHead>Trạng thái</TableHead>
+                        <TableHead className="text-right">Hành động</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                {filteredRegistrations.length > 0 ? (
+                    filteredRegistrations.map((reg) => (
+                        <RegistrationRow key={reg.id} registration={reg} sessionMap={sessionMap} onAction={handleActionClick} />
+                    ))
+                ) : (
+                    <TableRow>
+                        <TableCell colSpan={5} className="h-24 text-center">
+                            Không có sinh viên nào.
+                        </TableCell>
+                    </TableRow>
+                )}
+                </TableBody>
+            </Table>
           )}
         </CardContent>
       </Card>
@@ -560,3 +579,5 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     </>
   );
 }
+
+    
