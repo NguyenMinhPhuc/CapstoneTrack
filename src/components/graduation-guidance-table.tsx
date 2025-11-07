@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -22,7 +23,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, Search, Eye, FileSignature, FileUp, Activity, Book, Target, CheckCircle, Link as LinkIcon, ArrowUpDown, ChevronUp, ChevronDown } from 'lucide-react';
+import { MoreHorizontal, Search, Eye, FileSignature, FileUp, Activity, Book, Target, CheckCircle, Link as LinkIcon, ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, Query, doc, updateDoc } from 'firebase/firestore';
 import type { DefenseRegistration, GraduationDefenseSession, WeeklyProgressReport } from '@/lib/types';
@@ -39,7 +40,6 @@ import {
 } from '@/components/ui/select';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
@@ -92,6 +92,69 @@ const statusLabel: Record<string, string> = {
   upcoming: 'Sắp diễn ra',
   completed: 'Đã hoàn thành',
 };
+
+function RegistrationRow({ registration, sessionMap, onAction }: { registration: DefenseRegistration, sessionMap: Map<string, string>, onAction: (type: 'proposal' | 'report' | 'progress', reg: DefenseRegistration) => void }) {
+    const [isOpen, setIsOpen] = useState(false);
+
+    const propStatus = registration.proposalStatus || 'not_submitted';
+    const propConfig = proposalStatusVariant[propStatus];
+    const propLabel = proposalStatusLabel[propStatus];
+
+    const reportStatus = registration.reportStatus || 'not_submitted';
+    const reportConfig = reportStatusVariant[reportStatus];
+    const reportLabel = reportStatusLabel[reportStatus];
+
+    return (
+        <>
+            <TableRow className="hover:bg-muted/50 data-[state=open]:bg-muted/50">
+                <TableCell>
+                     <Button variant="ghost" size="icon" onClick={() => setIsOpen(!isOpen)}>
+                        <ChevronDown className={cn("h-4 w-4 transition-transform", isOpen && "rotate-180")} />
+                    </Button>
+                </TableCell>
+                <TableCell>
+                    <div className="font-medium">{registration.studentName}</div>
+                    <div className="text-sm text-muted-foreground">{registration.studentId}</div>
+                </TableCell>
+                <TableCell>
+                    <p className="font-medium max-w-xs truncate">{registration.projectTitle || 'Chưa có'}</p>
+                    <p className="text-xs text-muted-foreground">{sessionMap.get(registration.sessionId)}</p>
+                </TableCell>
+                <TableCell>
+                    <div className="flex flex-col gap-1.5 items-start">
+                        <Badge variant={propConfig}>{propLabel}</Badge>
+                        <Badge variant={reportConfig}>{reportLabel}</Badge>
+                    </div>
+                </TableCell>
+                <TableCell className="text-right">
+                    <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon">
+                        <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => onAction('progress', registration)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onAction('proposal', registration)} disabled={propStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => onAction('report', registration)} disabled={reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
+                    </DropdownMenuContent>
+                    </DropdownMenu>
+                </TableCell>
+            </TableRow>
+            {isOpen && (
+                <TableRow className="bg-muted/30 hover:bg-muted/40">
+                    <TableCell colSpan={5} className="p-0">
+                         <div className="p-4 space-y-4">
+                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.summary || ''}</ReactMarkdown></div></div>
+                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.objectives || ''}</ReactMarkdown></div></div>
+                            <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{registration.expectedResults || ''}</ReactMarkdown></div></div>
+                        </div>
+                    </TableCell>
+                </TableRow>
+            )}
+        </>
+    )
+}
 
 export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGuidanceTableProps) {
   const firestore = useFirestore();
@@ -176,7 +239,7 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     if (!sortConfig || sortConfig.key !== key) {
         return <ArrowUpDown className="ml-2 h-4 w-4 opacity-30" />;
     }
-    return sortConfig.direction === 'asc' ? <ArrowUpDown className="ml-2 h-4 w-4" /> : <ArrowUpDown className="ml-2 h-4 w-4" />;
+    return sortConfig.direction === 'asc' ? <ChevronUp className="ml-2 h-4 w-4" /> : <ChevronDown className="ml-2 h-4 w-4" />;
   };
 
   const filteredRegistrations = useMemo(() => {
@@ -257,19 +320,11 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
     }
   }
 
-  const handleViewProposalClick = (registration: DefenseRegistration) => {
+  const handleActionClick = (type: 'proposal' | 'report' | 'progress', registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
-    setIsProposalDialogOpen(true);
-  }
-
-  const handleViewReportClick = (registration: DefenseRegistration) => {
-    setSelectedRegistration(registration);
-    setIsReportDialogOpen(true);
-  }
-  
-  const handleViewProgressClick = (registration: DefenseRegistration) => {
-    setSelectedRegistration(registration);
-    setIsProgressDialogOpen(true);
+    if (type === 'proposal') setIsProposalDialogOpen(true);
+    if (type === 'report') setIsReportDialogOpen(true);
+    if (type === 'progress') setIsProgressDialogOpen(true);
   }
 
   return (
@@ -374,69 +429,25 @@ export function GraduationGuidanceTable({ supervisorId, userRole }: GraduationGu
              <Table>
                   <TableHeader>
                       <TableRow>
-                          <TableHead className="w-[10px]"></TableHead>
-                          <TableHead className="w-2/5">Sinh viên & Đề tài</TableHead>
-                          <TableHead className="w-1/5">Trạng thái</TableHead>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead className="w-1/3"><Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentName')}>Sinh viên {getSortIcon('studentName')}</Button></TableHead>
+                          <TableHead><Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('projectTitle')}>Đề tài {getSortIcon('projectTitle')}</Button></TableHead>
+                          <TableHead>Trạng thái</TableHead>
                           <TableHead className="text-right">Hành động</TableHead>
                       </TableRow>
                   </TableHeader>
                   <TableBody>
-                  {filteredRegistrations.length > 0 ? (
-                    filteredRegistrations.map((reg) => (
-                    <Collapsible key={reg.id} asChild>
-                        <>
+                    {filteredRegistrations.length > 0 ? (
+                        filteredRegistrations.map((reg) => (
+                            <RegistrationRow key={reg.id} registration={reg} sessionMap={sessionMap} onAction={handleActionClick} />
+                        ))
+                    ) : (
                         <TableRow>
-                            <TableCell className="w-10/12 p-0" colSpan={3}>
-                                <CollapsibleTrigger asChild>
-                                    <div className="flex items-center px-4 py-4 w-full text-left">
-                                        <ChevronDown className="h-4 w-4 mr-2" />
-                                        <div className="flex-1 space-y-1">
-                                            <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
-                                            <p className="text-sm text-muted-foreground">{reg.projectTitle || "Chưa có tên đề tài"}</p>
-                                            <div className="flex flex-wrap items-start gap-1 pt-1">
-                                                <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge>
-                                                <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </CollapsibleTrigger>
-                            </TableCell>
-                            <TableCell className="w-2/12 text-right">
-                                <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                    <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem tiến độ</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem thuyết minh</DropdownMenuItem>
-                                    <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem báo cáo</DropdownMenuItem>
-                                </DropdownMenuContent>
-                                </DropdownMenu>
+                            <TableCell colSpan={5} className="h-24 text-center">
+                                Không có sinh viên nào.
                             </TableCell>
                         </TableRow>
-                        <TableRow>
-                            <TableCell colSpan={4} className="p-0">
-                                <CollapsibleContent>
-                                <div className="p-4 bg-muted/30 space-y-4">
-                                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.summary || ''}</ReactMarkdown></div></div>
-                                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.objectives || ''}</ReactMarkdown></div></div>
-                                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{reg.expectedResults || ''}</ReactMarkdown></div></div>
-                                </div>
-                                </CollapsibleContent>
-                            </TableCell>
-                        </TableRow>
-                        </>
-                    </Collapsible>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={4} className="text-center h-24">
-                        Không có sinh viên nào phù hợp.
-                      </TableCell>
-                    </TableRow>
-                  )}
+                    )}
                   </TableBody>
               </Table>
           )}
