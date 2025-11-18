@@ -67,7 +67,7 @@ export type Student = {
     internshipStatus: 'achieved' | 'not_achieved';
 }
 
-export type ReportStatus = 'reporting' | 'exempted' | 'withdrawn' | 'not_reporting' | 'completed';
+export type ReportStatus = 'reporting' | 'exempted' | 'not_yet_reporting' | 'not_reporting' | 'completed';
 export type ProjectRegistrationStatus = 'pending' | 'approved' | 'rejected';
 export type ProposalStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
 export type FinalReportStatus = 'not_submitted' | 'pending_approval' | 'approved' | 'rejected';
@@ -123,6 +123,8 @@ export type DefenseRegistration = {
   internship_acceptanceLetterLink?: string;
   internship_feedbackFormLink?: string;
   internship_reportLink?: string;
+  internship_positionId?: string;
+  internship_positionTitle?: string;
 }
 
 // Represents a student's registration for a specific graduation defense session.
@@ -255,17 +257,26 @@ export type WeeklyProgressReport = {
     reviewDate?: any;
 }
 
+export type InternshipPosition = {
+  id: string;
+  title: string;
+  description?: string;
+  quantity: number;
+  supervisorId?: string;
+  supervisorName?: string;
+}
+
 export type InternshipCompany = {
   id: string;
   name: string;
   address?: string;
   description?: string;
   website?: string;
-  supervisorId?: string; // Add this to link to a supervisor if isLHU is true
   contactName?: string;
   contactEmail?: string;
   contactPhone?: string;
   isLHU?: boolean;
+  positions?: InternshipPosition[];
   createdAt?: any;
 };
 
@@ -281,7 +292,7 @@ export type EarlyInternship = {
   startDate: any;
   endDate?: any;
   proofLink?: string;
-  status: 'pending_approval' | 'ongoing' | 'completed' | 'rejected' | 'cancelled';
+  status: 'pending_admin_approval' | 'pending_company_approval' | 'ongoing' | 'completed' | 'rejected_by_admin' | 'rejected_by_company' | 'cancelled';
   statusNote?: string;
   batch: string;
 };

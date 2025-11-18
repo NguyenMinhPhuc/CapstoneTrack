@@ -1,5 +1,3 @@
-
-
 'use client';
 
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -18,21 +16,16 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore } from '@/firebase';
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from 'firebase/firestore';
-import type { Student, Supervisor, DefenseSession } from '@/lib/types';
+import type { Student, Supervisor, DefenseSession, DefenseRegistration } from '@/lib/types';
 import { useEffect, useState } from 'react';
-import { SupervisorCombobox } from './supervisor-combobox';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
 import { Check, ChevronsUpDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 
-const NO_SUPERVISOR_VALUE = "__NONE__";
-
 const formSchema = z.object({
   studentDocId: z.string({ required_error: 'Vui lòng chọn một sinh viên.' }),
-  projectTitle: z.string().optional(),
-  supervisorId: z.string().optional(),
 });
 
 interface AddStudentRegistrationFormProps {
@@ -47,7 +40,6 @@ export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished 
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoadingStudents, setIsLoadingStudents] = useState(true);
   const [comboboxOpen, setComboboxOpen] = useState(false);
-  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
 
   useEffect(() => {
     const fetchStudents = async () => {
@@ -80,10 +72,7 @@ export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished 
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      projectTitle: '',
-      supervisorId: '',
-    },
+    defaultValues: {},
   });
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
@@ -108,17 +97,11 @@ export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished 
         return;
     }
     
-    const supervisorIdValue = values.supervisorId === NO_SUPERVISOR_VALUE ? null : (values.supervisorId || null);
-    const supervisorNameValue = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : '';
-    
-    const newRegistrationData: any = {
+    const newRegistrationData: Partial<DefenseRegistration> = {
       sessionId: sessionId,
       studentDocId: selectedStudent.id,
       studentId: selectedStudent.studentId,
       studentName: `${selectedStudent.firstName} ${selectedStudent.lastName}`,
-      projectTitle: values.projectTitle,
-      supervisorId: supervisorIdValue,
-      supervisorName: supervisorNameValue,
       registrationDate: serverTimestamp(),
     };
     
@@ -216,36 +199,6 @@ export function AddStudentRegistrationForm({ sessionId, sessionType, onFinished 
                   </Command>
                 </PopoverContent>
               </Popover>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="projectTitle"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Tên đề tài (tùy chọn)</FormLabel>
-              <FormControl>
-                <Input placeholder="Ví dụ: Xây dựng hệ thống quản lý..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="supervisorId"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Giáo viên hướng dẫn</FormLabel>
-               <FormControl>
-                 <SupervisorCombobox
-                    value={field.value || null}
-                    onChange={(supervisorId) => field.onChange(supervisorId || '')}
-                    onSupervisorSelect={setSelectedSupervisor}
-                />
-               </FormControl>
               <FormMessage />
             </FormItem>
           )}

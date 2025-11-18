@@ -247,7 +247,7 @@ export function CompanyManagementTable() {
                                 Thêm Doanh nghiệp
                             </Button>
                         </DialogTrigger>
-                        <DialogContent className="sm:max-w-lg">
+                        <DialogContent className="sm:max-w-2xl">
                             <AddCompanyForm onFinished={() => setIsAddDialogOpen(false)} />
                         </DialogContent>
                     </Dialog>
@@ -267,7 +267,7 @@ export function CompanyManagementTable() {
               </TableHead>
               <TableHead>Tên Doanh nghiệp</TableHead>
               <TableHead>Địa chỉ</TableHead>
-              <TableHead>Website</TableHead>
+              <TableHead>Số vị trí</TableHead>
               <TableHead>Phòng ban LHU</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
@@ -283,9 +283,7 @@ export function CompanyManagementTable() {
                 </TableCell>
                 <TableCell className="font-medium">{company.name}</TableCell>
                 <TableCell>{company.address}</TableCell>
-                <TableCell>
-                  <a href={company.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{company.website}</a>
-                </TableCell>
+                <TableCell>{company.positions?.length || 0}</TableCell>
                 <TableCell>
                     {company.isLHU && <CheckCircle className="h-5 w-5 text-green-500" />}
                 </TableCell>
@@ -310,7 +308,7 @@ export function CompanyManagementTable() {
     </Card>
 
     <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-2xl">
           {selectedCompany && (
             <EditCompanyForm
               company={selectedCompany}

@@ -17,7 +17,7 @@ import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { useFirestore, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship } from '@/lib/types';
+import type { DefenseRegistration, InternshipCompany, InternshipRegistrationStatus, EarlyInternship, InternshipPosition, Supervisor } from '@/lib/types';
 import { Separator } from './ui/separator';
 import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 import {
@@ -29,8 +29,9 @@ import {
 } from '@/components/ui/select';
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
-import { Building, Mail, Phone, User, XCircle } from 'lucide-react';
+import { Building, Mail, Phone, User, XCircle, Briefcase } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { SupervisorCombobox } from './supervisor-combobox';
 
 
 const formSchema = z.object({
@@ -38,6 +39,8 @@ const formSchema = z.object({
   
   // From list
   selectedCompanyId: z.string().optional(),
+  internship_positionId: z.string().optional(),
+  internshipSupervisorId: z.string().optional(), // For LHU departments
 
   // Self-arranged
   internship_companyName: z.string().optional(),
@@ -56,14 +59,13 @@ const formSchema = z.object({
     if (data.registrationType === 'self_arranged') {
         return !!data.internship_companyName;
     }
-    // early_internship is always valid if selected, as data is pre-filled
     if (data.registrationType === 'early_internship') {
         return true;
     }
     return false;
 }, {
     message: 'Vui lòng chọn doanh nghiệp hoặc nhập tên doanh nghiệp.',
-    path: ['selectedCompanyId'] // Apply error to one of the fields
+    path: ['selectedCompanyId']
 });
 
 
@@ -79,20 +81,23 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
   const { toast } = useToast();
   const firestore = useFirestore();
   const [selectedCompany, setSelectedCompany] = useState<InternshipCompany | null>(null);
+  const [selectedPosition, setSelectedPosition] = useState<InternshipPosition | null>(null);
+  const [selectedSupervisor, setSelectedSupervisor] = useState<Supervisor | null>(null);
+
 
   const isApproved = registration.internshipRegistrationStatus === 'approved';
   const isRejected = registration.internshipRegistrationStatus === 'rejected';
   const isPending = registration.internshipRegistrationStatus === 'pending';
   
-  // Only company details are locked after approval. Links are always editable.
-  const areCompanyFieldsDisabled = isApproved || isPending;
+  const areCompanyFieldsDisabled = isApproved || isPending || isRejected;
 
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      registrationType: registration.internship_companyName ? 'self_arranged' : 'from_list',
+      registrationType: registration.internship_companyName ? (hasCompletedEarlyInternship && registration.internship_companyName === earlyInternshipData?.companyName ? 'early_internship' : 'self_arranged') : 'from_list',
       selectedCompanyId: '',
+      internship_positionId: registration.internship_positionId || '',
       internship_companyName: registration.internship_companyName || '',
       internship_companyAddress: registration.internship_companyAddress || '',
       internship_companySupervisorName: registration.internship_companySupervisorName || '',
@@ -100,26 +105,45 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
       internship_registrationFormLink: registration.internship_registrationFormLink || '',
       internship_acceptanceLetterLink: registration.internship_acceptanceLetterLink || '',
       internship_commitmentFormLink: registration.internship_commitmentFormLink || '',
+      internshipSupervisorId: registration.internshipSupervisorId || '',
     },
   });
 
   const registrationType = useWatch({ control: form.control, name: 'registrationType' });
   const selectedCompanyId = useWatch({ control: form.control, name: 'selectedCompanyId' });
+  const internship_positionId = useWatch({ control: form.control, name: 'internship_positionId' });
+
 
   useEffect(() => {
     if (registrationType === 'from_list' && selectedCompanyId) {
       const company = sessionCompanies.find(c => c.id === selectedCompanyId);
       setSelectedCompany(company || null);
+       if (company?.positions && company.positions.length > 0) {
+        form.setValue('internship_positionId', ''); 
+      }
     } else {
       setSelectedCompany(null);
     }
-  }, [selectedCompanyId, registrationType, sessionCompanies]);
+  }, [selectedCompanyId, registrationType, sessionCompanies, form]);
+  
+  useEffect(() => {
+      if (selectedCompany && internship_positionId) {
+          const position = selectedCompany.positions?.find(p => p.id === internship_positionId);
+          setSelectedPosition(position || null);
+          if (position?.supervisorId) {
+              form.setValue('internshipSupervisorId', position.supervisorId);
+          }
+      } else {
+          setSelectedPosition(null);
+      }
+  }, [selectedCompany, internship_positionId, form]);
   
   useEffect(() => {
       if (registrationType === 'early_internship' && earlyInternshipData) {
           form.setValue('internship_companyName', earlyInternshipData.companyName);
           form.setValue('internship_companyAddress', earlyInternshipData.companyAddress || '');
           form.setValue('internship_companySupervisorName', earlyInternshipData.supervisorName);
+          form.setValue('internshipSupervisorId', earlyInternshipData.supervisorId);
           form.setValue('internship_companySupervisorPhone', ''); // Not stored in early internship
       }
   }, [registrationType, earlyInternshipData, form]);
@@ -133,31 +157,51 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
         internship_commitmentFormLink: values.internship_commitmentFormLink,
     };
     
-    // Only update company details if the form is not locked (i.e., not approved or pending)
+    // Only update company info if the form is not locked
     if (!areCompanyFieldsDisabled) {
         dataToUpdate.internshipStatus = 'reporting';
         dataToUpdate.internshipRegistrationStatus = 'pending' as InternshipRegistrationStatus;
-        dataToUpdate.internshipStatusNote = ''; // Clear previous rejection note on resubmission
+        dataToUpdate.internshipStatusNote = '';
 
         if (values.registrationType === 'from_list' && values.selectedCompanyId) {
             const company = sessionCompanies.find(c => c.id === values.selectedCompanyId);
             if (company) {
                 dataToUpdate.internship_companyName = company.name;
-                dataToUpdate.internship_companyAddress = company.address;
-                dataToUpdate.internship_companySupervisorName = company.contactName;
-                dataToUpdate.internship_companySupervisorPhone = company.contactPhone;
+                dataToUpdate.internship_companyAddress = company.address || '';
+                const position = company.positions?.find(p => p.id === values.internship_positionId);
+                 if (position) {
+                    dataToUpdate.internship_positionId = position.id || '';
+                    dataToUpdate.internship_positionTitle = position.title || '';
+                    dataToUpdate.internship_companySupervisorName = position.supervisorName || ''; 
+                    dataToUpdate.internshipSupervisorId = values.internshipSupervisorId || position.supervisorId || ''; 
+                    dataToUpdate.internshipSupervisorName = selectedSupervisor ? `${selectedSupervisor.firstName} ${selectedSupervisor.lastName}` : (position.supervisorName || '');
+                    dataToUpdate.internship_companySupervisorPhone = '';
+                } else {
+                    dataToUpdate.internship_companySupervisorName = company.contactName || '';
+                    dataToUpdate.internship_companySupervisorPhone = company.contactPhone || '';
+                    dataToUpdate.internship_positionId = '';
+                    dataToUpdate.internship_positionTitle = '';
+                    dataToUpdate.internshipSupervisorId = '';
+                    dataToUpdate.internshipSupervisorName = '';
+                }
             }
         } else if (values.registrationType === 'self_arranged') {
-            dataToUpdate.internship_companyName = values.internship_companyName;
-            dataToUpdate.internship_companyAddress = values.internship_companyAddress;
-            dataToUpdate.internship_companySupervisorName = values.internship_companySupervisorName;
-            dataToUpdate.internship_companySupervisorPhone = values.internship_companySupervisorPhone;
+            dataToUpdate.internship_companyName = values.internship_companyName || '';
+            dataToUpdate.internship_companyAddress = values.internship_companyAddress || '';
+            dataToUpdate.internship_companySupervisorName = values.internship_companySupervisorName || '';
+            dataToUpdate.internship_companySupervisorPhone = values.internship_companySupervisorPhone || '';
+            dataToUpdate.internship_positionId = '';
+            dataToUpdate.internship_positionTitle = '';
+            dataToUpdate.internshipSupervisorId = '';
+            dataToUpdate.internshipSupervisorName = '';
         } else if (values.registrationType === 'early_internship' && earlyInternshipData) {
-             dataToUpdate.internship_companyName = earlyInternshipData.companyName;
-             dataToUpdate.internship_companyAddress = earlyInternshipData.companyAddress;
-             dataToUpdate.internship_companySupervisorName = earlyInternshipData.supervisorName;
-             dataToUpdate.internshipSupervisorId = earlyInternshipData.supervisorId;
-             dataToUpdate.internshipSupervisorName = earlyInternshipData.supervisorName;
+             dataToUpdate.internship_companyName = earlyInternshipData.companyName || '';
+             dataToUpdate.internship_companyAddress = earlyInternshipData.companyAddress || '';
+             dataToUpdate.internship_companySupervisorName = earlyInternshipData.supervisorName || '';
+             dataToUpdate.internshipSupervisorId = earlyInternshipData.supervisorId || '';
+             dataToUpdate.internshipSupervisorName = earlyInternshipData.supervisorName || '';
+             dataToUpdate.internship_positionId = '';
+             dataToUpdate.internship_positionTitle = '';
         }
     }
 
@@ -182,15 +226,19 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
 
   return (
     <Form {...form}>
-       {isRejected && registration.internshipStatusNote && (
-            <Alert variant="destructive" className="mb-6">
-                <XCircle className="h-4 w-4" />
-                <AlertTitle>Đăng ký bị từ chối</AlertTitle>
-                <AlertDescription>
-                    <p>Lý do: {registration.internshipStatusNote}</p>
-                    <p className="mt-2">Vui lòng kiểm tra lại thông tin, chỉnh sửa và nộp lại.</p>
-                </AlertDescription>
-            </Alert>
+       {isRejected && (
+            <div className="space-y-4">
+                <Alert variant="destructive">
+                    <XCircle className="h-4 w-4" />
+                    <AlertTitle>Đăng ký bị từ chối</AlertTitle>
+                    <AlertDescription>
+                        {registration.internshipStatusNote ? `Lý do: ${registration.internshipStatusNote}` : 'Đơn đăng ký của bạn đã bị từ chối.'}
+                    </AlertDescription>
+                </Alert>
+                <Button onClick={() => form.setValue('registrationType', 'self_arranged')} className="w-full">
+                    Đăng ký lại
+                </Button>
+            </div>
         )}
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
         <FormField
@@ -236,7 +284,7 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                     name="selectedCompanyId"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Chọn Doanh nghiệp</FormLabel>
+                        <FormLabel>Chọn Doanh nghiệp / Phòng ban</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value} disabled={areCompanyFieldsDisabled}>
                             <FormControl>
                             <SelectTrigger>
@@ -261,36 +309,111 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                             <CardTitle>{selectedCompany.name}</CardTitle>
                             <CardDescription>{selectedCompany.website ? <a href={selectedCompany.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{selectedCompany.website}</a> : 'Không có website'}</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-4 text-sm">
-                             <div className="flex items-start gap-3">
-                                <Building className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Địa chỉ</p>
-                                    <p className="text-muted-foreground">{selectedCompany.address || 'Chưa có thông tin'}</p>
+                        <CardContent className="space-y-4">
+                             {selectedCompany.description && (
+                                <>
+                                  <div className="space-y-1">
+                                      <p className="font-medium text-sm">Mô tả công ty</p>
+                                      <p className="text-sm text-muted-foreground">{selectedCompany.description}</p>
+                                  </div>
+                                  <Separator />
+                                </>
+                            )}
+                            {selectedCompany.positions && selectedCompany.positions.length > 0 && (
+                                <FormField
+                                    control={form.control}
+                                    name="internship_positionId"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Chọn Vị trí Thực tập</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value} disabled={areCompanyFieldsDisabled}>
+                                                <FormControl>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Chọn một vị trí..." />
+                                                    </SelectTrigger>
+                                                </FormControl>
+                                                <SelectContent>
+                                                    {selectedCompany.positions?.map((pos) => (
+                                                        <SelectItem key={pos.id} value={pos.id}>
+                                                            {pos.title} (Số lượng: {pos.quantity})
+                                                        </SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
+                            {selectedPosition && (
+                                <Card className="bg-muted/50">
+                                    <CardHeader>
+                                        <CardTitle className="text-base flex items-center gap-2">
+                                            <Briefcase className="h-4 w-4" />
+                                            {selectedPosition.title}
+                                        </CardTitle>
+                                        <CardDescription>Số lượng: {selectedPosition.quantity}</CardDescription>
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {selectedPosition.description && (
+                                            <p className="text-sm text-muted-foreground">{selectedPosition.description}</p>
+                                        )}
+                                        {selectedCompany.isLHU && (
+                                            <FormField
+                                                control={form.control}
+                                                name="internshipSupervisorId"
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                        <FormLabel>Người hướng dẫn tại trường</FormLabel>
+                                                        <FormControl>
+                                                            <SupervisorCombobox
+                                                                value={field.value || null}
+                                                                onChange={(supervisorId) => field.onChange(supervisorId || '')}
+                                                                onSupervisorSelect={setSelectedSupervisor}
+                                                                disabled={areCompanyFieldsDisabled}
+                                                            />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                        )}
+                                    </CardContent>
+                                </Card>
+                            )}
+                             {!selectedCompany.isLHU && (
+                                <div className="space-y-3 text-sm pt-4">
+                                    <div className="flex items-start gap-3">
+                                        <Building className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <div>
+                                            <p className="font-medium">Địa chỉ</p>
+                                            <p className="text-muted-foreground">{selectedCompany.address || 'Chưa có thông tin'}</p>
+                                        </div>
+                                    </div>
+                                    <Separator />
+                                    <div className="flex items-start gap-3">
+                                        <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <div>
+                                            <p className="font-medium">Người liên hệ</p>
+                                            <p className="text-muted-foreground">{selectedCompany.contactName || 'Chưa có thông tin'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <div>
+                                            <p className="font-medium">Số điện thoại</p>
+                                            <p className="text-muted-foreground">{selectedCompany.contactPhone || 'Chưa có thông tin'}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex items-start gap-3">
+                                        <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
+                                        <div>
+                                            <p className="font-medium">Email</p>
+                                            <p className="text-muted-foreground">{selectedCompany.contactEmail || 'Chưa có thông tin'}</p>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
-                            <Separator />
-                            <div className="flex items-start gap-3">
-                                <User className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Người liên hệ</p>
-                                    <p className="text-muted-foreground">{selectedCompany.contactName || 'Chưa có thông tin'}</p>
-                                </div>
-                            </div>
-                             <div className="flex items-start gap-3">
-                                <Phone className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Số điện thoại</p>
-                                    <p className="text-muted-foreground">{selectedCompany.contactPhone || 'Chưa có thông tin'}</p>
-                                </div>
-                            </div>
-                             <div className="flex items-start gap-3">
-                                <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
-                                <div>
-                                    <p className="font-medium">Email</p>
-                                    <p className="text-muted-foreground">{selectedCompany.contactEmail || 'Chưa có thông tin'}</p>
-                                </div>
-                            </div>
+                             )}
                         </CardContent>
                     </Card>
                 )}
@@ -377,11 +500,18 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                  />
                  <FormField
                     control={form.control}
-                    name="internship_companySupervisorName"
+                    name="internshipSupervisorId"
                     render={({ field }) => (
-                        <FormItem>
+                         <FormItem>
                             <FormLabel>Người hướng dẫn</FormLabel>
-                            <FormControl><Input {...field} disabled /></FormControl>
+                            <FormControl>
+                                <SupervisorCombobox
+                                    value={field.value || null}
+                                    onChange={(supervisorId) => field.onChange(supervisorId || '')}
+                                    onSupervisorSelect={setSelectedSupervisor}
+                                    disabled
+                                />
+                            </FormControl>
                         </FormItem>
                     )}
                  />
@@ -403,41 +533,41 @@ export function InternshipRegistrationForm({ registration, sessionCompanies, has
                 <FormControl>
                     <Input placeholder="https://docs.google.com/..." {...field} />
                 </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <FormField
-            control={form.control}
-            name="internship_acceptanceLetterLink"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Giấy tiếp nhận thực tập</FormLabel>
-                <FormControl>
-                    <Input placeholder="https://docs.google.com/..." {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
-            <FormField
-            control={form.control}
-            name="internship_commitmentFormLink"
-            render={({ field }) => (
-                <FormItem>
-                <FormLabel>Đơn cam kết tự đi thực tập (nếu có)</FormLabel>
-                <FormControl>
-                    <Input placeholder="https://docs.google.com/..." {...field} />
-                </FormControl>
-                <FormMessage />
-                </FormItem>
-            )}
-            />
+               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="internship_acceptanceLetterLink"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Giấy tiếp nhận thực tập</FormLabel>
+              <FormControl>
+                <Input placeholder="https://docs.google.com/..." {...field} />
+              </FormControl>
+               <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="internship_commitmentFormLink"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Đơn cam kết tự đi thực tập (nếu có)</FormLabel>
+              <FormControl>
+                <Input placeholder="https://docs.google.com/..." {...field} />
+              </FormControl>
+               <FormMessage />
+            </FormItem>
+          )}
+        />
         </div>
 
 
-        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting}>
-          {isApproved ? 'Lưu thay đổi' : (isPending ? 'Đang chờ duyệt' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký'))}
+        <Button type="submit" className="w-full" disabled={form.formState.isSubmitting || isApproved || isRejected}>
+          {isApproved ? 'Đơn đã được duyệt' : (isPending ? 'Đang chờ duyệt' : (isRejected ? 'Đơn đã bị từ chối' : (form.formState.isSubmitting ? 'Đang gửi...' : 'Gửi Đăng ký')))}
         </Button>
       </form>
     </Form>

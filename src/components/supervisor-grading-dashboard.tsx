@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, useDoc } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, useDoc, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, query, where, getDocs, doc, Query, DocumentData } from 'firebase/firestore';
 import type { GraduationDefenseSession, DefenseRegistration, Supervisor, Rubric, Evaluation } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,13 +15,6 @@ import { Button } from './ui/button';
 import { Dialog, DialogContent } from './ui/dialog';
 import { GradingForm, type ProjectGroup } from './grading-form';
 import { Separator } from './ui/separator';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-
 
 interface SupervisorGradingDashboardProps {
   supervisorId: string;
@@ -34,7 +27,6 @@ interface SessionAssignments {
   internshipRegistrations: DefenseRegistration[];
 }
 
-// Component for grading Graduation Projects
 function GraduationGradingView({
     registrations,
     rubric,
@@ -52,12 +44,16 @@ function GraduationGradingView({
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
 
+
     const projectGroups = useMemo(() => {
+        // Only include students whose final report has been approved
         const groups = new Map<string, DefenseRegistration[]>();
         registrations.forEach(reg => {
-            const projectKey = reg.projectTitle || `_individual_${reg.id}`;
-            if (!groups.has(projectKey)) groups.set(projectKey, []);
-            groups.get(projectKey)!.push(reg);
+            if (reg.reportStatus === 'approved') {
+                const projectKey = reg.projectTitle || `_individual_${reg.id}`;
+                if (!groups.has(projectKey)) groups.set(projectKey, []);
+                groups.get(projectKey)!.push(reg);
+            }
         });
         return Array.from(groups.entries()).map(([projectTitle, students]) => ({ projectTitle, students }));
     }, [registrations]);
@@ -79,8 +75,8 @@ function GraduationGradingView({
         setIsDialogOpen(true);
     };
 
-    if (registrations.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn đồ án tốt nghiệp nào trong đợt này.</p>;
+    if (projectGroups.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Chưa có sinh viên nào có báo cáo đã được duyệt để chấm điểm.</p>;
     }
 
     return (
@@ -89,34 +85,21 @@ function GraduationGradingView({
                 {projectGroups.map(group => {
                     const evaluation = getEvaluationForGroup(group);
                     return (
-                        <div key={group.projectTitle} className="border rounded-lg p-4 space-y-3">
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <h4 className="font-semibold truncate cursor-default">
-                                            {group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}
-                                        </h4>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>{group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                            <div className="space-y-2 pl-4 border-l-2">
-                                {group.students.map(student => (
-                                    <p key={student.id} className="text-sm text-muted-foreground">{student.studentName} ({student.studentId})</p>
-                                ))}
+                        <div key={group.projectTitle} className="border rounded-lg p-4 flex items-center justify-between">
+                            <div>
+                                <h4 className="font-semibold">{group.projectTitle.startsWith('_individual_') ? 'Đề tài cá nhân' : group.projectTitle}</h4>
+                                <div className="text-xs text-muted-foreground">
+                                    {group.students.map(s => `${s.studentName} (${s.studentId})`).join(', ')}
+                                </div>
                             </div>
-                            <Separator />
                             <div className="flex items-center gap-2">
                                 {evaluation && (
                                     <Badge variant="secondary" className="border-green-600/50 bg-green-50 text-green-700">
                                         {evaluation.totalScore.toFixed(2)}
                                     </Badge>
                                 )}
-                                <Button className="w-full" variant="secondary" disabled={!rubric} onClick={() => handleGradeClick(group)}>
-                                    <GraduationCap className="mr-2 h-4 w-4" />
-                                    {evaluation ? 'Sửa điểm Đồ án' : 'Chấm điểm Đồ án'}
+                                <Button className="w-32" variant="outline" disabled={!rubric} onClick={() => handleGradeClick(group)}>
+                                    {evaluation ? 'Sửa điểm' : 'Chấm điểm'}
                                 </Button>
                             </div>
                         </div>
@@ -160,6 +143,11 @@ function InternshipGradingView({
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [existingEvaluation, setExistingEvaluation] = useState<Evaluation | null>(null);
     
+    // Only show students who are in 'reporting' status
+    const validRegistrations = useMemo(() => {
+        return registrations.filter(reg => reg.internshipStatus === 'reporting');
+    }, [registrations]);
+
     const getEvaluationForInternship = (student: DefenseRegistration) => {
         return evaluations.find(e => 
             e.registrationId === student.id &&
@@ -176,14 +164,14 @@ function InternshipGradingView({
         setIsDialogOpen(true);
     };
 
-    if (registrations.length === 0) {
-        return <p className="text-sm text-muted-foreground px-6 pb-4">Bạn không hướng dẫn thực tập cho sinh viên nào trong đợt này.</p>;
+    if (validRegistrations.length === 0) {
+        return <p className="text-sm text-muted-foreground px-6 pb-4">Không có sinh viên nào đang ở trạng thái báo cáo để chấm điểm.</p>;
     }
 
     return (
         <>
             <CardContent className="space-y-4">
-                {registrations.map(student => {
+                {validRegistrations.map(student => {
                     const evaluation = getEvaluationForInternship(student);
                     return (
                         <div key={student.id} className="border rounded-lg p-4 flex items-center justify-between">
@@ -197,9 +185,8 @@ function InternshipGradingView({
                                         {evaluation.totalScore.toFixed(2)}
                                     </Badge>
                                 )}
-                                <Button variant="outline" size="sm" disabled={!rubric} onClick={() => handleGradeClick(student)}>
-                                    <Briefcase className="mr-2 h-4 w-4" />
-                                    {evaluation ? 'Sửa điểm TT' : 'Chấm Thực tập'}
+                                <Button className="w-32" variant="outline" size="sm" disabled={!rubric} onClick={() => handleGradeClick(student)}>
+                                    {evaluation ? 'Sửa điểm' : 'Chấm Thực tập'}
                                 </Button>
                             </div>
                         </div>
@@ -256,11 +243,9 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
 
         const baseGradQuery = [
             where('sessionId', '==', session.id),
-            where('graduationStatus', '==', 'reporting')
         ];
         const baseInternQuery = [
             where('sessionId', '==', session.id),
-            where('internshipStatus', '==', 'reporting')
         ];
 
         if (userRole === 'admin') {
@@ -296,7 +281,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
     fetchAssignments();
   }, [allSessions, isLoadingSessions, supervisorId, firestore, userRole]);
   
-
+  
   const SessionAccordionItem = ({ sessionData }: { sessionData: SessionAssignments }) => {
     const { session, graduationRegistrations, internshipRegistrations } = sessionData;
 
@@ -330,7 +315,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                 {/* Graduation Section */}
                 <Card>
                     <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2"><GraduationCap /> Đồ án Tốt nghiệp bạn hướng dẫn</CardTitle>
+                        <CardTitle className="text-base flex items-center gap-2"><GraduationCap /> Đồ án Tốt nghiệp</CardTitle>
                         <CardDescription className="text-xs">Rubric sử dụng: {getRubricName(supervisorGraduationRubric, isLoadingSupGradRubric)}</CardDescription>
                     </CardHeader>
                     {isLoadingRubrics ? (
@@ -349,7 +334,7 @@ export function SupervisorGradingDashboard({ supervisorId, userRole }: Superviso
                 {/* Internship Section */}
                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-base flex items-center gap-2"><Briefcase /> Thực tập Doanh nghiệp bạn hướng dẫn</CardTitle>
+                        <CardTitle className="text-base flex items-center gap-2"><Briefcase /> Thực tập Doanh nghiệp</CardTitle>
                         <CardDescription className="text-xs">Rubric sử dụng (dành cho đơn vị): {getRubricName(companyInternshipRubric, isLoadingCompInternRubric)}</CardDescription>
                     </CardHeader>
                     {isLoadingRubrics ? (

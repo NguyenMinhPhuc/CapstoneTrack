@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
@@ -37,6 +38,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Shield, User, GraduationCap, KeyRound, ArrowUpDown, Link as LinkIcon } from 'lucide-react';
@@ -620,7 +622,7 @@ export function UserManagementTable() {
             />
           )}
         </DialogContent>
-      </Dialog>
+    </Dialog>
     </div>
   );
 }

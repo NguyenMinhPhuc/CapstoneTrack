@@ -23,7 +23,6 @@ import { cn } from '@/lib/utils';
 import { Textarea } from './ui/textarea';
 import { Alert, AlertTitle, AlertDescription } from './ui/alert';
 import { ScrollArea } from './ui/scroll-area';
-import { Separator } from './ui/separator';
 
 interface ViewProgressDialogProps {
   registration: DefenseRegistration;
@@ -120,9 +119,9 @@ export function ViewProgressDialog({ registration, onFinished }: ViewProgressDia
                                     </div>
                                     <div>
                                         <h4 className="font-semibold mb-2">Kế hoạch tuần tới</h4>
-                                        <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
-                                            <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.nextWeekPlan}</ReactMarkdown>
-                                        </div>
+                                             <div className={cn("prose prose-sm max-w-none text-muted-foreground", "[&_ul]:list-disc [&_ul]:pl-4", "[&_ol]:list-decimal [&_ol]:pl-4")}>
+                                                <ReactMarkdown remarkPlugins={[remarkGfm]}>{report.nextWeekPlan}</ReactMarkdown>
+                                            </div>
                                     </div>
                                     {report.proofLink && (
                                         <div>
@@ -132,7 +131,6 @@ export function ViewProgressDialog({ registration, onFinished }: ViewProgressDia
                                             </a>
                                         </div>
                                     )}
-                                    <Separator />
                                      {report.status === 'pending_review' ? (
                                         <div className="space-y-2">
                                             <Textarea 
@@ -172,5 +170,3 @@ export function ViewProgressDialog({ registration, onFinished }: ViewProgressDia
     </>
   );
 }
-
-    

@@ -42,7 +42,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -50,11 +49,12 @@ import {
   DropdownMenuSubContent,
   DropdownMenuPortal,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown, KeyRound } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Search, Upload, ListFilter, Trash2, Users, FilePlus2, ChevronDown, ChevronUp, ArrowUpDown, Briefcase, GraduationCap, Check, X, FileDown, KeyRound, ChevronsUpDown } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
 import { collection, doc, writeBatch, updateDoc } from 'firebase/firestore';
-import type { Student } from '@/lib/types';
+import type { Student, SystemUser } from '@/lib/types';
 import { Skeleton } from './ui/skeleton';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
@@ -71,6 +71,16 @@ import { StudentStatusDetailsDialog } from './student-status-details-dialog';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from './ui/collapsible';
 import { ScrollArea } from './ui/scroll-area';
 import { Separator } from './ui/separator';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AssignMajorDialog } from './assign-major-dialog';
 
 
 const statusLabel: Record<Student['status'], string> = {
@@ -99,7 +109,7 @@ const statusColorClass: Record<Student['status'], string> = {
   graduated: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-900/50 dark:text-blue-300 dark:border-blue-700',
 };
 
-type SortKey = 'firstName' | 'studentId' | 'className' | 'email' | 'status' | 'createdAt';
+type SortKey = 'firstName' | 'studentId' | 'className' | 'email' | 'status' | 'createdAt' | 'major';
 type SortDirection = 'asc' | 'desc';
 
 
@@ -111,19 +121,23 @@ export function StudentManagementTable() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignClassDialogOpen, setIsAssignClassDialogOpen] = useState(false);
+  const [isAssignMajorDialogOpen, setIsAssignMajorDialogOpen] = useState(false);
   const [isAddToSessionDialogOpen, setIsAddToSessionDialogOpen] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<Student | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [classFilter, setClassFilter] = useState('all');
+  const [classFilter, setClassFilter] = useState<string[]>([]);
   const [courseFilter, setCourseFilter] = useState('all');
   const [graduationStatusFilter, setGraduationStatusFilter] = useState('all');
   const [internshipStatusFilter, setInternshipStatusFilter] = useState('all');
+  const [majorFilter, setMajorFilter] = useState('all');
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
   const [isStatusDetailOpen, setIsStatusDetailOpen] = useState(false);
   const [statusDetailData, setStatusDetailData] = useState<{ title: string; students: Student[] }>({ title: '', students: [] });
   const [isStatsOpen, setIsStatsOpen] = useState(false);
   const [sortConfig, setSortConfig] = useState<{ key: SortKey; direction: SortDirection } | null>(null);
+  const [isClassPopoverOpen, setIsClassPopoverOpen] = useState(false);
+  const [isCoursePopoverOpen, setIsCoursePopoverOpen] = useState(false);
 
 
   const studentsCollectionRef = useMemoFirebase(
@@ -132,6 +146,17 @@ export function StudentManagementTable() {
   );
   
   const { data: students, isLoading } = useCollection<Student>(studentsCollectionRef);
+  
+  const uniqueMajors = useMemo(() => {
+    if (!students) return [];
+    const majorSet = new Set<string>();
+    students.forEach(student => {
+        if (student.major) {
+            majorSet.add(student.major);
+        }
+    });
+    return Array.from(majorSet).sort();
+  }, [students]);
 
   const uniqueCourses = useMemo(() => {
     if (!students) return [];
@@ -230,14 +255,16 @@ export function StudentManagementTable() {
       const emailMatch = student.email?.toLowerCase().includes(term);
       const classMatchFilter = student.className?.toLowerCase().includes(term);
       
-      const classFilterMatch = classFilter === 'all' || student.className === classFilter;
+      const classFilterMatch = classFilter.length === 0 || (student.className && classFilter.includes(student.className));
       const courseMatch = courseFilter === 'all' || (student.className && student.className.startsWith(courseFilter));
       const gradStatusMatch = graduationStatusFilter === 'all' || (student.graduationStatus || 'not_achieved') === graduationStatusFilter;
       const internStatusMatch = internshipStatusFilter === 'all' || (student.internshipStatus || 'not_achieved') === internshipStatusFilter;
+      const majorMatch = majorFilter === 'all' || student.major === majorFilter;
 
-      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch && gradStatusMatch && internStatusMatch;
+
+      return (nameMatch || idMatch || emailMatch || classMatchFilter) && classFilterMatch && courseMatch && gradStatusMatch && internStatusMatch && majorMatch;
     });
-  }, [students, searchTerm, classFilter, courseFilter, graduationStatusFilter, internshipStatusFilter, sortConfig]);
+  }, [students, searchTerm, classFilter, courseFilter, graduationStatusFilter, internshipStatusFilter, sortConfig, majorFilter]);
 
   const requestSort = (key: SortKey) => {
     let direction: SortDirection = 'asc';
@@ -325,7 +352,7 @@ export function StudentManagementTable() {
         description: 'Không thể cập nhật trạng thái hoàn thành.',
       });
     }
-  }
+  };
 
   const handleStatusChange = async (studentId: string, newStatus: Student['status']) => {
     const studentDocRef = doc(firestore, 'students', studentId);
@@ -411,9 +438,10 @@ export function StudentManagementTable() {
 
   const handleDialogFinished = () => {
     setIsAssignClassDialogOpen(false);
+    setIsAssignMajorDialogOpen(false);
     setIsAddToSessionDialogOpen(false);
     setSelectedRowIds([]);
-  }
+  };
 
   const exportToExcel = () => {
     const dataToExport = filteredStudents.map((student, index) => ({
@@ -595,13 +623,25 @@ export function StudentManagementTable() {
                             Xếp lớp ({selectedRowIds.length})
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
-                          <AssignClassDialog
+                         <AssignClassDialog
                             studentIds={selectedRowIds}
                             allStudents={students || []}
                             onFinished={handleDialogFinished}
                           />
-                        </DialogContent>
+                      </Dialog>
+                      
+                       <Dialog open={isAssignMajorDialogOpen} onOpenChange={setIsAssignMajorDialogOpen}>
+                        <DialogTrigger asChild>
+                          <Button variant="outline" size="sm">
+                            <GraduationCap className="mr-2 h-4 w-4" />
+                            Gán ngành ({selectedRowIds.length})
+                          </Button>
+                        </DialogTrigger>
+                         <AssignMajorDialog
+                            studentIds={selectedRowIds}
+                            allStudents={students || []}
+                            onFinished={handleDialogFinished}
+                          />
                       </Dialog>
 
                       <Dialog open={isAddToSessionDialogOpen} onOpenChange={setIsAddToSessionDialogOpen}>
@@ -611,13 +651,11 @@ export function StudentManagementTable() {
                             Thêm vào đợt ({selectedRowIds.length})
                           </Button>
                         </DialogTrigger>
-                        <DialogContent>
                           <AddStudentsToSessionDialog
                             studentIds={selectedRowIds}
                             allStudents={students || []}
                             onFinished={handleDialogFinished}
                           />
-                        </DialogContent>
                       </Dialog>
 
                       <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
@@ -647,58 +685,85 @@ export function StudentManagementTable() {
                             </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <ScrollArea className="h-[40vh]">
-                            <DropdownMenuLabel>Lọc theo niên khóa</DropdownMenuLabel>
-                            <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem
-                                checked={courseFilter === 'all'}
-                                onCheckedChange={() => setCourseFilter('all')}
-                            >
-                                Tất cả niên khóa
-                            </DropdownMenuCheckboxItem>
-                            {uniqueCourses.map(course => (
-                                <DropdownMenuCheckboxItem
-                                    key={course}
-                                    checked={courseFilter === course}
-                                    onCheckedChange={() => setCourseFilter(course)}
-                                >
-                                    Khóa {course}
-                                </DropdownMenuCheckboxItem>
-                            ))}
-                            <DropdownMenuSeparator />
-                             <DropdownMenuLabel>Lọc theo lớp</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem
-                                checked={classFilter === 'all'}
-                                onCheckedChange={() => setClassFilter('all')}
-                            >
-                                Tất cả các lớp
-                            </DropdownMenuCheckboxItem>
-                            {uniqueClasses.map(className => (
-                                <DropdownMenuCheckboxItem
-                                    key={className}
-                                    checked={classFilter === className}
-                                    onCheckedChange={() => setClassFilter(className)}
-                                >
-                                    {className}
-                                </DropdownMenuCheckboxItem>
-                            ))}
-                             <DropdownMenuSeparator />
-                             <DropdownMenuLabel>Trạng thái Tốt nghiệp</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'all'} onCheckedChange={() => setGraduationStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'achieved'} onCheckedChange={() => setGraduationStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'not_achieved'} onCheckedChange={() => setGraduationStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
+                          <DropdownMenuLabel>Trạng thái TN</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'all'} onCheckedChange={() => setGraduationStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'achieved'} onCheckedChange={() => setGraduationStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={graduationStatusFilter === 'not_achieved'} onCheckedChange={() => setGraduationStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
 
-                             <DropdownMenuSeparator />
-                             <DropdownMenuLabel>Trạng thái Thực tập</DropdownMenuLabel>
-                             <DropdownMenuSeparator />
-                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'all'} onCheckedChange={() => setInternshipStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'achieved'} onCheckedChange={() => setInternshipStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
-                             <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
-                          </ScrollArea>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuLabel>Trạng thái TT</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'all'} onCheckedChange={() => setInternshipStatusFilter('all')}>Tất cả</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'achieved'} onCheckedChange={() => setInternshipStatusFilter('achieved')}>Đã đạt</DropdownMenuCheckboxItem>
+                          <DropdownMenuCheckboxItem checked={internshipStatusFilter === 'not_achieved'} onCheckedChange={() => setInternshipStatusFilter('not_achieved')}>Chưa đạt</DropdownMenuCheckboxItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
+                    <Select value={majorFilter} onValueChange={setMajorFilter}>
+                        <SelectTrigger className="w-[180px] h-9 text-sm">
+                          <SelectValue placeholder="Lọc theo ngành" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tất cả các ngành</SelectItem>
+                          {uniqueMajors.map(major => (
+                            <SelectItem key={major} value={major}>{major}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    <Popover open={isCoursePopoverOpen} onOpenChange={setIsCoursePopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-[150px] justify-between h-9 text-sm font-normal">
+                                {courseFilter === 'all' ? 'Tất cả khóa' : `Khóa ${courseFilter}`}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[150px] p-0">
+                             <Command>
+                                <CommandInput placeholder="Tìm khóa..." />
+                                <CommandEmpty>Không tìm thấy.</CommandEmpty>
+                                <CommandGroup>
+                                    <CommandItem onSelect={() => {setCourseFilter('all'); setIsCoursePopoverOpen(false);}}>Tất cả khóa</CommandItem>
+                                    {uniqueCourses.map(course => (
+                                        <CommandItem key={course} onSelect={() => {setCourseFilter(course); setIsCoursePopoverOpen(false);}}>Khóa {course}</CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
+                     <Popover open={isClassPopoverOpen} onOpenChange={setIsClassPopoverOpen}>
+                        <PopoverTrigger asChild>
+                            <Button variant="outline" role="combobox" className="w-[180px] justify-between h-9 text-sm font-normal">
+                                {classFilter.length === 0 ? "Tất cả các lớp" : classFilter.length === 1 ? classFilter[0] : `${classFilter.length} lớp đã chọn`}
+                                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                            </Button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-[180px] p-0">
+                            <Command>
+                                <CommandInput placeholder="Tìm lớp..." />
+                                <CommandEmpty>Không tìm thấy lớp.</CommandEmpty>
+                                <CommandGroup>
+                                    <CommandItem onSelect={() => { setClassFilter([]); setIsClassPopoverOpen(false); }}>
+                                        <Check className={cn("mr-2 h-4 w-4", classFilter.length === 0 ? "opacity-100" : "opacity-0")} />
+                                        Tất cả các lớp
+                                    </CommandItem>
+                                    {uniqueClasses.map(className => (
+                                        <CommandItem
+                                            key={className}
+                                            onSelect={() => {
+                                                const newSelection = classFilter.includes(className)
+                                                    ? classFilter.filter(item => item !== className)
+                                                    : [...classFilter, className];
+                                                setClassFilter(newSelection);
+                                            }}
+                                        >
+                                            <Check className={cn("mr-2 h-4 w-4", classFilter.includes(className) ? "opacity-100" : "opacity-0")} />
+                                            {className}
+                                        </CommandItem>
+                                    ))}
+                                </CommandGroup>
+                            </Command>
+                        </PopoverContent>
+                    </Popover>
                 </div>
                 <div className="flex gap-2 w-full sm:w-auto">
                     <Button onClick={exportToExcel} variant="outline" className="w-full">
@@ -747,24 +812,28 @@ export function StudentManagementTable() {
               </TableHead>
               <TableHead className="w-[50px]">STT</TableHead>
               <TableHead>
-                <Button variant="ghost" onClick={() => requestSort('firstName')} className="px-0 hover:bg-transparent">
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('firstName')}>
                     Họ và Tên {getSortIcon('firstName')}
                 </Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" onClick={() => requestSort('studentId')} className="px-0 hover:bg-transparent">
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('studentId')}>
                     MSSV {getSortIcon('studentId')}
                 </Button>
               </TableHead>
               <TableHead>
-                <Button variant="ghost" onClick={() => requestSort('className')} className="px-0 hover:bg-transparent">
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('className')}>
                     Lớp {getSortIcon('className')}
+                </Button>
+              </TableHead>
+              <TableHead>
+                <Button variant="ghost" className="px-0 hover:bg-transparent" onClick={() => requestSort('major')}>
+                    Chuyên ngành {getSortIcon('major')}
                 </Button>
               </TableHead>
               <TableHead>TT Học tập</TableHead>
               <TableHead>TT Tốt nghiệp</TableHead>
               <TableHead>TT Thực tập</TableHead>
-              <TableHead className="hidden md:table-cell">Ngày tạo</TableHead>
               <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
@@ -781,6 +850,7 @@ export function StudentManagementTable() {
                 <TableCell className="font-medium">{`${student.firstName} ${student.lastName}`}</TableCell>
                 <TableCell>{student.studentId}</TableCell>
                 <TableCell>{student.className || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
+                <TableCell>{student.major || <span className="text-muted-foreground">Chưa có</span>}</TableCell>
                 <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -811,9 +881,6 @@ export function StudentManagementTable() {
                 </TableCell>
                 <TableCell>
                     <Badge variant={student.internshipStatus === 'achieved' ? 'default' : 'outline'}>{completionStatusLabel[student.internshipStatus || 'not_achieved']}</Badge>
-                </TableCell>
-                <TableCell className="hidden md:table-cell">
-                    {student.createdAt?.toDate && format(student.createdAt.toDate(), 'PPP')}
                 </TableCell>
                 <TableCell className="text-right">
                   <DropdownMenu>
@@ -923,3 +990,16 @@ export function StudentManagementTable() {
 
 
 
+
+
+
+
+
+
+    
+
+    
+
+    
+
+    

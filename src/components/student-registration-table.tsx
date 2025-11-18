@@ -97,7 +97,7 @@ type ReportStatusType = 'graduation' | 'internship' | 'both';
 const registrationStatusLabel: Record<DefenseRegistration['graduationStatus'], string> = {
     reporting: 'Báo cáo',
     exempted: 'Đặc cách',
-    withdrawn: 'Bỏ báo cáo',
+    not_yet_reporting: 'Chưa báo cáo',
     not_reporting: 'Không BC',
     completed: 'Hoàn thành',
 };
@@ -105,7 +105,7 @@ const registrationStatusLabel: Record<DefenseRegistration['graduationStatus'], s
 const registrationStatusVariant: Record<DefenseRegistration['graduationStatus'], 'default' | 'secondary' | 'destructive' | 'outline'> = {
     reporting: 'default',
     exempted: 'secondary',
-    withdrawn: 'destructive',
+    not_yet_reporting: 'outline',
     not_reporting: 'outline',
     completed: 'default',
 };
@@ -778,7 +778,7 @@ export function StudentRegistrationTable({ sessionId, sessionType, initialData, 
                             <DropdownMenuSub>
                                 <DropdownMenuSubTrigger>
                                      <XCircle className="mr-2 h-4 w-4" />
-                                    <span>Bỏ báo cáo</span>
+                                    <span>Chưa báo cáo</span>
                                 </DropdownMenuSubTrigger>
                                 <DropdownMenuSubContent>
                                     <DropdownMenuItem onClick={() => { setIsWithdrawDialogOpen(true); setSelectedRowIds([reg.id]); }}>Tốt nghiệp</DropdownMenuItem>

@@ -13,7 +13,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { PlusCircle, Trash2, Lock, Activity } from 'lucide-react';
+import { PlusCircle, Trash2, Lock, Activity, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import Link from 'next/link';
 import {
@@ -35,6 +35,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import { cn } from '@/lib/utils';
+
+
+const statusConfig: Record<EarlyInternship['status'], { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
+  pending_admin_approval: { label: 'Chờ Admin duyệt', variant: 'secondary' },
+  pending_company_approval: { label: 'Chờ ĐV duyệt', variant: 'secondary' },
+  ongoing: { label: 'Đang thực tập', variant: 'default' },
+  completed: { label: 'Hoàn thành', variant: 'outline' },
+  rejected_by_admin: { label: 'Admin từ chối', variant: 'destructive' },
+  rejected_by_company: { label: 'ĐV từ chối', variant: 'destructive' },
+  cancelled: { label: 'Đã hủy', variant: 'destructive' },
+};
+
 
 export default function EarlyInternshipRegistrationPage() {
   const { user, isUserLoading } = useUser();
@@ -66,7 +79,12 @@ export default function EarlyInternshipRegistrationPage() {
 
   const activeInternship = useMemo(() => {
     if (!pastRegistrations) return null;
-    return pastRegistrations.find(reg => reg.status === 'ongoing' || reg.status === 'pending_approval');
+    // An active internship is one that is not in a final "rejected" or "cancelled" state.
+    return pastRegistrations.find(reg => 
+        reg.status === 'ongoing' || 
+        reg.status === 'pending_admin_approval' || 
+        reg.status === 'pending_company_approval'
+    );
   }, [pastRegistrations]);
 
   const canRegisterNew = !activeInternship;
@@ -178,67 +196,79 @@ export default function EarlyInternshipRegistrationPage() {
           </CardHeader>
           <CardContent className="space-y-4">
               {!canRegisterNew && (
-                <Alert variant="destructive">
+                <Alert variant="default" className="border-blue-500 text-blue-800">
                     <Lock className="h-4 w-4" />
                     <AlertTitle>Không thể đăng ký mới</AlertTitle>
                     <AlertDescription>
-                        Bạn hiện có một đơn đăng ký thực tập sớm đang ở trạng thái "{activeInternship?.status === 'ongoing' ? 'Đang thực tập' : 'Chờ duyệt'}". Bạn cần hoàn thành hoặc hủy đơn đăng ký hiện tại trước khi tạo đơn mới.
+                        Bạn hiện có một đơn đăng ký đang ở trạng thái "{statusConfig[activeInternship!.status]?.label || activeInternship!.status}". Bạn cần hoàn thành hoặc hủy đơn đăng ký hiện tại trước khi tạo đơn mới.
                     </AlertDescription>
                 </Alert>
               )}
               {pastRegistrations && pastRegistrations.length > 0 ? (
                 <div className="space-y-4">
-                  {pastRegistrations.map(reg => (
-                    <Card key={reg.id} className="bg-muted/30">
-                        <CardHeader>
-                            <div className="flex justify-between items-start">
-                                <div>
-                                    <CardTitle className="text-lg">{reg.companyName}</CardTitle>
-                                    <CardDescription>{reg.companyAddress}</CardDescription>
+                  {pastRegistrations.map(reg => {
+                    const statusInfo = statusConfig[reg.status] || { label: reg.status, variant: 'secondary' };
+                    const isRejected = reg.status === 'rejected_by_admin' || reg.status === 'rejected_by_company';
+
+                    return (
+                        <Card key={reg.id} className={cn(isRejected && 'border-destructive')}>
+                            <CardHeader>
+                                <div className="flex justify-between items-start">
+                                    <div>
+                                        <CardTitle className="text-lg">{reg.companyName}</CardTitle>
+                                        <CardDescription>{reg.companyAddress}</CardDescription>
+                                    </div>
+                                    <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
                                 </div>
-                                <Badge>{reg.status}</Badge>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="text-sm space-y-2">
-                             <div className="flex justify-between">
-                                <span className="text-muted-foreground">Người hướng dẫn tại ĐV:</span>
-                                <span>{reg.supervisorName || 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Ngày bắt đầu:</span>
-                                <span>{toDate(reg.startDate) ? format(toDate(reg.startDate)!, 'dd/MM/yyyy') : 'N/A'}</span>
-                            </div>
-                            <div className="flex justify-between">
-                                <span className="text-muted-foreground">Ngày kết thúc:</span>
-                                <span>{toDate(reg.endDate) ? format(toDate(reg.endDate)!, 'dd/MM/yyyy') : 'N/A'}</span>
-                            </div>
-                        </CardContent>
-                        {reg.status === 'pending_approval' && (
-                            <CardFooter>
-                                 <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button variant="destructive" size="sm" className="w-full" disabled={isCancelling}>
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            {isCancelling ? 'Đang hủy...' : 'Hủy Đăng ký'}
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Xác nhận hủy?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                Bạn có chắc chắn muốn hủy đơn đăng ký thực tập tại <strong>{reg.companyName}</strong> không? Hành động này không thể hoàn tác.
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Không</AlertDialogCancel>
-                                            <AlertDialogAction onClick={() => handleCancelRegistration(reg.id)}>Xác nhận hủy</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </CardFooter>
-                        )}
-                    </Card>
-                  ))}
+                            </CardHeader>
+                            <CardContent className="text-sm space-y-2">
+                                {isRejected && reg.statusNote && (
+                                     <Alert variant="destructive">
+                                        <XCircle className="h-4 w-4" />
+                                        <AlertTitle>Lý do từ chối</AlertTitle>
+                                        <AlertDescription>{reg.statusNote}</AlertDescription>
+                                    </Alert>
+                                )}
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Người hướng dẫn tại ĐV:</span>
+                                    <span>{reg.supervisorName || 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Ngày bắt đầu:</span>
+                                    <span>{toDate(reg.startDate) ? format(toDate(reg.startDate)!, 'dd/MM/yyyy') : 'N/A'}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                    <span className="text-muted-foreground">Ngày kết thúc:</span>
+                                    <span>{toDate(reg.endDate) ? format(toDate(reg.endDate)!, 'dd/MM/yyyy') : 'N/A'}</span>
+                                </div>
+                            </CardContent>
+                            {(reg.status === 'pending_approval' || reg.status === 'pending_admin_approval' || isRejected) && (
+                                <CardFooter>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button variant="destructive" size="sm" className="w-full" disabled={isCancelling}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                {isCancelling ? 'Đang hủy...' : (isRejected ? 'Xóa đơn đăng ký' : 'Hủy Đăng ký')}
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Xác nhận hủy?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    Bạn có chắc chắn muốn hủy đơn đăng ký thực tập tại <strong>{reg.companyName}</strong> không? Hành động này không thể hoàn tác.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Không</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleCancelRegistration(reg.id)}>Xác nhận hủy</AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </CardFooter>
+                            )}
+                        </Card>
+                    )
+                  })}
                 </div>
               ) : (
                 <Alert>

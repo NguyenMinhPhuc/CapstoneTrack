@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useMemo, useEffect } from 'react';
@@ -19,8 +18,12 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubTrigger,
+  DropdownMenuPortal,
+  DropdownMenuSubContent,
 } from '@/components/ui/dropdown-menu';
-import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle, Move, ChevronsUpDown } from 'lucide-react';
+import { MoreHorizontal, PlusCircle, Check, X, Eye, FileSignature, Book, Target, CheckCircle, Link as LinkIcon, FileUp, Activity, AlertTriangle, Move } from 'lucide-react';
 import { useCollection, useFirestore, useMemoFirebase, errorEmitter, FirestorePermissionError } from '@/firebase';
 import { collection, doc, deleteDoc, query, where, writeBatch, updateDoc } from 'firebase/firestore';
 import type { ProjectTopic, GraduationDefenseSession, DefenseRegistration } from '@/lib/types';
@@ -29,29 +32,10 @@ import { useToast } from '@/hooks/use-toast';
 import { AddTopicForm } from './add-topic-form';
 import { EditTopicForm } from './edit-topic-form';
 import { Badge } from './ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '@/lib/utils';
-import { Separator } from './ui/separator';
 import { ViewProgressDialog } from './view-progress-dialog';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
-import {
-    Alert,
-    AlertDescription,
-    AlertTitle,
-} from '@/components/ui/alert';
 import {
   Card,
   CardContent,
@@ -59,19 +43,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Dialog, DialogContent, DialogTrigger, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from './ui/dialog';
 import { Checkbox } from './ui/checkbox';
 import { MoveTopicsDialog } from './move-topics-dialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from './ui/command';
+import { ChevronsUpDown } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from './ui/accordion';
 
 
 interface MyTopicsTableProps {
@@ -106,10 +91,10 @@ const registrationStatusVariant: Record<string, 'secondary' | 'default' | 'destr
 };
 
 const proposalStatusLabel: Record<string, string> = {
-    not_submitted: 'Chưa nộp',
-    pending_approval: 'Chờ duyệt',
-    approved: 'Đã duyệt',
-    rejected: 'Bị từ chối',
+    not_submitted: 'Chưa nộp TM',
+    pending_approval: 'Chờ duyệt TM',
+    approved: 'Đã duyệt TM',
+    rejected: 'TM bị từ chối',
 };
 
 const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
@@ -120,10 +105,10 @@ const proposalStatusVariant: Record<string, 'outline' | 'secondary' | 'default' 
 };
 
 const reportStatusLabel: Record<string, string> = {
-    not_submitted: 'Chưa nộp',
-    pending_approval: 'Chờ duyệt',
-    approved: 'Đã duyệt',
-    rejected: 'Bị từ chối',
+    not_submitted: 'Chưa nộp BC',
+    pending_approval: 'Chờ duyệt BC',
+    approved: 'Đã duyệt BC',
+    rejected: 'BC bị từ chối',
 };
 
 const reportStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 'destructive'> = {
@@ -133,13 +118,13 @@ const reportStatusVariant: Record<string, 'outline' | 'secondary' | 'default' | 
     rejected: 'destructive',
 };
 
-
 export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTableProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isDetailsDialogOpen, setIsDetailsDialogOpen] = useState(false);
   const [isProposalDialogOpen, setIsProposalDialogOpen] = useState(false);
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [isProgressDialogOpen, setIsProgressDialogOpen] = useState(false);
@@ -157,7 +142,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     () => query(collection(firestore, 'projectTopics'), where('supervisorId', '==', supervisorId)),
     [firestore, supervisorId]
   );
-  const { data: topics, isLoading: isLoadingTopics } = useCollection<ProjectTopic>(topicsQuery);
+  const { data: topics, isLoading: isLoadingTopics, forceRefresh: forceRefreshTopics } = useCollection<ProjectTopic>(topicsQuery);
   
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, 'graduationDefenseSessions'),
@@ -169,11 +154,16 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     () => query(collection(firestore, 'defenseRegistrations'), where('supervisorId', '==', supervisorId)),
     [firestore, supervisorId]
   );
-  const { data: allRegistrations, isLoading: isLoadingRegs } = useCollection<DefenseRegistration>(registrationsQuery);
+  const { data: allRegistrations, isLoading: isLoadingRegs, forceRefresh: forceRefreshRegs } = useCollection<DefenseRegistration>(registrationsQuery);
   
   useEffect(() => {
     setSelectedRowIds([]);
   }, [topics, sessionFilter, statusFilter]);
+  
+  const graduationSessions = useMemo(() => {
+    if (!sessions) return [];
+    return sessions.filter(s => s.sessionType === 'graduation' || s.sessionType === 'combined');
+  }, [sessions]);
 
   const sessionMap = useMemo(() => {
     if (!sessions) return new Map();
@@ -181,21 +171,22 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
   }, [sessions]);
 
   const groupedSessions = useMemo(() => {
-    if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
-    return sessions.reduce((acc, session) => {
+    if (!graduationSessions) return { ongoing: [], upcoming: [], completed: [] };
+    return graduationSessions.reduce((acc, session) => {
       const group = acc[session.status] || [];
       group.push(session);
       acc[session.status] = group;
       return acc;
     }, {} as Record<GraduationDefenseSession['status'], GraduationDefenseSession[]>);
-  }, [sessions]);
+  }, [graduationSessions]);
 
-  const registrationsByTopic = useMemo(() => {
+ const registrationsByTopic = useMemo(() => {
       const map = new Map<string, DefenseRegistration[]>();
       if (allRegistrations) {
           allRegistrations.forEach(reg => {
               if (reg.projectTitle) {
-                  const key = `${'reg.sessionId'}-${reg.projectTitle}`;
+                  // A composite key is more specific to avoid collisions between different sessions
+                  const key = `${reg.sessionId}-${reg.projectTitle}`;
                   if (!map.has(key)) {
                       map.set(key, []);
                   }
@@ -248,6 +239,11 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     setIsDeleteDialogOpen(true);
   };
   
+  const handleViewDetailsClick = (topic: ProjectTopic) => {
+    setSelectedTopic(topic);
+    setIsDetailsDialogOpen(true);
+  }
+
   const handleViewProposalClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
     setIsProposalDialogOpen(true);
@@ -291,13 +287,14 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
     if (action === 'approve') {
         batch.update(regDocRef, { projectRegistrationStatus: 'approved' });
 
-        const registrationsForThisTopic = allRegistrations?.filter(r => r.sessionId === topic.sessionId && r.projectTitle === topic.title) || [];
+        const key = `${topic.sessionId}-${topic.title}`;
+        const registrationsForThisTopic = registrationsByTopic.get(key) || [];
         const approvedCount = registrationsForThisTopic.filter(r => r.projectRegistrationStatus === 'approved').length;
 
         if (approvedCount + 1 >= topic.maxStudents) {
             batch.update(topicRef, { status: 'taken' });
         }
-    } else { // 'reject' or 'cancel' have the same logic of clearing the student's topic registration
+    } else { 
         batch.update(regDocRef, { 
             projectRegistrationStatus: action === 'reject' ? 'rejected' : null,
             projectTitle: '',
@@ -319,6 +316,8 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
             ? 'Đã xác nhận hướng dẫn sinh viên.'
             : (action === 'reject' ? 'Đã từ chối hướng dẫn.' : 'Đã hủy đăng ký cho sinh viên.');
         toast({ title: 'Thành công', description: successMessage });
+        forceRefreshTopics();
+        forceRefreshRegs();
     } catch (error: any) {
          toast({ variant: 'destructive', title: 'Lỗi', description: `Không thể cập nhật: ${error.message}` });
          const contextualError = new FirestorePermissionError({
@@ -478,7 +477,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                     <AddTopicForm 
                         supervisorId={supervisorId}
                         supervisorName={supervisorName}
-                        sessions={sessions || []}
+                        sessions={graduationSessions || []}
                         onFinished={() => setIsAddDialogOpen(false)} 
                     />
                 </DialogContent>
@@ -495,7 +494,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                         </Button>
                     </DialogTrigger>
                     <MoveTopicsDialog 
-                        sessions={sessions || []}
+                        sessions={graduationSessions || []}
                         topicIds={selectedRowIds}
                         onFinished={handleMoveFinished}
                     />
@@ -504,91 +503,34 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
           )}
         </CardHeader>
         <CardContent>
-             <div className="border rounded-md">
+            <div className="border rounded-md">
                 <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
-                    <div className="col-span-1 flex items-center gap-2"><Checkbox
-                        checked={isAllSelected ? true : isSomeSelected ? 'indeterminate' : false}
-                        onCheckedChange={handleSelectAll}
-                    />#</div>
-                    <div className="col-span-5">Tên đề tài</div>
+                    <div className="col-span-1 text-center">STT</div>
+                    <div className="col-span-4">Tên đề tài</div>
+                    <div className="col-span-2">Giáo viên hướng dẫn</div>
                     <div className="col-span-2">Đợt báo cáo</div>
                     <div className="col-span-1 text-center">SL SV</div>
-                    <div className="col-span-2">Trạng thái</div>
-                    <div className="col-span-1 text-right pr-2">Hành động</div>
+                    <div className="col-span-1">Trạng thái</div>
+                    <div className="col-span-1 text-right pr-8">Hành động</div>
                 </div>
-                <Accordion type="multiple" className="w-full">
+                <Accordion type="multiple" className="space-y-2">
                     {filteredTopics.length > 0 ? (
                         filteredTopics.map((topic, index) => {
-                            const registeredStudents = registrationsByTopic.get(`${topic.sessionId}-${topic.title}`) || [];
+                            const key = `${topic.sessionId}-${topic.title}`;
+                            const registeredStudents = registrationsByTopic.get(key) || [];
                             const registeredCount = registeredStudents.length;
+
                             return (
                                 <AccordionItem value={topic.id} key={topic.id} className="border-b">
-                                    <div className="flex items-center px-4 hover:bg-muted/50">
-                                        <div className="flex items-center gap-2 py-4">
-                                            <Checkbox
-                                                checked={selectedRowIds.includes(topic.id)}
-                                                onCheckedChange={(checked) => handleRowSelect(topic.id, !!checked)}
-                                                onClick={(e) => e.stopPropagation()}
-                                            />
-                                        </div>
+                                     <div className="flex items-center px-4 hover:bg-muted/50">
                                         <AccordionTrigger className="w-full py-0 hover:no-underline flex-1">
                                             <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4 py-4">
                                                 <div className="col-span-1 text-center">{index + 1}</div>
-                                                <div className="col-span-5 font-medium truncate" title={topic.title}>{topic.title}</div>
+                                                <div className="col-span-4 font-medium truncate" title={topic.title}>{topic.title}</div>
+                                                <div className="col-span-2 truncate">{topic.supervisorName}</div>
                                                 <div className="col-span-2 truncate">{sessionMap.get(topic.sessionId) || 'N/A'}</div>
-                                                <div className="col-span-1 text-center">
-                                                    <Dialog>
-                                                        <DialogTrigger asChild>
-                                                            <Button variant="ghost" disabled={registeredCount === 0} className="p-1 h-auto" onClick={(e) => e.stopPropagation()}>
-                                                                <Badge variant="outline">{registeredCount}/{topic.maxStudents}</Badge>
-                                                            </Button>
-                                                        </DialogTrigger>
-                                                        <DialogContent className="sm:max-w-4xl">
-                                                            <DialogHeader>
-                                                                <DialogTitle>Danh sách sinh viên đăng ký</DialogTitle>
-                                                                <DialogDescription>Đề tài: {topic.title}</DialogDescription>
-                                                            </DialogHeader>
-                                                            <Table>
-                                                                <TableHeader>
-                                                                    <TableRow>
-                                                                        <TableHead>MSSV</TableHead>
-                                                                        <TableHead>Họ và Tên</TableHead>
-                                                                        <TableHead>Trạng thái ĐK</TableHead>
-                                                                        <TableHead>Trạng thái TM</TableHead>
-                                                                        <TableHead>Trạng thái BC</TableHead>
-                                                                        <TableHead className="text-right">Hành động</TableHead>
-                                                                    </TableRow>
-                                                                </TableHeader>
-                                                                <TableBody>
-                                                                    {registeredStudents.map(reg => (
-                                                                        <TableRow key={reg.id}>
-                                                                            <TableCell>{reg.studentId}</TableCell>
-                                                                            <TableCell>{reg.studentName}</TableCell>
-                                                                            <TableCell><Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>{registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}</Badge></TableCell>
-                                                                            <TableCell><Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>{proposalStatusLabel[reg.proposalStatus || 'not_submitted']}</Badge></TableCell>
-                                                                            <TableCell><Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>{reportStatusLabel[reg.reportStatus || 'not_submitted']}</Badge></TableCell>
-                                                                            <TableCell className="text-right">
-                                                                                <div className="flex gap-2 justify-end">
-                                                                                    {(!reg.projectRegistrationStatus || reg.projectRegistrationStatus === 'pending') && (<>
-                                                                                        <Button size="sm" variant="outline" className="bg-green-100 text-green-800 hover:bg-green-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}><Check className="mr-2 h-4 w-4" /> Chấp nhận</Button>
-                                                                                        <Button size="sm" variant="outline" className="bg-red-100 text-red-800 hover:bg-red-200 h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}><X className="mr-2 h-4 w-4" /> Từ chối</Button>
-                                                                                    </>)}
-                                                                                    {reg.projectRegistrationStatus === 'approved' && (<>
-                                                                                        <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4" /> Xem TĐ</Button>
-                                                                                        <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewProposalClick(reg)} disabled={reg.proposalStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem TM</Button>
-                                                                                        <Button size="sm" variant="outline" className="h-8" onClick={() => handleViewReportClick(reg)} disabled={reg.reportStatus === 'not_submitted'}><Eye className="mr-2 h-4 w-4" /> Xem BC</Button>
-                                                                                        <Button size="sm" variant="destructive" className="h-8" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}><X className="mr-2 h-4 w-4" /> Hủy ĐK</Button>
-                                                                                    </>)}
-                                                                                </div>
-                                                                            </TableCell>
-                                                                        </TableRow>
-                                                                    ))}
-                                                                </TableBody>
-                                                            </Table>
-                                                        </DialogContent>
-                                                    </Dialog>
-                                                </div>
-                                                <div className="col-span-2">
+                                                <div className="col-span-1 text-center">{topic.maxStudents}</div>
+                                                <div className="col-span-1">
                                                     <Badge variant={statusVariant[topic.status]}>
                                                         {statusLabel[topic.status]}
                                                     </Badge>
@@ -598,11 +540,12 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                          <div className="col-span-1 flex justify-end">
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" onClick={(e) => e.stopPropagation()}>
+                                                    <Button variant="ghost" size="icon">
                                                     <MoreHorizontal className="h-4 w-4" />
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent align="end">
+                                                    <DropdownMenuItem onClick={() => handleViewDetailsClick(topic)}>Xem chi tiết</DropdownMenuItem>
                                                     <DropdownMenuItem onClick={() => handleEditClick(topic)} disabled={topic.status === 'taken'}>Sửa</DropdownMenuItem>
                                                     <DropdownMenuItem className="text-destructive" onClick={() => handleDeleteClick(topic)} disabled={topic.status === 'taken'}>Xóa</DropdownMenuItem>
                                                 </DropdownMenuContent>
@@ -610,36 +553,103 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                          </div>
                                     </div>
                                     <AccordionContent>
-                                        <div className="p-4 bg-muted/30 border-t">
-                                            <div className="space-y-6">
-                                                {topic.status === 'rejected' && topic.rejectionReason && (
-                                                    <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Lý do từ chối</AlertTitle><AlertDescription>{topic.rejectionReason}</AlertDescription></Alert>
-                                                )}
-                                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.summary || ''}</ReactMarkdown></div></div>
-                                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.objectives || ''}</ReactMarkdown></div></div>
-                                                <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{topic.expectedResults || ''}</ReactMarkdown></div></div>
-                                            </div>
+                                        <div className="p-4 bg-muted/30 border-t space-y-4">
+                                            <h4 className="font-semibold text-sm">Danh sách Sinh viên đăng ký ({registeredCount})</h4>
+                                            {registeredStudents.length > 0 ? (
+                                                <div className="space-y-2">
+                                                    {registeredStudents.map(reg => (
+                                                        <div key={reg.id} className="flex items-center justify-between p-2 border rounded-md bg-background">
+                                                            <div>
+                                                                <p className="font-medium">{reg.studentName} ({reg.studentId})</p>
+                                                                <div className="text-xs text-muted-foreground flex items-center gap-2 mt-1">
+                                                                     <Badge variant={registrationStatusVariant[reg.projectRegistrationStatus || 'pending']}>
+                                                                        {registrationStatusLabel[reg.projectRegistrationStatus || 'pending']}
+                                                                    </Badge>
+                                                                     <Badge variant={proposalStatusVariant[reg.proposalStatus || 'not_submitted']}>
+                                                                        {proposalStatusLabel[reg.proposalStatus || 'not_submitted']}
+                                                                    </Badge>
+                                                                     <Badge variant={reportStatusVariant[reg.reportStatus || 'not_submitted']}>
+                                                                        {reportStatusLabel[reg.reportStatus || 'not_submitted']}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex items-center gap-1">
+                                                                <DropdownMenu>
+                                                                    <DropdownMenuTrigger asChild><Button variant="ghost" size="icon"><MoreHorizontal className="h-4 w-4"/></Button></DropdownMenuTrigger>
+                                                                    <DropdownMenuContent>
+                                                                        <DropdownMenuItem onClick={() => handleViewProgressClick(reg)}><Activity className="mr-2 h-4 w-4"/>Xem tiến độ</DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => handleViewProposalClick(reg)} disabled={!reg.proposalStatus || reg.proposalStatus === 'not_submitted'}><FileSignature className="mr-2 h-4 w-4"/>Duyệt thuyết minh</DropdownMenuItem>
+                                                                        <DropdownMenuItem onClick={() => handleViewReportClick(reg)} disabled={!reg.reportStatus || reg.reportStatus === 'not_submitted'}><FileUp className="mr-2 h-4 w-4"/>Duyệt báo cáo</DropdownMenuItem>
+                                                                    </DropdownMenuContent>
+                                                                </DropdownMenu>
+
+                                                                {reg.projectRegistrationStatus === 'pending' && (
+                                                                    <>
+                                                                        <Button size="sm" variant="outline" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}><Check className="h-4 w-4"/></Button>
+                                                                        <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'reject')}><X className="h-4 w-4"/></Button>
+                                                                    </>
+                                                                )}
+                                                                {reg.projectRegistrationStatus === 'approved' && (
+                                                                    <Button size="sm" variant="destructive" onClick={() => handleRegistrationAction(reg.id, topic, 'cancel')}>Hủy ĐK</Button>
+                                                                )}
+                                                                {reg.projectRegistrationStatus === 'rejected' && (
+                                                                     <Button size="sm" variant="secondary" onClick={() => handleRegistrationAction(reg.id, topic, 'approve')}>Duyệt lại</Button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : <p className="text-xs text-muted-foreground text-center py-2">Chưa có sinh viên nào đăng ký đề tài này.</p>}
                                         </div>
                                     </AccordionContent>
                                 </AccordionItem>
-                            )
+                            );
                         })
                     ) : (
                         <div className="text-center py-10 text-muted-foreground col-span-12">
-                            Không tìm thấy đề tài nào phù hợp.
+                            Không có đề tài nào phù hợp.
                         </div>
                     )}
                 </Accordion>
             </div>
+           {filteredTopics.length === 0 && (
+                <div className="text-center py-10 text-muted-foreground">
+                    Không có đề tài nào phù hợp.
+                </div>
+            )}
         </CardContent>
       </Card>
+
+      <Dialog open={isDetailsDialogOpen} onOpenChange={setIsDetailsDialogOpen}>
+        <DialogContent className="sm:max-w-2xl">
+            {selectedTopic && (
+                <>
+                <DialogHeader>
+                    <DialogTitle>{selectedTopic.title}</DialogTitle>
+                    <DialogDescription>
+                        GVHD: {selectedTopic.supervisorName} | Đợt: {sessionMap.get(selectedTopic.sessionId)}
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-6 max-h-[60vh] overflow-y-auto p-1">
+                    {selectedTopic.status === 'rejected' && selectedTopic.rejectionReason && (
+                        <Alert variant="destructive"><AlertTriangle className="h-4 w-4" /><AlertTitle>Lý do từ chối</AlertTitle><AlertDescription>{selectedTopic.rejectionReason}</AlertDescription></Alert>
+                    )}
+                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Book className="h-4 w-4 text-primary" /> Tóm tắt</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedTopic.summary || ''}</ReactMarkdown></div></div>
+                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><Target className="h-4 w-4 text-primary" /> Mục tiêu</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedTopic.objectives || ''}</ReactMarkdown></div></div>
+                    <div className="space-y-1"><h4 className="font-semibold flex items-center gap-2 text-base"><CheckCircle className="h-4 w-4 text-primary" /> Kết quả mong đợi</h4><div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4"><ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedTopic.expectedResults || ''}</ReactMarkdown></div></div>
+                </div>
+                </>
+            )}
+        </DialogContent>
+    </Dialog>
+
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="sm:max-w-2xl">
           {selectedTopic && (
             <EditTopicForm
               topic={selectedTopic}
-              sessions={sessions || []}
+              sessions={graduationSessions || []}
               onFinished={() => setIsEditDialogOpen(false)}
             />
           )}
@@ -673,7 +683,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.objectives || ''}</ReactMarkdown>
                             </div>
                         </div>
-                        <div className="space-y-1">
+                         <div className="space-y-1">
                             <h4 className="font-semibold flex items-center gap-2 text-base"><FileSignature className="h-4 w-4 text-primary" /> Phương pháp & Công nghệ thực hiện</h4>
                             <div className="prose prose-sm max-w-none text-muted-foreground [&_ul]:list-disc [&_ul]:pl-4 [&_ol]:list-decimal [&_ol]:pl-4">
                                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{selectedRegistration.implementationPlan || ''}</ReactMarkdown>
@@ -693,14 +703,10 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                                 </a>
                             </div>
                         )}
-                    </div>
+                     </div>
                      <DialogFooter>
-                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>
-                            Yêu cầu chỉnh sửa
-                        </Button>
-                        <Button onClick={() => handleProposalAction(selectedRegistration, 'approve')}>
-                            Duyệt thuyết minh
-                        </Button>
+                        <Button variant="destructive" onClick={() => handleProposalAction(selectedRegistration, 'reject')}>Yêu cầu chỉnh sửa</Button>
+                        <Button onClick={() => handleProposalAction(selectedRegistration, 'approve')}>Duyệt thuyết minh</Button>
                     </DialogFooter>
                   </>
               )}
@@ -717,7 +723,7 @@ export function MyTopicsTable({ supervisorId, supervisorName }: MyTopicsTablePro
                             Xem xét và phê duyệt báo cáo cuối kỳ của sinh viên: {selectedRegistration.studentName} ({selectedRegistration.studentId})
                         </DialogDescription>
                     </DialogHeader>
-                    <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
+                     <div className="space-y-6 max-h-[60vh] overflow-y-auto p-4 border rounded-md">
                         <p className="text-sm text-muted-foreground">Thông tin dưới đây là bản tóm tắt cuối cùng sinh viên đã nộp.</p>
                         <div className="space-y-1">
                              <h4 className="font-semibold flex items-center gap-2 text-base"><LinkIcon className="h-4 w-4 text-primary" /> Link file báo cáo toàn văn</h4>

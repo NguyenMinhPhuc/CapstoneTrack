@@ -1,4 +1,3 @@
-
 'use client';
 import { useState, ChangeEvent } from 'react';
 import * as XLSX from 'xlsx';
@@ -25,7 +24,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { FileWarning, Rocket } from 'lucide-react';
 import { useFirestore } from '@/firebase';
 import { collection, doc, writeBatch, getDocs, serverTimestamp, query, where } from 'firebase/firestore';
-import type { Student, Supervisor } from '@/lib/types';
+import type { Student, Supervisor, DefenseRegistration } from '@/lib/types';
 
 interface RegistrationData {
     [key: string]: any;
@@ -139,14 +138,14 @@ export function ImportRegistrationsDialog({ sessionId, onFinished }: ImportRegis
             const supervisorInfo = supervisorMap.get(supervisorName.toLowerCase());
 
             const newRegistrationRef = doc(registrationsCollectionRef);
-            const registrationData = {
+            const registrationData: Partial<DefenseRegistration> = {
                 sessionId: sessionId,
                 studentDocId: studentInfo.id,
                 studentId: studentIdNumber,
                 studentName: `${studentInfo.firstName} ${studentInfo.lastName}`,
                 projectTitle: row['ProjectTitle'] || row['Tên đề tài'] || '',
                 supervisorId: supervisorInfo?.id || '',
-                supervisorName: supervisorName,
+                supervisorName: supervisorInfo ? `${supervisorInfo.firstName} ${supervisorInfo.lastName}` : '',
                 registrationDate: serverTimestamp(),
                 graduationStatus: 'reporting',
                 internshipStatus: 'not_reporting',

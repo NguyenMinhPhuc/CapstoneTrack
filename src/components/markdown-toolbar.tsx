@@ -1,3 +1,4 @@
+
 'use client';
 
 import React from 'react';
@@ -21,64 +22,53 @@ export function MarkdownToolbar({ textareaRef, onChange }: MarkdownToolbarProps)
     
     let prefix = '';
     let suffix = '';
-    let replacement = selectedText;
+    let newText = '';
 
     switch (style) {
       case 'bold':
         prefix = '**';
         suffix = '**';
+        newText = `${prefix}${selectedText}${suffix}`;
         break;
       case 'italic':
         prefix = '*';
         suffix = '*';
+        newText = `${prefix}${selectedText}${suffix}`;
         break;
       case 'bullet':
         const lines = selectedText.split('\n');
         if (lines.length > 1 && selectedText) {
-          replacement = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
+          newText = lines.map(line => line.trim() ? `- ${line}` : line).join('\n');
         } else {
             const lineStart = value.lastIndexOf('\n', start - 1) + 1;
             const currentLinePrefix = value.substring(lineStart, start);
-            if(currentLinePrefix.trim().length > 0) {
-                 prefix = '\n- ';
-            } else {
-                 prefix = '- ';
-            }
+            prefix = currentLinePrefix.trim().length > 0 ? '\n- ' : '- ';
+            newText = `${prefix}${selectedText}`;
         }
         break;
       case 'number':
            const linesNum = selectedText.split('\n');
            if (linesNum.length > 1 && selectedText) {
-             replacement = linesNum.map((line, index) => line.trim() ? `${index + 1}. ${line}` : line).join('\n');
+             newText = linesNum.map((line, index) => line.trim() ? `${index + 1}. ${line}` : line).join('\n');
            } else {
              const lineStart = value.lastIndexOf('\n', start - 1) + 1;
              const currentLinePrefix = value.substring(lineStart, start);
-              if(currentLinePrefix.trim().length > 0) {
-                 prefix = '\n1. ';
-              } else {
-                 prefix = '1. ';
-              }
+              prefix = currentLinePrefix.trim().length > 0 ? '\n1. ' : '1. ';
+              newText = `${prefix}${selectedText}`;
            }
         break;
     }
-    
-    if (style === 'bold' || style === 'italic') {
-        replacement = `${prefix}${selectedText}${suffix}`;
-    } else {
-        replacement = `${prefix}${selectedText}${suffix}`;
-    }
 
-    const newValue = value.substring(0, start) + replacement + value.substring(end);
+    const newValue = value.substring(0, start) + newText + value.substring(end);
+    
     onChange(newValue);
 
-    // After updating the value via onChange, we need to manually set the selection
-    // in the next render cycle.
     setTimeout(() => {
         if (!textarea) return;
         textarea.focus();
         if (selectedText) {
-             textarea.selectionStart = start + replacement.length;
-             textarea.selectionEnd = start + replacement.length;
+             textarea.selectionStart = start + newText.length;
+             textarea.selectionEnd = start + newText.length;
         } else {
             textarea.selectionStart = start + prefix.length;
             textarea.selectionEnd = start + prefix.length;
