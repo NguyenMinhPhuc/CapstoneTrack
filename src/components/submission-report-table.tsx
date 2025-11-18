@@ -1,11 +1,8 @@
+"use client";
 
-'use client';
-
-import { useState, useMemo } from 'react';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
-const PizZip = require('pizzip');
-const Docxtemplater = require('docxtemplater');
+import { useState, useMemo } from "react";
+import * as XLSX from "xlsx";
+import { saveAs } from "file-saver";
 import {
   Table,
   TableBody,
@@ -13,142 +10,217 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
+} from "@/components/ui/table";
 import {
   Card,
   CardContent,
   CardHeader,
   CardTitle,
   CardDescription,
-} from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, FileDown, Link as LinkIcon, MoreHorizontal } from 'lucide-react';
-import { useCollection, useFirestore, useMemoFirebase } from '@/firebase';
-import { collection } from 'firebase/firestore';
-import type { GraduationDefenseSession, DefenseRegistration, SubmissionReport } from '@/lib/types';
-import { Skeleton } from './ui/skeleton';
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Search,
+  FileDown,
+  Link as LinkIcon,
+  MoreHorizontal,
+} from "lucide-react";
+import { usePagination } from "@/hooks/usePagination";
+import { PaginationControls } from "@/components/ui/pagination-controls";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import type {
+  GraduationDefenseSession,
+  DefenseRegistration,
+  SubmissionReport,
+} from "@/lib/types";
+import { Skeleton } from "./ui/skeleton";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
+} from "@/components/ui/select";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from '@/components/ui/tooltip';
+} from "@/components/ui/tooltip";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
+
+const statusLabel: Record<string, string> = {
+  ongoing: "Đang diễn ra",
+  upcoming: "Sắp diễn ra",
+  completed: "Đã hoàn thành",
+};
 
 export function SubmissionReportTable() {
   const firestore = useFirestore();
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSessionId, setSelectedSessionId] = useState('all');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedSessionId, setSelectedSessionId] = useState("ongoing");
 
   const sessionsQuery = useMemoFirebase(
-    () => collection(firestore, 'graduationDefenseSessions'),
+    () => collection(firestore, "graduationDefenseSessions"),
     [firestore]
   );
-  const { data: sessions, isLoading: isLoadingSessions } = useCollection<GraduationDefenseSession>(sessionsQuery);
+  const { data: sessions, isLoading: isLoadingSessions } =
+    useCollection<GraduationDefenseSession>(sessionsQuery);
 
   const registrationsQuery = useMemoFirebase(
-    () => collection(firestore, 'defenseRegistrations'),
+    () => collection(firestore, "defenseRegistrations"),
     [firestore]
   );
-  const { data: registrations, isLoading: isLoadingRegistrations } = useCollection<DefenseRegistration>(registrationsQuery);
+  const { data: registrations, isLoading: isLoadingRegistrations } =
+    useCollection<DefenseRegistration>(registrationsQuery);
 
   const isLoading = isLoadingSessions || isLoadingRegistrations;
+
+  const groupedSessions = useMemo(() => {
+    if (!sessions)
+      return { ongoing: [], upcoming: [], completed: [] } as Record<
+        GraduationDefenseSession["status"],
+        GraduationDefenseSession[]
+      >;
+    return sessions.reduce(
+      (acc, session) => {
+        const arr = acc[session.status] || [];
+        arr.push(session);
+        acc[session.status] = arr;
+        return acc;
+      },
+      { ongoing: [], upcoming: [], completed: [] } as Record<
+        GraduationDefenseSession["status"],
+        GraduationDefenseSession[]
+      >
+    );
+  }, [sessions]);
 
   const processedData = useMemo(() => {
     if (!registrations || !sessions) return [];
 
-    const sessionMap = new Map(sessions.map(s => [s.id, s.name]));
+    const sessionMap = new Map(sessions.map((s) => [s.id, s.name]));
+    const sessionStatusMap = new Map(sessions.map((s) => [s.id, s.status]));
 
     return registrations
-      .map((reg): SubmissionReport => ({
-        ...reg,
-        sessionName: sessionMap.get(reg.sessionId) || 'Không xác định',
-      }))
-      .filter(reg => {
-        if (selectedSessionId !== 'all' && reg.sessionId !== selectedSessionId) {
-          return false;
+      .map(
+        (reg): SubmissionReport => ({
+          ...reg,
+          sessionName: sessionMap.get(reg.sessionId) || "Không xác định",
+        })
+      )
+      .filter((reg) => {
+        if (selectedSessionId !== "all") {
+          if (selectedSessionId === "ongoing") {
+            const st = sessionStatusMap.get(reg.sessionId);
+            if (st !== "ongoing") return false;
+          } else if (reg.sessionId !== selectedSessionId) {
+            return false;
+          }
         }
         const term = searchTerm.toLowerCase();
         return (
-          reg.studentName.toLowerCase().includes(term) ||
-          reg.studentId.toLowerCase().includes(term) ||
+          (reg.studentName || "").toLowerCase().includes(term) ||
+          (reg.studentId || "").toLowerCase().includes(term) ||
           (reg.projectTitle && reg.projectTitle.toLowerCase().includes(term)) ||
-          (reg.internship_companyName && reg.internship_companyName.toLowerCase().includes(term))
+          (reg.internship_companyName &&
+            reg.internship_companyName.toLowerCase().includes(term))
         );
       });
   }, [registrations, sessions, selectedSessionId, searchTerm]);
 
   const createExportData = (data: SubmissionReport[]) => {
     return data.map((item, index) => ({
-      'STT': index + 1,
-      'MSSV': item.studentId,
-      'Họ và Tên': item.studentName,
-      'Đợt báo cáo': item.sessionName,
-      'Đề tài TN': item.projectTitle || '',
-      'Công ty TT': item.internship_companyName || '',
-      'Link báo cáo TN': item.reportLink || '',
-      'Link báo cáo TT': item.internship_reportLink || '',
-      'Link giấy tiếp nhận TT': item.internship_acceptanceLetterLink || '',
-      'Link đơn đăng ký TT': item.internship_registrationFormLink || '',
-      'Link đơn cam kết TT': item.internship_commitmentFormLink || '',
-      'Link giấy nhận xét TT': item.internship_feedbackFormLink || '',
+      STT: index + 1,
+      MSSV: item.studentId,
+      "Họ và Tên": item.studentName,
+      "Đợt báo cáo": item.sessionName,
+      "Đề tài TN": item.projectTitle || "",
+      "Công ty TT": item.internship_companyName || "",
+      "Link báo cáo TN": item.reportLink || "",
+      "Link báo cáo TT": item.internship_reportLink || "",
+      "Link giấy tiếp nhận TT": item.internship_acceptanceLetterLink || "",
+      "Link đơn đăng ký TT": item.internship_registrationFormLink || "",
+      "Link đơn cam kết TT": item.internship_commitmentFormLink || "",
+      "Link giấy nhận xét TT": item.internship_feedbackFormLink || "",
     }));
-  }
+  };
 
   const exportToExcel = (data: SubmissionReport[], fileName: string) => {
     const dataToExport = createExportData(data);
-    
+
     const worksheet = XLSX.utils.json_to_sheet(dataToExport);
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'HoSoDaNop');
+    XLSX.utils.book_append_sheet(workbook, worksheet, "HoSoDaNop");
 
     // Set column widths
-    worksheet['!cols'] = [
-      { wch: 5 }, { wch: 15 }, { wch: 25 }, { wch: 25 }, { wch: 30 },
-      { wch: 30 }, { wch: 40 }, { wch: 40 }, { wch: 40 }, { wch: 40 },
-      { wch: 40 }, { wch: 40 },
+    worksheet["!cols"] = [
+      { wch: 5 },
+      { wch: 15 },
+      { wch: 25 },
+      { wch: 25 },
+      { wch: 30 },
+      { wch: 30 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
+      { wch: 40 },
     ];
 
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    const excelBuffer = XLSX.write(workbook, {
+      bookType: "xlsx",
+      type: "array",
+    });
+    const blob = new Blob([excelBuffer], { type: "application/octet-stream" });
     saveAs(blob, fileName);
   };
-  
+
   const handleExportAll = () => {
-      exportToExcel(processedData, 'BaoCao_HoSoDaNop.xlsx');
-  }
+    exportToExcel(processedData, "BaoCao_HoSoDaNop.xlsx");
+  };
 
   const handleExportSingle = (studentData: SubmissionReport) => {
-      exportToExcel([studentData], `HoSo_${studentData.studentId}_${studentData.studentName.replace(/\s+/g, '_')}.xlsx`);
-  }
+    exportToExcel(
+      [studentData],
+      `HoSo_${studentData.studentId}_${studentData.studentName.replace(
+        /\s+/g,
+        "_"
+      )}.xlsx`
+    );
+  };
 
   const renderLinkCell = (url: string | undefined, tooltip: string) => {
     return (
       <TooltipProvider>
         <Tooltip>
           <TooltipTrigger asChild>
-             <span className={!url ? 'text-muted-foreground/30' : 'text-primary'}>
-                <LinkIcon className="h-4 w-4" />
-             </span>
+            <span
+              className={!url ? "text-muted-foreground/30" : "text-primary"}
+            >
+              <LinkIcon className="h-4 w-4" />
+            </span>
           </TooltipTrigger>
-           {url && (
+          {url && (
             <TooltipContent side="top">
-              <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
-                 {tooltip}
-                <span className="text-xs text-muted-foreground max-w-xs truncate">{url}</span>
+              <a
+                href={url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 hover:underline"
+              >
+                {tooltip}
+                <span className="text-xs text-muted-foreground max-w-xs truncate">
+                  {url}
+                </span>
               </a>
             </TooltipContent>
           )}
@@ -156,6 +228,13 @@ export function SubmissionReportTable() {
       </TooltipProvider>
     );
   };
+
+  const {
+    items: paginatedData,
+    state: pageState,
+    next,
+    prev,
+  } = usePagination(processedData, 50);
 
   if (isLoading) {
     return (
@@ -178,7 +257,8 @@ export function SubmissionReportTable() {
           <div>
             <CardTitle>Danh sách Hồ sơ đã nộp</CardTitle>
             <CardDescription>
-              Tổng hợp tất cả các hồ sơ đồ án tốt nghiệp và thực tập đã được sinh viên nộp lên hệ thống.
+              Tổng hợp tất cả các hồ sơ đồ án tốt nghiệp và thực tập đã được
+              sinh viên nộp lên hệ thống.
             </CardDescription>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-2 w-full sm:w-auto">
@@ -192,18 +272,38 @@ export function SubmissionReportTable() {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <Select value={selectedSessionId} onValueChange={setSelectedSessionId}>
-              <SelectTrigger className="w-full sm:w-[200px]">
+            <Select
+              value={selectedSessionId}
+              onValueChange={setSelectedSessionId}
+            >
+              <SelectTrigger className="w-full sm:w-[260px]">
                 <SelectValue placeholder="Lọc theo đợt" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Tất cả các đợt</SelectItem>
-                {sessions?.map(session => (
-                  <SelectItem key={session.id} value={session.id}>{session.name}</SelectItem>
-                ))}
+                <SelectItem value="ongoing">Các đợt đang diễn ra</SelectItem>
+                {Object.entries(groupedSessions).map(
+                  ([status, sessionList]) =>
+                    sessionList.length > 0 && (
+                      <div key={status}>
+                        <div className="px-2 py-1 text-xs text-muted-foreground">
+                          {statusLabel[status] || status}
+                        </div>
+                        {sessionList.map((session) => (
+                          <SelectItem key={session.id} value={session.id}>
+                            {session.name}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    )
+                )}
               </SelectContent>
             </Select>
-            <Button onClick={handleExportAll} variant="outline" className="w-full sm:w-auto">
+            <Button
+              onClick={handleExportAll}
+              variant="outline"
+              className="w-full sm:w-auto"
+            >
               <FileDown className="mr-2 h-4 w-4" />
               Xuất Excel
             </Button>
@@ -224,52 +324,81 @@ export function SubmissionReportTable() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {processedData.length > 0 ? (
-                processedData.map((item, index) => (
+              {paginatedData.length > 0 ? (
+                paginatedData.map((item, index) => (
                   <TableRow key={item.id}>
-                    <TableCell>{index + 1}</TableCell>
+                    <TableCell>{pageState.startIndex + index + 1}</TableCell>
                     <TableCell>
-                        <div>{item.studentName}</div>
-                        <div className="text-xs text-muted-foreground">{item.studentId}</div>
+                      <div>{item.studentName}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {item.studentId}
+                      </div>
                     </TableCell>
                     <TableCell>{item.sessionName}</TableCell>
                     <TableCell>
-                        {item.projectTitle ? (
-                           <div>
-                                <p className="font-medium truncate max-w-xs">{item.projectTitle}</p>
-                                <p className="text-xs text-muted-foreground">Đề tài Tốt nghiệp</p>
-                           </div>
-                        ) : item.internship_companyName ? (
-                             <div>
-                                <p className="font-medium truncate max-w-xs">{item.internship_companyName}</p>
-                                <p className="text-xs text-muted-foreground">Thực tập Doanh nghiệp</p>
-                           </div>
-                        ) : '-'}
+                      {item.projectTitle ? (
+                        <div>
+                          <p className="font-medium truncate max-w-xs">
+                            {item.projectTitle}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Đề tài Tốt nghiệp
+                          </p>
+                        </div>
+                      ) : item.internship_companyName ? (
+                        <div>
+                          <p className="font-medium truncate max-w-xs">
+                            {item.internship_companyName}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            Thực tập Doanh nghiệp
+                          </p>
+                        </div>
+                      ) : (
+                        "-"
+                      )}
                     </TableCell>
                     <TableCell>
-                        <div className="flex justify-center items-center gap-4">
-                            {renderLinkCell(item.reportLink, "Báo cáo Tốt nghiệp")}
-                            {renderLinkCell(item.internship_reportLink, "Báo cáo Thực tập")}
-                            {renderLinkCell(item.internship_acceptanceLetterLink, "Giấy tiếp nhận")}
-                            {renderLinkCell(item.internship_registrationFormLink, "Đơn đăng ký")}
-                            {renderLinkCell(item.internship_commitmentFormLink, "Đơn cam kết")}
-                            {renderLinkCell(item.internship_feedbackFormLink, "Giấy nhận xét")}
-                        </div>
+                      <div className="flex justify-center items-center gap-4">
+                        {renderLinkCell(item.reportLink, "Báo cáo Tốt nghiệp")}
+                        {renderLinkCell(
+                          item.internship_reportLink,
+                          "Báo cáo Thực tập"
+                        )}
+                        {renderLinkCell(
+                          item.internship_acceptanceLetterLink,
+                          "Giấy tiếp nhận"
+                        )}
+                        {renderLinkCell(
+                          item.internship_registrationFormLink,
+                          "Đơn đăng ký"
+                        )}
+                        {renderLinkCell(
+                          item.internship_commitmentFormLink,
+                          "Đơn cam kết"
+                        )}
+                        {renderLinkCell(
+                          item.internship_feedbackFormLink,
+                          "Giấy nhận xét"
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell className="text-right">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="h-4 w-4" />
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                                <DropdownMenuItem onClick={() => handleExportSingle(item)}>
-                                    <FileDown className="mr-2 h-4 w-4" />
-                                    <span>Xuất Excel</span>
-                                </DropdownMenuItem>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => handleExportSingle(item)}
+                          >
+                            <FileDown className="mr-2 h-4 w-4" />
+                            <span>Xuất Excel</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))
@@ -284,6 +413,7 @@ export function SubmissionReportTable() {
           </Table>
         </div>
       </CardContent>
+      <PaginationControls state={pageState} onPrev={prev} onNext={next} />
     </Card>
   );
 }

@@ -276,6 +276,8 @@ export type InternshipCompany = {
   contactEmail?: string;
   contactPhone?: string;
   isLHU?: boolean;
+  companySupervisorId?: string;
+  companySupervisorName?: string;
   positions?: InternshipPosition[];
   createdAt?: any;
 };

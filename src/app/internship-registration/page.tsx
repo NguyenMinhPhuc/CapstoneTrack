@@ -92,12 +92,17 @@ export default function InternshipRegistrationPage() {
         }
 
         // Filter all companies to get only the ones for the current session
-        if (sessionData.companyIds && sessionData.companyIds.length > 0 && allCompanies) {
+        // If no companyIds configured, default to showing all companies to avoid empty lists
+        if (allCompanies) {
+          if (sessionData.companyIds && sessionData.companyIds.length > 0) {
             const companyIdSet = new Set(sessionData.companyIds);
             const companiesForSession = allCompanies.filter(company => companyIdSet.has(company.id));
             setSessionCompanies(companiesForSession);
+          } else {
+            setSessionCompanies(allCompanies);
+          }
         } else {
-            setSessionCompanies([]);
+          setSessionCompanies([]);
         }
 
     } catch (error) {

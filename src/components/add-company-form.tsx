@@ -46,6 +46,8 @@ const formSchema = z.object({
   contactEmail: z.string().email({ message: 'Email không hợp lệ.' }).optional().or(z.literal('')),
   contactPhone: z.string().optional(),
   isLHU: z.boolean().default(false),
+  companySupervisorId: z.string().optional(),
+  companySupervisorName: z.string().optional(),
   positions: z.array(positionSchema).optional(),
 });
 
@@ -68,6 +70,8 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
       contactEmail: '',
       contactPhone: '',
       isLHU: false,
+      companySupervisorId: '',
+      companySupervisorName: '',
       positions: [],
     },
   });
@@ -107,6 +111,8 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
             contactName: values.contactName || '',
             contactEmail: values.contactEmail || '',
             contactPhone: values.contactPhone || '',
+        companySupervisorId: values.companySupervisorId || '',
+        companySupervisorName: values.companySupervisorName || '',
         };
     }
 
@@ -214,6 +220,7 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
                         {...field}
                       />
                     </FormControl>
+                    <p className="text-xs text-muted-foreground">Hỗ trợ Markdown (tiêu đề, danh sách, liên kết, bảng...)</p>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -271,6 +278,7 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
                                 <FormControl>
                                   <Textarea placeholder="Yêu cầu, kỹ năng, công việc chính..." {...field} />
                                 </FormControl>
+                                <p className="text-xs text-muted-foreground">Hỗ trợ Markdown để mô tả rõ ràng hơn.</p>
                                 <FormMessage />
                               </FormItem>
                             )}
@@ -310,6 +318,26 @@ export function AddCompanyForm({ onFinished }: AddCompanyFormProps) {
 
               {!isLHU && (
                 <>
+                  <FormField
+                    control={form.control}
+                    name="companySupervisorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>GV hướng dẫn (trường)</FormLabel>
+                        <FormControl>
+                          <SupervisorCombobox
+                            value={field.value || null}
+                            onChange={(supervisorId) => field.onChange(supervisorId || '')}
+                            onSupervisorSelect={(s: Supervisor | null) => {
+                              form.setValue('companySupervisorId', s?.id || '');
+                              form.setValue('companySupervisorName', s ? `${s.firstName} ${s.lastName}` : '');
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                   <FormField
                     control={form.control}
                     name="contactName"
