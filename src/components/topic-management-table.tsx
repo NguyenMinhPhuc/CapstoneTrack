@@ -35,7 +35,11 @@ import {
 } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection, doc, updateDoc, query } from "firebase/firestore";
-import type { ProjectTopic, GraduationDefenseSession } from "@/lib/types";
+import type {
+  ProjectTopic,
+  GraduationDefenseSession,
+  DefenseRegistration,
+} from "@/lib/types";
 import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "./ui/badge";
@@ -104,6 +108,7 @@ export function TopicManagementTable() {
   const [topicToReject, setTopicToReject] = useState<ProjectTopic | null>(null);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isSessionPopoverOpen, setIsSessionPopoverOpen] = useState(false);
+  const [showStats, setShowStats] = useState(false);
 
   const topicsQuery = useMemoFirebase(
     () => query(collection(firestore, "projectTopics")),
@@ -111,6 +116,14 @@ export function TopicManagementTable() {
   );
   const { data: topics, isLoading: isLoadingTopics } =
     useCollection<ProjectTopic>(topicsQuery);
+
+  // Fetch all registrations (used for counting students guided per teacher/topic)
+  const registrationsQuery = useMemoFirebase(
+    () => collection(firestore, "defenseRegistrations"),
+    [firestore]
+  );
+  const { data: registrations, isLoading: isLoadingRegistrations } =
+    useCollection<DefenseRegistration>(registrationsQuery);
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, "graduationDefenseSessions"),
@@ -197,7 +210,63 @@ export function TopicManagementTable() {
     }
   };
 
-  const isLoading = isLoadingTopics || isLoadingSessions;
+  const isLoading =
+    isLoadingTopics || isLoadingSessions || isLoadingRegistrations;
+
+  // Compute per-teacher stats based on CURRENT filtered topics and registrations
+  const teacherStats = useMemo(() => {
+    if (!filteredTopics.length || !registrations)
+      return [] as Array<{
+        supervisorId: string;
+        supervisorName: string;
+        topicCount: number;
+        studentCount: number;
+      }>;
+
+    // Build map for topic counts per supervisor
+    const map = new Map<
+      string,
+      {
+        supervisorName: string;
+        topicCount: number;
+        studentCount: number;
+        keys: Set<string>;
+      }
+    >();
+    filteredTopics.forEach((t) => {
+      const entry = map.get(t.supervisorId) || {
+        supervisorName: t.supervisorName,
+        topicCount: 0,
+        studentCount: 0,
+        keys: new Set<string>(),
+      };
+      entry.topicCount += 1;
+      // Composite key used in registrations (sessionId-title-supervisorId)
+      entry.keys.add(`${t.sessionId}-${t.title}-${t.supervisorId}`);
+      map.set(t.supervisorId, entry);
+    });
+
+    // Count students per topic key if matches supervisor and not rejected
+    registrations.forEach((reg) => {
+      if (!reg.supervisorId || !reg.projectTitle) return;
+      if (reg.projectRegistrationStatus === "rejected") return;
+      const key = `${reg.sessionId}-${reg.projectTitle}-${reg.supervisorId}`;
+      const entry = map.get(reg.supervisorId);
+      if (entry && entry.keys.has(key)) {
+        entry.studentCount += 1;
+      }
+    });
+
+    // Build final array
+    return Array.from(map.entries())
+      .map(([supervisorId, v]) => ({
+        supervisorId,
+        supervisorName: v.supervisorName,
+        topicCount: v.topicCount,
+        studentCount: v.studentCount,
+      }))
+      .sort((a, b) => a.supervisorName.localeCompare(b.supervisorName));
+  }, [filteredTopics, registrations]);
 
   if (isLoading) {
     return (
@@ -330,6 +399,40 @@ export function TopicManagementTable() {
           </div>
         </CardHeader>
         <CardContent>
+          {teacherStats.length > 0 && (
+            <div className="mb-4 space-y-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowStats((v) => !v)}
+              >
+                {showStats ? "Ẩn thống kê GV" : "Hiển thị thống kê GV"} (
+                {teacherStats.length} GV)
+              </Button>
+              {showStats && (
+                <div className="text-sm space-y-1 animate-in fade-in-50">
+                  <div className="font-medium">
+                    Thống kê theo GV (lọc hiện tại):
+                  </div>
+                  <div className="grid gap-1 md:grid-cols-2 lg:grid-cols-3">
+                    {teacherStats.map((s) => (
+                      <div
+                        key={s.supervisorId}
+                        className="flex items-center justify-between rounded border px-2 py-1 bg-muted/40"
+                      >
+                        <span className="truncate" title={s.supervisorName}>
+                          {s.supervisorName}
+                        </span>
+                        <span className="text-muted-foreground">
+                          {s.topicCount} đề tài / {s.studentCount} SV
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
           <div className="border rounded-md">
             <div className="grid grid-cols-12 w-full text-left text-sm font-semibold items-center gap-4 px-4 py-2 bg-muted/50">
               <div className="col-span-1 text-center">STT</div>

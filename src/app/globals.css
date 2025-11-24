@@ -69,7 +69,7 @@
     --border: 222 84% 15%;
     --input: 222 84% 15%;
     --ring: 0 0% 83.1%;
-    
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;
@@ -91,7 +91,32 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Markdown preview basic list styling */
+.markdown-preview ul {
+  list-style: disc;
+  margin-left: 1.25rem;
+  padding-left: 0.25rem;
+}
+
+.markdown-preview ol {
+  list-style: decimal;
+  margin-left: 1.25rem;
+  padding-left: 0.25rem;
+}
+
+.markdown-preview li {
+  margin: 0.25rem 0;
+}
+
+.markdown-preview code {
+  background: hsl(var(--muted));
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-size: 0.85em;
 }

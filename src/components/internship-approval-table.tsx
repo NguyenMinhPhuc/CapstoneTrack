@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import * as XLSX from "xlsx";
 import {
   Table,
   TableBody,
@@ -181,6 +182,46 @@ export function InternshipApprovalTable() {
       return sessionMatch && searchMatch;
     });
   }, [registrations, selectedSessionId, searchTerm]);
+
+  const handleExportExcel = () => {
+    try {
+      const rows = filteredRegistrations.map((reg, idx) => ({
+        STT: idx + 1,
+        SinhVien: reg.studentName,
+        MSSV: reg.studentId,
+        CongTy: reg.internship_companyName || "",
+        DotBaoCao: sessionMap.get(reg.sessionId) || "",
+        TrangThaiDangKy:
+          registrationStatusLabel[
+            reg.internshipRegistrationStatus || "pending"
+          ],
+        TrangThaiBaoCao:
+          reportStatusLabel[reg.internshipStatus || "not_reporting"],
+        DonDangKy: reg.internship_registrationFormLink || "",
+        GiayTiepNhan: reg.internship_acceptanceLetterLink || "",
+        DonCamKet: reg.internship_commitmentFormLink || "",
+        BaoCaoThucTap: reg.internship_reportLink || "",
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(rows);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "DangKyThucTap");
+      const filename = `dangky-thuctap-${new Date()
+        .toISOString()
+        .slice(0, 10)}.xlsx`;
+      XLSX.writeFile(workbook, filename);
+      toast({
+        title: "Xuất Excel thành công",
+        description: `Đã tạo file ${filename}`,
+      });
+    } catch (e: any) {
+      console.error("Excel export error", e);
+      toast({
+        variant: "destructive",
+        title: "Lỗi xuất Excel",
+        description: e.message || "Không thể tạo file.",
+      });
+    }
+  };
 
   const handleStatusChange = async (
     registrationId: string,
@@ -364,6 +405,9 @@ export function InternshipApprovalTable() {
                     Xác nhận Báo cáo ({selectedRowIds.length})
                   </Button>
                 )}
+                <Button onClick={handleExportExcel} variant="outline" size="sm">
+                  Xuất Excel
+                </Button>
                 <div className="relative w-full sm:w-auto">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input

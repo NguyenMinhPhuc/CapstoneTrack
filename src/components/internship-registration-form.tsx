@@ -233,7 +233,7 @@ export function InternshipRegistrationForm({
         (p) => p.id === internship_positionId
       );
       setSelectedPosition(position || null);
-          if (position?.supervisorId) {
+      if (position?.supervisorId) {
         form.setValue("internshipSupervisorId", position.supervisorId);
       } else {
         form.setValue("internshipSupervisorId", "");
@@ -318,9 +318,14 @@ export function InternshipRegistrationForm({
                   ...dataToUpdate,
                   internship_positionId: position.id || "",
                   internship_positionTitle: position.title || "",
-                  internship_companySupervisorName: position.supervisorName || "",
-                  internshipSupervisorId: company.isLHU ? (position.supervisorId || "") : (company.companySupervisorId || ""),
-                  internshipSupervisorName: company.isLHU ? (position.supervisorName || "") : (company.companySupervisorName || ""),
+                  internship_companySupervisorName:
+                    position.supervisorName || "",
+                  internshipSupervisorId: company.isLHU
+                    ? position.supervisorId || ""
+                    : company.companySupervisorId || "",
+                  internshipSupervisorName: company.isLHU
+                    ? position.supervisorName || ""
+                    : company.companySupervisorName || "",
                   internship_companySupervisorPhone: "",
                 });
               });
@@ -354,8 +359,10 @@ export function InternshipRegistrationForm({
               dataToUpdate.internshipSupervisorId = "";
               dataToUpdate.internshipSupervisorName = "";
             } else {
-              dataToUpdate.internshipSupervisorId = company.companySupervisorId || "";
-              dataToUpdate.internshipSupervisorName = company.companySupervisorName || "";
+              dataToUpdate.internshipSupervisorId =
+                company.companySupervisorId || "";
+              dataToUpdate.internshipSupervisorName =
+                company.companySupervisorName || "";
             }
           }
         }
@@ -555,11 +562,11 @@ export function InternshipRegistrationForm({
                     <>
                       <div className="space-y-1">
                         <p className="font-medium text-sm">Mô tả công ty</p>
-                          <div className="text-sm text-muted-foreground">
-                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                              {selectedCompany.description}
-                            </ReactMarkdown>
-                          </div>
+                        <div className="text-sm text-muted-foreground">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {selectedCompany.description}
+                          </ReactMarkdown>
+                        </div>
                       </div>
                       <Separator />
                     </>
@@ -651,9 +658,12 @@ export function InternshipRegistrationForm({
                         )}
                         {selectedCompany.isLHU && (
                           <div>
-                            <p className="text-sm font-medium">Người hướng dẫn tại trường</p>
+                            <p className="text-sm font-medium">
+                              Người hướng dẫn tại trường
+                            </p>
                             <p className="text-sm text-muted-foreground">
-                              {selectedPosition?.supervisorName || "Chưa được gán"}
+                              {selectedPosition?.supervisorName ||
+                                "Chưa được gán"}
                             </p>
                           </div>
                         )}
@@ -677,7 +687,8 @@ export function InternshipRegistrationForm({
                         <div>
                           <p className="font-medium">GV hướng dẫn (trường)</p>
                           <p className="text-muted-foreground">
-                            {selectedCompany.companySupervisorName || "Chưa được gán"}
+                            {selectedCompany.companySupervisorName ||
+                              "Chưa được gán"}
                           </p>
                         </div>
                       </div>

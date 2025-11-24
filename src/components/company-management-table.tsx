@@ -61,6 +61,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Input } from "./ui/input";
 import { AddCompanyForm } from "./add-company-form";
 import { EditCompanyForm } from "./edit-company-form";
+import { CompanyDetailsDialog } from "./company-details-dialog";
 import { Checkbox } from "./ui/checkbox";
 import { AssignCompaniesToSessionDialog } from "./assign-companies-to-session-dialog";
 import { ImportCompaniesDialog } from "./import-companies-dialog";
@@ -73,6 +74,7 @@ export function CompanyManagementTable() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isAssignToSessionDialogOpen, setIsAssignToSessionDialogOpen] =
     useState(false);
@@ -116,6 +118,11 @@ export function CompanyManagementTable() {
   const handleEditClick = (company: InternshipCompany) => {
     setSelectedCompany(company);
     setIsEditDialogOpen(true);
+  };
+
+  const handleDetailClick = (company: InternshipCompany) => {
+    setSelectedCompany(company);
+    setIsDetailDialogOpen(true);
   };
 
   const handleDeleteClick = (company: InternshipCompany) => {
@@ -212,6 +219,35 @@ export function CompanyManagementTable() {
   const isSomeSelected =
     selectedRowIds.length > 0 &&
     selectedRowIds.length < (paginatedCompanies?.length ?? 0);
+
+  const stats = useMemo(() => {
+    if (!companies) return null;
+    const totalCompanies = companies.length;
+    const lhuCount = companies.filter((c) => c.isLHU).length;
+    const externalCount = totalCompanies - lhuCount;
+    const totalPositions = companies.reduce(
+      (sum, c) => sum + (c.positions ? c.positions.length : 0),
+      0
+    );
+    const totalCapacity = companies.reduce(
+      (sum, c) =>
+        sum +
+        (c.positions
+          ? c.positions.reduce(
+              (inner, p) => inner + (p.quantity ? p.quantity : 0),
+              0
+            )
+          : 0),
+      0
+    );
+    return {
+      totalCompanies,
+      lhuCount,
+      externalCount,
+      totalPositions,
+      totalCapacity,
+    };
+  }, [companies]);
 
   if (isLoading) {
     return (
@@ -315,6 +351,13 @@ export function CompanyManagementTable() {
           </div>
         </CardHeader>
         <CardContent>
+          {stats && (
+            <div className="mb-4 text-sm font-medium">
+              Tổng số doanh nghiệp: {stats.totalCompanies} (Ngoài:{" "}
+              {stats.externalCount}, LHU: {stats.lhuCount}) • Tổng số vị trí /
+              SV tiếp nhận: {stats.totalPositions} / {stats.totalCapacity}
+            </div>
+          )}
           <Table>
             <TableHeader>
               <TableRow>
@@ -332,7 +375,7 @@ export function CompanyManagementTable() {
                 </TableHead>
                 <TableHead>Tên Doanh nghiệp</TableHead>
                 <TableHead>Địa chỉ</TableHead>
-                <TableHead>Số vị trí</TableHead>
+                <TableHead>Vị trí / SV tiếp nhận</TableHead>
                 <TableHead>Phòng ban LHU</TableHead>
                 <TableHead className="text-right">Hành động</TableHead>
               </TableRow>
@@ -353,7 +396,17 @@ export function CompanyManagementTable() {
                   </TableCell>
                   <TableCell className="font-medium">{company.name}</TableCell>
                   <TableCell>{company.address}</TableCell>
-                  <TableCell>{company.positions?.length || 0}</TableCell>
+                  <TableCell>
+                    {(() => {
+                      const positions = company.positions || [];
+                      const count = positions.length;
+                      const total = positions.reduce(
+                        (sum, p) => sum + (p.quantity || 0),
+                        0
+                      );
+                      return `${count} / ${total}`;
+                    })()}
+                  </TableCell>
                   <TableCell>
                     {company.isLHU && (
                       <CheckCircle className="h-5 w-5 text-green-500" />
@@ -371,6 +424,11 @@ export function CompanyManagementTable() {
                           onClick={() => handleEditClick(company)}
                         >
                           Sửa
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleDetailClick(company)}
+                        >
+                          Xem chi tiết
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           className="text-destructive focus:text-destructive"
@@ -398,6 +456,10 @@ export function CompanyManagementTable() {
             />
           )}
         </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
+        {selectedCompany && <CompanyDetailsDialog company={selectedCompany} />}
       </Dialog>
 
       <AlertDialog
