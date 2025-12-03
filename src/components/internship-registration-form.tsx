@@ -339,13 +339,19 @@ export function InternshipRegistrationForm({
             } catch (e) {
               if ((e as Error).message === "FULL") {
                 toast({
+                  variant: "destructive",
                   title: "Hết chỗ",
                   description:
                     "Vị trí này đã đủ số lượng. Vui lòng chọn vị trí khác.",
                 });
                 return; // Stop submission
               }
-              console.warn("Transaction failed", e);
+              console.error("Transaction failed", e);
+              toast({
+                variant: "destructive",
+                title: "Lỗi",
+                description: "Không thể gửi đăng ký. Vui lòng thử lại sau.",
+              });
               return; // Stop submission on unknown failure to avoid overfill
             }
           } else {
@@ -409,6 +415,12 @@ export function InternshipRegistrationForm({
         onSuccess(); // Refetch data in parent component
       })
       .catch((error) => {
+        console.error("Error updating registration:", error);
+        toast({
+          variant: "destructive",
+          title: "Lỗi",
+          description: "Không thể gửi đăng ký. Vui lòng thử lại sau.",
+        });
         const contextualError = new FirestorePermissionError({
           path: registrationDocRef.path,
           operation: "update",

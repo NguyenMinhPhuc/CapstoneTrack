@@ -141,6 +141,7 @@ export function SubmissionReportTable() {
       STT: index + 1,
       MSSV: item.studentId,
       "Họ và Tên": item.studentName,
+      Lớp: item.className || "",
       "Đợt báo cáo": item.sessionName,
       "Đề tài TN": item.projectTitle || "",
       "Công ty TT": item.internship_companyName || "",
@@ -165,6 +166,7 @@ export function SubmissionReportTable() {
       { wch: 5 },
       { wch: 15 },
       { wch: 25 },
+      { wch: 15 },
       { wch: 25 },
       { wch: 30 },
       { wch: 30 },
@@ -317,6 +319,7 @@ export function SubmissionReportTable() {
               <TableRow>
                 <TableHead>STT</TableHead>
                 <TableHead>Sinh viên</TableHead>
+                <TableHead>Lớp</TableHead>
                 <TableHead>Đợt báo cáo</TableHead>
                 <TableHead>Đề tài/Công ty</TableHead>
                 <TableHead className="text-center">Minh chứng</TableHead>
@@ -334,6 +337,7 @@ export function SubmissionReportTable() {
                         {item.studentId}
                       </div>
                     </TableCell>
+                    <TableCell>{item.className || "—"}</TableCell>
                     <TableCell>{item.sessionName}</TableCell>
                     <TableCell>
                       {item.projectTitle ? (
@@ -404,7 +408,7 @@ export function SubmissionReportTable() {
                 ))
               ) : (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center h-24">
+                  <TableCell colSpan={7} className="text-center h-24">
                     Không tìm thấy hồ sơ nào.
                   </TableCell>
                 </TableRow>

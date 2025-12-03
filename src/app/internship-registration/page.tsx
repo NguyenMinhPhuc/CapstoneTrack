@@ -103,7 +103,8 @@ export default function InternshipRegistrationPage() {
     try {
       const sessionsQuery = query(
         collection(firestore, "graduationDefenseSessions"),
-        where("status", "in", ["upcoming", "ongoing"])
+        where("status", "in", ["upcoming", "ongoing"]),
+        where("sessionType", "in", ["internship", "combined"]) // Only internship-related sessions
       );
       const sessionsSnapshot = await getDocs(sessionsQuery);
 

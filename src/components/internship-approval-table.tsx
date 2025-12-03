@@ -24,7 +24,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import {
   MoreHorizontal,
   Search,
@@ -32,6 +32,7 @@ import {
   X,
   Link as LinkIcon,
   FileUp,
+  Trash2,
 } from "lucide-react";
 import {
   useCollection,
@@ -47,6 +48,7 @@ import {
   query,
   where,
   writeBatch,
+  deleteField,
 } from "firebase/firestore";
 import type {
   GraduationDefenseSession,
@@ -127,6 +129,9 @@ export function InternshipApprovalTable() {
   const [selectedRegistration, setSelectedRegistration] =
     useState<DefenseRegistration | null>(null);
   const [selectedRowIds, setSelectedRowIds] = useState<string[]>([]);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [registrationToDelete, setRegistrationToDelete] =
+    useState<DefenseRegistration | null>(null);
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, "graduationDefenseSessions"),
@@ -312,6 +317,63 @@ export function InternshipApprovalTable() {
   const handleRejectClick = (registration: DefenseRegistration) => {
     setSelectedRegistration(registration);
     setIsRejectDialogOpen(true);
+  };
+
+  const handleDeleteClick = (registration: DefenseRegistration) => {
+    setRegistrationToDelete(registration);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!registrationToDelete) return;
+
+    const registrationDocRef = doc(
+      firestore,
+      "defenseRegistrations",
+      registrationToDelete.id
+    );
+
+    const dataToUpdate: any = {
+      internship_companyName: deleteField(),
+      internship_companyAddress: deleteField(),
+      internship_companySupervisorName: deleteField(),
+      internship_companySupervisorPhone: deleteField(),
+      internship_registrationFormLink: deleteField(),
+      internship_commitmentFormLink: deleteField(),
+      internship_acceptanceLetterLink: deleteField(),
+      internship_feedbackFormLink: deleteField(),
+      internship_reportLink: deleteField(),
+      internship_positionId: deleteField(),
+      internship_positionTitle: deleteField(),
+      internshipRegistrationStatus: deleteField(),
+      internshipStatus: "not_reporting",
+      internshipStatusNote: deleteField(),
+      internshipSupervisorId: deleteField(),
+      internshipSupervisorName: deleteField(),
+    };
+
+    try {
+      await updateDoc(registrationDocRef, dataToUpdate);
+      toast({
+        title: "Xóa thành công",
+        description: "Đã xóa dữ liệu đăng ký thực tập của sinh viên.",
+      });
+      setIsDeleteDialogOpen(false);
+      setRegistrationToDelete(null);
+    } catch (error) {
+      console.error("Error deleting internship data:", error);
+      const contextualError = new FirestorePermissionError({
+        path: registrationDocRef.path,
+        operation: "update",
+        requestResourceData: dataToUpdate,
+      });
+      errorEmitter.emit("permission-error", contextualError);
+      toast({
+        variant: "destructive",
+        title: "Lỗi",
+        description: "Không thể xóa dữ liệu đăng ký thực tập.",
+      });
+    }
   };
 
   const handleSelectAll = (checked: boolean | "indeterminate") => {
@@ -585,6 +647,16 @@ export function InternshipApprovalTable() {
                                 <X className="mr-2 h-4 w-4" />
                                 Từ chối
                               </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleDeleteClick(reg);
+                                }}
+                                className="text-destructive focus:text-destructive"
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Xóa dữ liệu ĐK
+                              </DropdownMenuItem>
                             </DropdownMenuContent>
                           </DropdownMenu>
                         </TableCell>
@@ -610,6 +682,7 @@ export function InternshipApprovalTable() {
       )}
       <Dialog open={isRejectDialogOpen} onOpenChange={setIsRejectDialogOpen}>
         <DialogContent>
+          <DialogTitle>Từ chối đăng ký</DialogTitle>
           {selectedRegistration && (
             <RejectionReasonDialog
               registration={selectedRegistration}
@@ -624,6 +697,48 @@ export function InternshipApprovalTable() {
               }}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle>Xác nhận xóa dữ liệu</DialogTitle>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <p className="text-sm text-muted-foreground">
+                Bạn có chắc chắn muốn xóa toàn bộ dữ liệu đăng ký thực tập của
+                sinh viên{" "}
+                <span className="font-semibold">
+                  {registrationToDelete?.studentName}
+                </span>{" "}
+                (
+                <span className="font-mono">
+                  {registrationToDelete?.studentId}
+                </span>
+                )?
+              </p>
+              <p className="text-sm text-destructive">
+                Hành động này sẽ xóa tất cả thông tin công ty, giám sát viên, và
+                các link minh chứng đăng ký thực tập. Sinh viên có thể đăng ký
+                lại vào đợt khác nếu cần.
+              </p>
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setRegistrationToDelete(null);
+                }}
+              >
+                Hủy
+              </Button>
+              <Button variant="destructive" onClick={handleConfirmDelete}>
+                <Trash2 className="mr-2 h-4 w-4" />
+                Xóa dữ liệu
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </>

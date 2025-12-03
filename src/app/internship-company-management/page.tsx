@@ -5,7 +5,9 @@ import { useRouter } from "next/navigation";
 import { useUser, useFirestore, useDoc, useMemoFirebase } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { MyCompanyManagementTable } from "@/components/my-company-management-table";
+import { MyCompanyStudentsTable } from "@/components/my-company-students-table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import type { Supervisor } from "@/lib/types";
 
 export default function InternshipCompanyManagementPage() {
@@ -67,15 +69,32 @@ export default function InternshipCompanyManagementPage() {
     <main className="p-4 sm:p-6 lg:p-8 space-y-6">
       <h1 className="text-2xl font-bold">Đơn vị thực tập của tôi</h1>
       <p className="text-sm text-muted-foreground">
-        Thêm, chỉnh sửa hoặc xóa các đơn vị thực tập mà bạn trực tiếp quản lý.
-        Các đơn vị này sẽ xuất hiện cho sinh viên khi đăng ký thực tập nếu được
-        gán vào đợt.
+        Quản lý các đơn vị thực tập và xem danh sách sinh viên đăng ký.
       </p>
-      <MyCompanyManagementTable
-        supervisorId={user.uid}
-        supervisorName={supervisorName}
-        isAdmin={userData.role === "admin"}
-      />
+
+      <Tabs defaultValue="companies" className="w-full">
+        <TabsList className="grid w-full sm:w-auto grid-cols-2">
+          <TabsTrigger value="companies">Đơn vị</TabsTrigger>
+          <TabsTrigger value="students">Sinh viên đăng ký</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="companies" className="space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Thêm, chỉnh sửa hoặc xóa các đơn vị thực tập mà bạn trực tiếp quản
+            lý. Các đơn vị này sẽ xuất hiện cho sinh viên khi đăng ký thực tập
+            nếu được gán vào đợt.
+          </p>
+          <MyCompanyManagementTable
+            supervisorId={user.uid}
+            supervisorName={supervisorName}
+            isAdmin={userData.role === "admin"}
+          />
+        </TabsContent>
+
+        <TabsContent value="students" className="space-y-4">
+          <MyCompanyStudentsTable supervisorId={user.uid} />
+        </TabsContent>
+      </Tabs>
     </main>
   );
 }
