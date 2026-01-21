@@ -400,6 +400,17 @@ export function EarlyInternshipGuidanceTable({
     batch.update(docRef, dataToUpdate);
 
     if (status === "completed") {
+      const studentIdentifier = (internship.studentIdentifier || internship.studentId || "").toString();
+
+      if (!studentIdentifier) {
+        toast({
+          variant: "destructive",
+          title: "Thiếu mã số sinh viên",
+          description: "Không thể thêm vào đợt báo cáo vì sinh viên thiếu mã số.",
+        });
+        return;
+      }
+
       try {
         const sessionsQuery = query(
           collection(firestore, "graduationDefenseSessions"),
@@ -442,7 +453,7 @@ export function EarlyInternshipGuidanceTable({
             ...registrationData,
             sessionId: ongoingSessionId,
             studentDocId: internship.studentId,
-            studentId: internship.studentIdentifier,
+              studentId: studentIdentifier,
             studentName: internship.studentName,
             graduationStatus: "not_reporting",
             registrationDate: serverTimestamp(),

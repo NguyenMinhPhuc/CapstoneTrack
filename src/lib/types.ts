@@ -45,6 +45,9 @@ export type DefenseSession = {
   companyInternshipRubricId?: string;
   graduationCouncilWeight?: number;
   internshipCouncilWeight?: number;
+  // Admin locks to disable registrations for a session
+  lockGraduationRegistration?: boolean;
+  lockInternshipRegistration?: boolean;
 };
 
 export type Student = {
@@ -133,6 +136,7 @@ export type DefenseRegistration = {
   internship_acceptanceLetterLink?: string;
   internship_feedbackFormLink?: string;
   internship_reportLink?: string;
+  internship_registrationType?: "from_list" | "self_arranged" | "early_internship";
   internship_positionId?: string;
   internship_positionTitle?: string;
 };

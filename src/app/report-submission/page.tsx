@@ -180,6 +180,18 @@ export default function ReportSubmissionPage() {
   }
 
   const getAlert = () => {
+    if (activeSession?.lockGraduationRegistration) {
+      return (
+        <Alert>
+          <Info className="h-4 w-4" />
+          <AlertTitle>Đã khóa đăng ký</AlertTitle>
+          <AlertDescription>
+            Đợt đăng ký báo cáo tốt nghiệp này đã bị khóa bởi quản trị viên. Bạn
+            không thể nộp báo cáo trong đợt này.
+          </AlertDescription>
+        </Alert>
+      );
+    }
     if (!activeRegistration) {
       return (
         <Alert>

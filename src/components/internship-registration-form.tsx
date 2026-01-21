@@ -151,13 +151,17 @@ export function InternshipRegistrationForm({
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      registrationType: registration.internship_companyName
-        ? hasCompletedEarlyInternship &&
-          registration.internship_companyName ===
-            earlyInternshipData?.companyName
+      registrationType:
+        (registration as any).internship_registrationType ||
+        (registration.internship_companyName
+          ? hasCompletedEarlyInternship &&
+            registration.internship_companyName ===
+              earlyInternshipData?.companyName
+            ? "early_internship"
+            : "self_arranged"
+          : hasCompletedEarlyInternship
           ? "early_internship"
-          : "self_arranged"
-        : "from_list",
+          : "from_list"),
       selectedCompanyId: "",
       internship_positionId: registration.internship_positionId || "",
       internship_companyName: registration.internship_companyName || "",
@@ -271,6 +275,9 @@ export function InternshipRegistrationForm({
       internship_acceptanceLetterLink: values.internship_acceptanceLetterLink,
       internship_commitmentFormLink: values.internship_commitmentFormLink,
     };
+
+    // persist the chosen registration type for admin reporting/export
+    dataToUpdate.internship_registrationType = values.registrationType;
 
     // Only update company info if the form is not locked
     if (!areCompanyFieldsDisabled) {

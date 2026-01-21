@@ -55,6 +55,8 @@ import type {
   DefenseRegistration,
   InternshipRegistrationStatus,
   ReportStatus,
+  Student,
+  InternshipCompany,
 } from "@/lib/types";
 import { Skeleton } from "./ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
@@ -95,6 +97,13 @@ const registrationStatusVariant: Record<
   rejected: "destructive",
 };
 
+const registrationTypeLabel: Record<string, string> = {
+  from_list: "Theo danh sách",
+  self_arranged: "Tự tìm",
+  early_internship: "Thực tập sớm",
+  unknown: "Khác",
+};
+
 const reportStatusLabel: Record<ReportStatus, string> = {
   reporting: "Báo cáo",
   exempted: "Đặc cách",
@@ -125,6 +134,9 @@ export function InternshipApprovalTable() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSessionId, setSelectedSessionId] = useState("all");
+  const [selectedRegistrationStatus, setSelectedRegistrationStatus] = useState<
+    "all" | InternshipRegistrationStatus
+  >("all");
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [selectedRegistration, setSelectedRegistration] =
     useState<DefenseRegistration | null>(null);
@@ -135,7 +147,7 @@ export function InternshipApprovalTable() {
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, "graduationDefenseSessions"),
-    [firestore]
+    [firestore],
   );
   const { data: sessions, isLoading: isLoadingSessions } =
     useCollection<GraduationDefenseSession>(sessionsQuery);
@@ -144,16 +156,33 @@ export function InternshipApprovalTable() {
     () =>
       query(
         collection(firestore, "defenseRegistrations"),
-        where("internship_companyName", "!=", null)
+        where("internship_companyName", "!=", null),
       ),
-    [firestore]
+    [firestore],
   );
   const { data: registrations, isLoading: isLoadingRegistrations } =
     useCollection<DefenseRegistration>(registrationsQuery);
 
+  // Load students and companies to include contact info in exports
+  const studentsQuery = useMemoFirebase(
+    () => collection(firestore, "students"),
+    [firestore],
+  );
+  const { data: students } = useCollection<Student>(studentsQuery);
+
+  const companiesQuery = useMemoFirebase(
+    () => collection(firestore, "internshipCompanies"),
+    [firestore],
+  );
+  const { data: companies } = useCollection<InternshipCompany>(companiesQuery);
+
   useEffect(() => {
     setSelectedRowIds([]);
   }, [registrations]);
+
+  useEffect(() => {
+    setSelectedRowIds([]);
+  }, [searchTerm, selectedSessionId, selectedRegistrationStatus]);
 
   const isLoading = isLoadingSessions || isLoadingRegistrations;
 
@@ -164,12 +193,18 @@ export function InternshipApprovalTable() {
 
   const groupedSessions = useMemo(() => {
     if (!sessions) return { ongoing: [], upcoming: [], completed: [] };
-    return sessions.reduce((acc, session) => {
-      const group = acc[session.status] || [];
-      group.push(session);
-      acc[session.status] = group;
-      return acc;
-    }, {} as Record<GraduationDefenseSession["status"], GraduationDefenseSession[]>);
+    return sessions.reduce(
+      (acc, session) => {
+        const group = acc[session.status] || [];
+        group.push(session);
+        acc[session.status] = group;
+        return acc;
+      },
+      {} as Record<
+        GraduationDefenseSession["status"],
+        GraduationDefenseSession[]
+      >,
+    );
   }, [sessions]);
 
   const filteredRegistrations = useMemo(() => {
@@ -178,41 +213,103 @@ export function InternshipApprovalTable() {
     return registrations.filter((reg) => {
       const sessionMatch =
         selectedSessionId === "all" || reg.sessionId === selectedSessionId;
+      const statusMatch =
+        selectedRegistrationStatus === "all" ||
+        (reg.internshipRegistrationStatus || "pending") ===
+          selectedRegistrationStatus;
       const term = searchTerm.toLowerCase();
       const searchMatch =
         reg.studentName.toLowerCase().includes(term) ||
         reg.studentId.toLowerCase().includes(term) ||
         reg.internship_companyName?.toLowerCase().includes(term);
 
-      return sessionMatch && searchMatch;
+      return sessionMatch && statusMatch && searchMatch;
     });
-  }, [registrations, selectedSessionId, searchTerm]);
+  }, [
+    registrations,
+    selectedSessionId,
+    selectedRegistrationStatus,
+    searchTerm,
+  ]);
 
   const handleExportExcel = () => {
     try {
-      const rows = filteredRegistrations.map((reg, idx) => ({
-        STT: idx + 1,
-        SinhVien: reg.studentName,
-        MSSV: reg.studentId,
-        CongTy: reg.internship_companyName || "",
-        DotBaoCao: sessionMap.get(reg.sessionId) || "",
-        TrangThaiDangKy:
-          registrationStatusLabel[
-            reg.internshipRegistrationStatus || "pending"
-          ],
-        TrangThaiBaoCao:
-          reportStatusLabel[reg.internshipStatus || "not_reporting"],
-        DonDangKy: reg.internship_registrationFormLink || "",
-        GiayTiepNhan: reg.internship_acceptanceLetterLink || "",
-        DonCamKet: reg.internship_commitmentFormLink || "",
-        BaoCaoThucTap: reg.internship_reportLink || "",
-      }));
+      // build lookup maps
+      const studentMap = new Map<string, Student>();
+      (students || []).forEach((s) => studentMap.set(s.id, s));
+      const companyMap = new Map<string, InternshipCompany>();
+      (companies || []).forEach((c) => companyMap.set(c.name, c));
+
+      const rows = filteredRegistrations.map((reg, idx) => {
+        const student = reg.studentDocId
+          ? studentMap.get(reg.studentDocId)
+          : undefined;
+        const company = reg.internship_companyName
+          ? companyMap.get(reg.internship_companyName)
+          : undefined;
+        return {
+          STT: idx + 1,
+          SinhVien: reg.studentName,
+          MSSV: reg.studentId,
+          SinhVien_NgaySinh:
+            // support several possible field names for DOB
+            (student as any)?.dateOfBirth?.toDate
+              ? (student as any).dateOfBirth.toDate().toISOString().slice(0, 10)
+              : (student as any)?.dateOfBirth || (student as any)?.dob || "",
+          SinhVien_ChuyenNganh: student?.major || "",
+          SinhVien_Email: student?.email || "",
+          SinhVien_SDT: student?.phone || "",
+          CongTy: reg.internship_companyName || "",
+          HinhThucDangKy:
+            registrationTypeLabel[
+              reg.internship_registrationType ||
+                (reg.internship_positionId ? "from_list" : "unknown")
+            ] || registrationTypeLabel.unknown,
+          CongTy_Email: company?.contactEmail || "",
+          CongTy_SDT:
+            company?.contactPhone ||
+            reg.internship_companySupervisorPhone ||
+            "",
+          DotBaoCao: sessionMap.get(reg.sessionId) || "",
+          TrangThaiDangKy:
+            registrationStatusLabel[
+              reg.internshipRegistrationStatus || "pending"
+            ],
+          TrangThaiBaoCao:
+            reportStatusLabel[reg.internshipStatus || "not_reporting"],
+          DonDangKy: reg.internship_registrationFormLink || "",
+          GiayTiepNhan: reg.internship_acceptanceLetterLink || "",
+          DonCamKet: reg.internship_commitmentFormLink || "",
+          BaoCaoThucTap: reg.internship_reportLink || "",
+        };
+      });
       const worksheet = XLSX.utils.json_to_sheet(rows);
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "DangKyThucTap");
       const filename = `dangky-thuctap-${new Date()
         .toISOString()
         .slice(0, 10)}.xlsx`;
+      // set reasonable column widths
+      worksheet["!cols"] = [
+        { wch: 5 }, // STT
+        { wch: 25 }, // SinhVien
+        { wch: 12 }, // MSSV
+        { wch: 12 }, // SinhVien_NgaySinh
+        { wch: 20 }, // SinhVien_ChuyenNganh
+        { wch: 25 }, // SinhVien_Email
+        { wch: 15 }, // SinhVien_SDT
+        { wch: 30 }, // CongTy
+        { wch: 18 }, // HinhThucDangKy
+        { wch: 25 }, // CongTy_Email
+        { wch: 15 }, // CongTy_SDT
+        { wch: 25 }, // DotBaoCao
+        { wch: 15 }, // TrangThaiDangKy
+        { wch: 15 }, // TrangThaiBaoCao
+        { wch: 30 }, // DonDangKy
+        { wch: 30 }, // GiayTiepNhan
+        { wch: 30 }, // DonCamKet
+        { wch: 30 }, // BaoCaoThucTap
+      ];
       XLSX.writeFile(workbook, filename);
       toast({
         title: "Xuất Excel thành công",
@@ -231,12 +328,12 @@ export function InternshipApprovalTable() {
   const handleStatusChange = async (
     registrationId: string,
     newStatus: InternshipRegistrationStatus,
-    reason?: string
+    reason?: string,
   ) => {
     const registrationDocRef = doc(
       firestore,
       "defenseRegistrations",
-      registrationId
+      registrationId,
     );
 
     const dataToUpdate: Partial<DefenseRegistration> = {
@@ -278,7 +375,7 @@ export function InternshipApprovalTable() {
     const registrationsToUpdate = filteredRegistrations.filter(
       (reg) =>
         selectedRowIds.includes(reg.id) &&
-        reg.internshipRegistrationStatus === "approved"
+        reg.internshipRegistrationStatus === "approved",
     );
 
     if (registrationsToUpdate.length === 0) {
@@ -330,7 +427,7 @@ export function InternshipApprovalTable() {
     const registrationDocRef = doc(
       firestore,
       "defenseRegistrations",
-      registrationToDelete.id
+      registrationToDelete.id,
     );
 
     const dataToUpdate: any = {
@@ -343,6 +440,7 @@ export function InternshipApprovalTable() {
       internship_acceptanceLetterLink: deleteField(),
       internship_feedbackFormLink: deleteField(),
       internship_reportLink: deleteField(),
+      internship_registrationType: deleteField(),
       internship_positionId: deleteField(),
       internship_positionTitle: deleteField(),
       internshipRegistrationStatus: deleteField(),
@@ -502,8 +600,33 @@ export function InternshipApprovalTable() {
                               </SelectItem>
                             ))}
                           </SelectGroup>
-                        )
+                        ),
                     )}
+                  </SelectContent>
+                </Select>
+
+                <Select
+                  value={selectedRegistrationStatus}
+                  onValueChange={(value) =>
+                    setSelectedRegistrationStatus(
+                      value as "all" | InternshipRegistrationStatus,
+                    )
+                  }
+                >
+                  <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectValue placeholder="Trạng thái ĐK" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tất cả trạng thái</SelectItem>
+                    {(
+                      Object.keys(
+                        registrationStatusLabel,
+                      ) as InternshipRegistrationStatus[]
+                    ).map((status) => (
+                      <SelectItem key={status} value={status}>
+                        {registrationStatusLabel[status]}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -520,8 +643,8 @@ export function InternshipApprovalTable() {
                           isAllSelected
                             ? true
                             : isSomeSelected
-                            ? "indeterminate"
-                            : false
+                              ? "indeterminate"
+                              : false
                         }
                         onCheckedChange={handleSelectAll}
                       />
@@ -529,6 +652,7 @@ export function InternshipApprovalTable() {
                     <TableHead>STT</TableHead>
                     <TableHead>Sinh viên</TableHead>
                     <TableHead>Công ty</TableHead>
+                    <TableHead>Hình thức ĐK</TableHead>
                     <TableHead>Đợt báo cáo</TableHead>
                     <TableHead>Trạng thái ĐK</TableHead>
                     <TableHead>Trạng thái BC</TableHead>
@@ -563,21 +687,75 @@ export function InternshipApprovalTable() {
                           </div>
                         </TableCell>
                         <TableCell>{reg.internship_companyName}</TableCell>
+                        <TableCell>
+                          {registrationTypeLabel[
+                            reg.internship_registrationType ||
+                              (reg.internship_positionId
+                                ? "from_list"
+                                : "unknown")
+                          ] || registrationTypeLabel.unknown}
+                        </TableCell>
                         <TableCell>{sessionMap.get(reg.sessionId)}</TableCell>
                         <TableCell>
-                          <Badge
-                            variant={
-                              registrationStatusVariant[
-                                reg.internshipRegistrationStatus || "pending"
-                              ]
-                            }
-                          >
-                            {
-                              registrationStatusLabel[
-                                reg.internshipRegistrationStatus || "pending"
-                              ]
-                            }
-                          </Badge>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <span className="inline-flex cursor-pointer">
+                                <Badge
+                                  variant={
+                                    registrationStatusVariant[
+                                      reg.internshipRegistrationStatus ||
+                                        "pending"
+                                    ]
+                                  }
+                                >
+                                  {
+                                    registrationStatusLabel[
+                                      reg.internshipRegistrationStatus ||
+                                        "pending"
+                                    ]
+                                  }
+                                </Badge>
+                              </span>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="start">
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(reg.id, "approved")
+                                }
+                                disabled={
+                                  reg.internshipRegistrationStatus ===
+                                  "approved"
+                                }
+                              >
+                                <Check className="mr-2 h-4 w-4" />
+                                Duyệt
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onSelect={(e) => {
+                                  e.preventDefault();
+                                  handleRejectClick(reg);
+                                }}
+                                disabled={
+                                  reg.internshipRegistrationStatus ===
+                                  "rejected"
+                                }
+                              >
+                                <X className="mr-2 h-4 w-4" />
+                                Từ chối
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
+                                onClick={() =>
+                                  handleStatusChange(reg.id, "pending")
+                                }
+                                disabled={
+                                  (reg.internshipRegistrationStatus ||
+                                    "pending") === "pending"
+                                }
+                              >
+                                Đưa về chờ duyệt
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </TableCell>
                         <TableCell>
                           <Badge
@@ -598,19 +776,19 @@ export function InternshipApprovalTable() {
                           <div className="flex justify-center items-center gap-4">
                             {renderLinkCell(
                               reg.internship_registrationFormLink,
-                              "Đơn đăng ký"
+                              "Đơn đăng ký",
                             )}
                             {renderLinkCell(
                               reg.internship_acceptanceLetterLink,
-                              "Giấy tiếp nhận"
+                              "Giấy tiếp nhận",
                             )}
                             {renderLinkCell(
                               reg.internship_commitmentFormLink,
-                              "Đơn cam kết"
+                              "Đơn cam kết",
                             )}
                             {renderLinkCell(
                               reg.internship_reportLink,
-                              "Báo cáo thực tập"
+                              "Báo cáo thực tập",
                             )}
                           </div>
                         </TableCell>
