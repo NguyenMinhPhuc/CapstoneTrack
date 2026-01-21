@@ -15,7 +15,7 @@ import {
 
 interface MarkdownToolbarProps {
   textareaRef: React.RefObject<HTMLTextAreaElement>;
-  onChange: (value: string) => void;
+  onChange?: (value: string) => void;
 }
 
 export function MarkdownToolbar({
@@ -31,7 +31,7 @@ export function MarkdownToolbar({
       | "h1"
       | "h2"
       | "link"
-      | "codeblock"
+      | "codeblock",
   ) => {
     const textarea = textareaRef.current;
     if (!textarea) return;
@@ -74,7 +74,7 @@ export function MarkdownToolbar({
         if (linesNum.length > 1 && selectedText) {
           newText = linesNum
             .map((line, index) =>
-              line.trim() ? `${index + 1}. ${line}` : line
+              line.trim() ? `${index + 1}. ${line}` : line,
             )
             .join("\n");
         } else {
@@ -138,7 +138,7 @@ export function MarkdownToolbar({
 
     const newValue = value.substring(0, start) + newText + value.substring(end);
 
-    onChange(newValue);
+    onChange?.(newValue);
 
     setTimeout(() => {
       if (!textarea) return;

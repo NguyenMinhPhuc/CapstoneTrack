@@ -95,6 +95,7 @@ interface EarlyInternshipGuidanceTableProps {
 }
 
 const statusLabel: Record<EarlyInternship["status"], string> = {
+  pending_approval: "Chờ duyệt",
   pending_admin_approval: "Chờ Admin duyệt",
   pending_company_approval: "Chờ duyệt",
   ongoing: "Đang thực tập",
@@ -108,6 +109,7 @@ const statusVariant: Record<
   EarlyInternship["status"],
   "secondary" | "default" | "outline" | "destructive"
 > = {
+  pending_approval: "secondary",
   pending_admin_approval: "secondary",
   pending_company_approval: "secondary",
   ongoing: "default",
@@ -144,7 +146,7 @@ export function EarlyInternshipGuidanceTable({
 
   const settingsDocRef = useMemoFirebase(
     () => doc(firestore, "systemSettings", "features"),
-    [firestore]
+    [firestore],
   );
   const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
   const goalHours = settings?.earlyInternshipGoalHours ?? 700;
@@ -160,20 +162,17 @@ export function EarlyInternshipGuidanceTable({
           "completed",
           "rejected_by_company",
           "cancelled",
-        ])
+        ]),
       ),
-    [firestore, supervisorId]
+    [firestore, supervisorId],
   );
 
-  const {
-    data: internships,
-    isLoading: isLoadingInternships,
-    forceRefresh,
-  } = useCollection<EarlyInternship>(internshipsQuery);
+  const { data: internships, isLoading: isLoadingInternships } =
+    useCollection<EarlyInternship>(internshipsQuery);
 
   const internshipIds = useMemo(
     () => internships?.map((i) => i.id) || [],
-    [internships]
+    [internships],
   );
 
   // Chunked subscription to avoid Firestore 'in' limit (max 10 items)
@@ -203,7 +202,7 @@ export function EarlyInternshipGuidanceTable({
       unsubscribes = chunks.map((chunk) => {
         const q = query(
           collection(firestore, "earlyInternshipWeeklyReports"),
-          where("earlyInternshipId", "in", chunk)
+          where("earlyInternshipId", "in", chunk),
         );
         return onSnapshot(
           q,
@@ -226,7 +225,7 @@ export function EarlyInternshipGuidanceTable({
           () => {
             pending -= 1;
             if (pending <= 0) setLoading(false);
-          }
+          },
         );
       });
 
@@ -247,11 +246,11 @@ export function EarlyInternshipGuidanceTable({
 
     internships.forEach((internship) => {
       const reportsForInternship = allReports.filter(
-        (r) => r.earlyInternshipId === internship.id && r.status === "approved"
+        (r) => r.earlyInternshipId === internship.id && r.status === "approved",
       );
       const totalHours = reportsForInternship.reduce(
         (sum, report) => sum + report.hours,
-        0
+        0,
       );
       data.set(internship.id, {
         totalHours,
@@ -388,7 +387,7 @@ export function EarlyInternshipGuidanceTable({
   const handleStatusChange = async (
     internship: EarlyInternship,
     status: "ongoing" | "rejected_by_company" | "cancelled" | "completed",
-    note?: string
+    note?: string,
   ) => {
     const docRef = doc(firestore, "earlyInternships", internship.id);
     const dataToUpdate: Partial<EarlyInternship> = {
@@ -400,13 +399,18 @@ export function EarlyInternshipGuidanceTable({
     batch.update(docRef, dataToUpdate);
 
     if (status === "completed") {
-      const studentIdentifier = (internship.studentIdentifier || internship.studentId || "").toString();
+      const studentIdentifier = (
+        internship.studentIdentifier ||
+        internship.studentId ||
+        ""
+      ).toString();
 
       if (!studentIdentifier) {
         toast({
           variant: "destructive",
           title: "Thiếu mã số sinh viên",
-          description: "Không thể thêm vào đợt báo cáo vì sinh viên thiếu mã số.",
+          description:
+            "Không thể thêm vào đợt báo cáo vì sinh viên thiếu mã số.",
         });
         return;
       }
@@ -414,7 +418,7 @@ export function EarlyInternshipGuidanceTable({
       try {
         const sessionsQuery = query(
           collection(firestore, "graduationDefenseSessions"),
-          where("status", "==", "ongoing")
+          where("status", "==", "ongoing"),
         );
         const sessionsSnapshot = await getDocs(sessionsQuery);
         if (sessionsSnapshot.empty) {
@@ -432,7 +436,7 @@ export function EarlyInternshipGuidanceTable({
         const registrationQuery = query(
           collection(firestore, "defenseRegistrations"),
           where("sessionId", "==", ongoingSessionId),
-          where("studentDocId", "==", internship.studentId)
+          where("studentDocId", "==", internship.studentId),
         );
         const registrationSnapshot = await getDocs(registrationQuery);
 
@@ -447,13 +451,13 @@ export function EarlyInternshipGuidanceTable({
 
         if (registrationSnapshot.empty) {
           const newRegistrationRef = doc(
-            collection(firestore, "defenseRegistrations")
+            collection(firestore, "defenseRegistrations"),
           );
           const newRegistrationData: Partial<DefenseRegistration> = {
             ...registrationData,
             sessionId: ongoingSessionId,
             studentDocId: internship.studentId,
-              studentId: studentIdentifier,
+            studentId: studentIdentifier,
             studentName: internship.studentName,
             graduationStatus: "not_reporting",
             registrationDate: serverTimestamp(),
@@ -480,7 +484,6 @@ export function EarlyInternshipGuidanceTable({
         title: "Thành công",
         description: "Đã cập nhật trạng thái thực tập.",
       });
-      forceRefresh();
     } catch (error) {
       console.error("Error updating status:", error);
       toast({
@@ -518,7 +521,7 @@ export function EarlyInternshipGuidanceTable({
 
   const reportsForSelected = selectedInternship
     ? allReports?.filter(
-        (r) => r.earlyInternshipId === selectedInternship.id
+        (r) => r.earlyInternshipId === selectedInternship.id,
       ) || []
     : [];
 
@@ -634,7 +637,7 @@ export function EarlyInternshipGuidanceTable({
                   allReports?.filter(
                     (r) =>
                       r.earlyInternshipId === internship.id &&
-                      r.status === "pending_review"
+                      r.status === "pending_review",
                   ).length || 0;
                 return (
                   <TableRow key={internship.id}>
@@ -732,7 +735,7 @@ export function EarlyInternshipGuidanceTable({
                                 handleStatusChange(
                                   internship,
                                   "completed",
-                                  "Hoàn thành tốt"
+                                  "Hoàn thành tốt",
                                 )
                               }
                             >
@@ -746,7 +749,7 @@ export function EarlyInternshipGuidanceTable({
                                 handleStatusChange(
                                   internship,
                                   "cancelled",
-                                  "Không hoàn thành"
+                                  "Không hoàn thành",
                                 )
                               }
                             >
@@ -774,7 +777,7 @@ export function EarlyInternshipGuidanceTable({
                 handleStatusChange(
                   selectedInternship,
                   "rejected_by_company",
-                  reason
+                  reason,
                 );
                 setIsRejectDialogOpen(false);
                 setSelectedInternship(null);
@@ -801,7 +804,6 @@ export function EarlyInternshipGuidanceTable({
                 setIsProgressDialogOpen(false);
                 setSelectedInternship(null);
               }}
-              forceRefresh={forceRefresh}
               goalHours={goalHours}
             />
           )}

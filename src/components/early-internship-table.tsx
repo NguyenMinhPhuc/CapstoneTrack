@@ -104,7 +104,7 @@ import { PaginationControls } from "@/components/ui/pagination-controls";
 // Chunked subscription to avoid Firestore 'in' limit (max 10 items)
 function useChunkedWeeklyReports(
   firestore: ReturnType<typeof useFirestore>,
-  internshipIds: string[]
+  internshipIds: string[],
 ) {
   const [reports, setReports] = useState<EarlyInternshipWeeklyReport[]>([]);
   const [loading, setLoading] = useState(false);
@@ -131,7 +131,7 @@ function useChunkedWeeklyReports(
     unsubscribes = chunks.map((chunk) => {
       const q = query(
         collection(firestore, "earlyInternshipWeeklyReports"),
-        where("earlyInternshipId", "in", chunk)
+        where("earlyInternshipId", "in", chunk),
       );
       return onSnapshot(
         q,
@@ -154,7 +154,7 @@ function useChunkedWeeklyReports(
         () => {
           pending -= 1;
           if (pending <= 0) setLoading(false);
-        }
+        },
       );
     });
 
@@ -171,6 +171,7 @@ interface EarlyInternshipGuidanceTableProps {
 }
 
 const statusLabel: Record<EarlyInternship["status"], string> = {
+  pending_approval: "Chờ duyệt",
   pending_admin_approval: "Chờ Admin duyệt",
   pending_company_approval: "Chờ ĐV duyệt",
   ongoing: "Đang thực tập",
@@ -181,6 +182,7 @@ const statusLabel: Record<EarlyInternship["status"], string> = {
 };
 
 const dropdownStatusLabel: Record<EarlyInternship["status"], string> = {
+  pending_approval: "Chờ duyệt",
   pending_admin_approval: "Chờ Admin duyệt",
   pending_company_approval: "Chuyển đơn vị",
   ongoing: "Đang thực tập",
@@ -194,6 +196,7 @@ const statusVariant: Record<
   EarlyInternship["status"],
   "secondary" | "default" | "outline" | "destructive"
 > = {
+  pending_approval: "secondary",
   pending_admin_approval: "secondary",
   pending_company_approval: "secondary",
   ongoing: "default",
@@ -238,28 +241,28 @@ export function EarlyInternshipTable() {
 
   const settingsDocRef = useMemoFirebase(
     () => doc(firestore, "systemSettings", "features"),
-    [firestore]
+    [firestore],
   );
   const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
   const goalHours = settings?.earlyInternshipGoalHours ?? 700;
 
   const earlyInternshipsCollectionRef = useMemoFirebase(
     () => collection(firestore, "earlyInternships"),
-    [firestore]
+    [firestore],
   );
   const { data: internships, isLoading: isLoadingInternships } =
     useCollection<EarlyInternship>(earlyInternshipsCollectionRef);
 
   const studentsCollectionRef = useMemoFirebase(
     () => collection(firestore, "students"),
-    [firestore]
+    [firestore],
   );
   const { data: allStudents, isLoading: isLoadingStudents } =
     useCollection<Student>(studentsCollectionRef);
 
   const internshipIds = useMemo(
     () => internships?.map((i) => i.id) || [],
-    [internships]
+    [internships],
   );
 
   const { reports: allReports, loading: isLoadingReports } =
@@ -274,11 +277,11 @@ export function EarlyInternshipTable() {
 
     internships.forEach((internship) => {
       const reportsForInternship = allReports.filter(
-        (r) => r.earlyInternshipId === internship.id && r.status === "approved"
+        (r) => r.earlyInternshipId === internship.id && r.status === "approved",
       );
       const totalHours = reportsForInternship.reduce(
         (sum, report) => sum + report.hours,
-        0
+        0,
       );
       data.set(internship.id, {
         totalHours,
@@ -441,13 +444,13 @@ export function EarlyInternshipTable() {
 
   const handleSelectAll = (checked: boolean | "indeterminate") => {
     setSelectedRowIds(
-      checked ? (filteredInternships || []).map((i) => i.studentId) : []
+      checked ? (filteredInternships || []).map((i) => i.studentId) : [],
     );
   };
 
   const handleRowSelect = (id: string, checked: boolean) => {
     setSelectedRowIds((prev) =>
-      checked ? [...prev, id] : prev.filter((rowId) => rowId !== id)
+      checked ? [...prev, id] : prev.filter((rowId) => rowId !== id),
     );
   };
 
@@ -464,7 +467,7 @@ export function EarlyInternshipTable() {
   const handleStatusChange = async (
     internshipId: string,
     status: EarlyInternship["status"],
-    note?: string
+    note?: string,
   ) => {
     const docRef = doc(firestore, "earlyInternships", internshipId);
     const dataToUpdate: Partial<EarlyInternship> = {
@@ -499,8 +502,8 @@ export function EarlyInternshipTable() {
             ?.filter((i) => selectedRowIds.includes(i.studentId))
             .map((i) => i.id) || []
         : internshipToDelete
-        ? [internshipToDelete.id]
-        : [];
+          ? [internshipToDelete.id]
+          : [];
 
     if (internshipIdsToDelete.length === 0) return;
 
@@ -717,8 +720,8 @@ export function EarlyInternshipTable() {
                       isAllSelected
                         ? true
                         : isSomeSelected
-                        ? "indeterminate"
-                        : false
+                          ? "indeterminate"
+                          : false
                     }
                     onCheckedChange={handleSelectAll}
                   />
@@ -846,7 +849,7 @@ export function EarlyInternshipTable() {
                             onClick={() =>
                               handleStatusChange(
                                 internship.id,
-                                "pending_company_approval"
+                                "pending_company_approval",
                               )
                             }
                           >
@@ -878,7 +881,7 @@ export function EarlyInternshipTable() {
                                     onClick={() =>
                                       handleStatusChange(
                                         internship.id,
-                                        "pending_company_approval"
+                                        "pending_company_approval",
                                       )
                                     }
                                     disabled={
@@ -897,7 +900,7 @@ export function EarlyInternshipTable() {
                                     onClick={() =>
                                       handleStatusChange(
                                         internship.id,
-                                        "ongoing"
+                                        "ongoing",
                                       )
                                     }
                                     disabled={internship.status === "ongoing"}
@@ -909,7 +912,7 @@ export function EarlyInternshipTable() {
                                     onClick={() =>
                                       handleStatusChange(
                                         internship.id,
-                                        "completed"
+                                        "completed",
                                       )
                                     }
                                     disabled={internship.status === "completed"}
@@ -996,7 +999,7 @@ export function EarlyInternshipTable() {
                 handleStatusChange(
                   selectedInternship.id,
                   "rejected_by_admin",
-                  reason
+                  reason,
                 );
                 setIsRejectDialogOpen(false);
                 setSelectedInternship(null);

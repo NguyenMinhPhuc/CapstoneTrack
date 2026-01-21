@@ -73,6 +73,8 @@ import { Badge } from "./ui/badge";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription, AlertTitle } from "./ui/alert";
+import { Separator } from "./ui/separator";
 import { ViewProgressDialog } from "./view-progress-dialog";
 import {
   Card,
@@ -215,19 +217,16 @@ export function MyTopicsTable({
     () =>
       query(
         collection(firestore, "projectTopics"),
-        where("supervisorId", "==", supervisorId)
+        where("supervisorId", "==", supervisorId),
       ),
-    [firestore, supervisorId]
+    [firestore, supervisorId],
   );
-  const {
-    data: topics,
-    isLoading: isLoadingTopics,
-    forceRefresh: forceRefreshTopics,
-  } = useCollection<ProjectTopic>(topicsQuery);
+  const { data: topics, isLoading: isLoadingTopics } =
+    useCollection<ProjectTopic>(topicsQuery);
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, "graduationDefenseSessions"),
-    [firestore]
+    [firestore],
   );
   const { data: sessions, isLoading: isLoadingSessions } =
     useCollection<GraduationDefenseSession>(sessionsQuery);
@@ -236,15 +235,12 @@ export function MyTopicsTable({
     () =>
       query(
         collection(firestore, "defenseRegistrations"),
-        where("supervisorId", "==", supervisorId)
+        where("supervisorId", "==", supervisorId),
       ),
-    [firestore, supervisorId]
+    [firestore, supervisorId],
   );
-  const {
-    data: allRegistrations,
-    isLoading: isLoadingRegs,
-    forceRefresh: forceRefreshRegs,
-  } = useCollection<DefenseRegistration>(registrationsQuery);
+  const { data: allRegistrations, isLoading: isLoadingRegs } =
+    useCollection<DefenseRegistration>(registrationsQuery);
 
   useEffect(() => {
     setSelectedRowIds([]);
@@ -253,7 +249,7 @@ export function MyTopicsTable({
   const graduationSessions = useMemo(() => {
     if (!sessions) return [];
     return sessions.filter(
-      (s) => s.sessionType === "graduation" || s.sessionType === "combined"
+      (s) => s.sessionType === "graduation" || s.sessionType === "combined",
     );
   }, [sessions]);
 
@@ -265,12 +261,18 @@ export function MyTopicsTable({
   const groupedSessions = useMemo(() => {
     if (!graduationSessions)
       return { ongoing: [], upcoming: [], completed: [] };
-    return graduationSessions.reduce((acc, session) => {
-      const group = acc[session.status] || [];
-      group.push(session);
-      acc[session.status] = group;
-      return acc;
-    }, {} as Record<GraduationDefenseSession["status"], GraduationDefenseSession[]>);
+    return graduationSessions.reduce(
+      (acc, session) => {
+        const group = acc[session.status] || [];
+        group.push(session);
+        acc[session.status] = group;
+        return acc;
+      },
+      {} as Record<
+        GraduationDefenseSession["status"],
+        GraduationDefenseSession[]
+      >,
+    );
   }, [graduationSessions]);
 
   const handleExportTemplate = () => {
@@ -431,7 +433,7 @@ export function MyTopicsTable({
   const handleRegistrationAction = async (
     registrationId: string,
     topic: ProjectTopic,
-    action: "approve" | "reject" | "cancel"
+    action: "approve" | "reject" | "cancel",
   ) => {
     const regDocRef = doc(firestore, "defenseRegistrations", registrationId);
     const topicRef = doc(firestore, "projectTopics", topic.id);
@@ -443,7 +445,7 @@ export function MyTopicsTable({
       const key = `${topic.sessionId}-${topic.title}`;
       const registrationsForThisTopic = registrationsByTopic.get(key) || [];
       const approvedCount = registrationsForThisTopic.filter(
-        (r) => r.projectRegistrationStatus === "approved"
+        (r) => r.projectRegistrationStatus === "approved",
       ).length;
 
       if (approvedCount + 1 >= topic.maxStudents) {
@@ -471,11 +473,9 @@ export function MyTopicsTable({
         action === "approve"
           ? "Đã xác nhận hướng dẫn sinh viên."
           : action === "reject"
-          ? "Đã từ chối hướng dẫn."
-          : "Đã hủy đăng ký cho sinh viên.";
+            ? "Đã từ chối hướng dẫn."
+            : "Đã hủy đăng ký cho sinh viên.";
       toast({ title: "Thành công", description: successMessage });
-      forceRefreshTopics();
-      forceRefreshRegs();
     } catch (error: any) {
       toast({
         variant: "destructive",
@@ -492,7 +492,7 @@ export function MyTopicsTable({
 
   const handleProposalAction = async (
     registration: DefenseRegistration,
-    action: "approve" | "reject"
+    action: "approve" | "reject",
   ) => {
     const regDocRef = doc(firestore, "defenseRegistrations", registration.id);
     const newStatus = action === "approve" ? "approved" : "rejected";
@@ -523,7 +523,7 @@ export function MyTopicsTable({
 
   const handleReportAction = async (
     registration: DefenseRegistration,
-    action: "approve" | "reject"
+    action: "approve" | "reject",
   ) => {
     const regDocRef = doc(firestore, "defenseRegistrations", registration.id);
     const newStatus = action === "approve" ? "approved" : "rejected";
@@ -636,7 +636,7 @@ export function MyTopicsTable({
                               "mr-2 h-4 w-4",
                               sessionFilter === "all"
                                 ? "opacity-100"
-                                : "opacity-0"
+                                : "opacity-0",
                             )}
                           />
                           Tất cả các đợt
@@ -666,14 +666,14 @@ export function MyTopicsTable({
                                         "mr-2 h-4 w-4",
                                         sessionFilter === session.id
                                           ? "opacity-100"
-                                          : "opacity-0"
+                                          : "opacity-0",
                                       )}
                                     />
                                     {session.name}
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
-                            )
+                            ),
                         )}
                       </CommandGroup>
                     </CommandList>
@@ -944,7 +944,7 @@ export function MyTopicsTable({
                                             handleRegistrationAction(
                                               reg.id,
                                               topic,
-                                              "approve"
+                                              "approve",
                                             )
                                           }
                                         >
@@ -957,7 +957,7 @@ export function MyTopicsTable({
                                             handleRegistrationAction(
                                               reg.id,
                                               topic,
-                                              "reject"
+                                              "reject",
                                             )
                                           }
                                         >
@@ -974,7 +974,7 @@ export function MyTopicsTable({
                                           handleRegistrationAction(
                                             reg.id,
                                             topic,
-                                            "cancel"
+                                            "cancel",
                                           )
                                         }
                                       >
@@ -990,7 +990,7 @@ export function MyTopicsTable({
                                           handleRegistrationAction(
                                             reg.id,
                                             topic,
-                                            "approve"
+                                            "approve",
                                           )
                                         }
                                       >

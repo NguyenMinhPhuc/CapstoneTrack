@@ -110,21 +110,21 @@ export function UserManagementTable() {
 
   const usersCollectionRef = useMemoFirebase(
     () => collection(firestore, "users"),
-    [firestore]
+    [firestore],
   );
   const { data: users, isLoading: isLoadingUsers } =
     useCollection<SystemUser>(usersCollectionRef);
 
   const studentsCollectionRef = useMemoFirebase(
     () => collection(firestore, "students"),
-    [firestore]
+    [firestore],
   );
   const { data: students, isLoading: isLoadingStudents } =
     useCollection<Student>(studentsCollectionRef);
 
   const supervisorsCollectionRef = useMemoFirebase(
     () => collection(firestore, "supervisors"),
-    [firestore]
+    [firestore],
   );
   const { data: supervisors, isLoading: isLoadingSupervisors } =
     useCollection<Supervisor>(supervisorsCollectionRef);
@@ -135,7 +135,9 @@ export function UserManagementTable() {
       students.forEach((s) => ids.add(s.userId));
     }
     if (supervisors) {
-      supervisors.forEach((s) => ids.add(s.userId));
+      supervisors.forEach((s) => {
+        if (s.userId) ids.add(s.userId);
+      });
     }
     return ids;
   }, [students, supervisors]);
@@ -181,7 +183,7 @@ export function UserManagementTable() {
       });
 
       filtered = filtered.filter(
-        (user) => user.email && duplicateEmails.has(user.email)
+        (user) => user.email && duplicateEmails.has(user.email),
       );
     }
 
@@ -327,7 +329,7 @@ export function UserManagementTable() {
 
   const handleStatusChange = async (
     userId: string,
-    newStatus: SystemUser["status"]
+    newStatus: SystemUser["status"],
   ) => {
     const userDocRef = doc(firestore, "users", userId);
     try {

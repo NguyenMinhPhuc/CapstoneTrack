@@ -115,14 +115,14 @@ export function EditDefenseSessionForm({
 
   const rubricsCollectionRef = useMemoFirebase(
     () => collection(firestore, "rubrics"),
-    [firestore]
+    [firestore],
   );
   const { data: rubrics, isLoading: isLoadingRubrics } =
     useCollection<Rubric>(rubricsCollectionRef);
 
   const companiesCollectionRef = useMemoFirebase(
     () => collection(firestore, "internshipCompanies"),
-    [firestore]
+    [firestore],
   );
   const { data: companies, isLoading: isLoadingCompanies } =
     useCollection<InternshipCompany>(companiesCollectionRef);
@@ -174,22 +174,22 @@ export function EditDefenseSessionForm({
     const sessionDocRef = doc(
       firestore,
       "graduationDefenseSessions",
-      session.id
+      session.id,
     );
 
     const dataToUpdate = {
       ...values,
       councilGraduationRubricId: cleanRubricId(
-        values.councilGraduationRubricId
+        values.councilGraduationRubricId,
       ),
       councilInternshipRubricId: cleanRubricId(
-        values.councilInternshipRubricId
+        values.councilInternshipRubricId,
       ),
       supervisorGraduationRubricId: cleanRubricId(
-        values.supervisorGraduationRubricId
+        values.supervisorGraduationRubricId,
       ),
       companyInternshipRubricId: cleanRubricId(
-        values.companyInternshipRubricId
+        values.companyInternshipRubricId,
       ),
     };
 
@@ -396,7 +396,7 @@ export function EditDefenseSessionForm({
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value ? (
@@ -435,7 +435,7 @@ export function EditDefenseSessionForm({
                               variant={"outline"}
                               className={cn(
                                 "w-full pl-3 text-left font-normal",
-                                !field.value && "text-muted-foreground"
+                                !field.value && "text-muted-foreground",
                               )}
                             >
                               {field.value ? (
@@ -475,7 +475,7 @@ export function EditDefenseSessionForm({
                             variant={"outline"}
                             className={cn(
                               "w-full pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
+                              !field.value && "text-muted-foreground",
                             )}
                           >
                             {field.value ? (
@@ -573,7 +573,7 @@ export function EditDefenseSessionForm({
 
               {(sessionType === "internship" || sessionType === "combined") && (
                 <>
-                  {sessionType !== "graduation" && <Separator />}
+                  {sessionType === "combined" && <Separator />}
                   <p className="text-sm font-medium">
                     Tùy chỉnh Tỷ lệ điểm Thực tập
                   </p>
@@ -623,7 +623,7 @@ export function EditDefenseSessionForm({
                                   {selectedCompanyIds.length > 0 ? (
                                     companies
                                       ?.filter((c) =>
-                                        selectedCompanyIds.includes(c.id)
+                                        selectedCompanyIds.includes(c.id),
                                       )
                                       .map((c) => (
                                         <Badge key={c.id} variant="secondary">
@@ -654,10 +654,10 @@ export function EditDefenseSessionForm({
                                       onSelect={() => {
                                         const currentIds = field.value || [];
                                         const newIds = currentIds.includes(
-                                          company.id
+                                          company.id,
                                         )
                                           ? currentIds.filter(
-                                              (id) => id !== company.id
+                                              (id) => id !== company.id,
                                             )
                                           : [...currentIds, company.id];
                                         field.onChange(newIds);
@@ -668,7 +668,7 @@ export function EditDefenseSessionForm({
                                           "mr-2 h-4 w-4",
                                           field.value?.includes(company.id)
                                             ? "opacity-100"
-                                            : "opacity-0"
+                                            : "opacity-0",
                                         )}
                                       />
                                       {company.name}

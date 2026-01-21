@@ -65,9 +65,9 @@ export function AddTopicForm({
 }: AddTopicFormProps) {
   const { toast } = useToast();
   const firestore = useFirestore();
-  const summaryRef = React.useRef<HTMLTextAreaElement>(null);
-  const objectivesRef = React.useRef<HTMLTextAreaElement>(null);
-  const expectedResultsRef = React.useRef<HTMLTextAreaElement>(null);
+  const summaryRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const objectivesRef = React.useRef<HTMLTextAreaElement | null>(null);
+  const expectedResultsRef = React.useRef<HTMLTextAreaElement | null>(null);
 
   // Toolbar handler will be attached inline in each field now.
 
@@ -86,6 +86,8 @@ export function AddTopicForm({
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const newTopicData: Omit<ProjectTopic, "id"> = {
       ...values,
+      objectives: values.objectives ?? "",
+      expectedResults: values.expectedResults ?? "",
       supervisorId,
       supervisorName,
       maxStudents: parseInt(values.maxStudents, 10) as 1 | 2,
@@ -142,7 +144,7 @@ export function AddTopicForm({
                         {sessions
                           .filter(
                             (s) =>
-                              s.status === "upcoming" || s.status === "ongoing"
+                              s.status === "upcoming" || s.status === "ongoing",
                           )
                           .map((session) => (
                             <SelectItem key={session.id} value={session.id}>
@@ -190,95 +192,104 @@ export function AddTopicForm({
               <FormField
                 control={form.control}
                 name="summary"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mô tả tóm tắt</FormLabel>
-                    <MarkdownToolbar
-                      textareaRef={summaryRef}
-                      onChange={(newValue) => {
-                        field.onChange(newValue);
-                        form.setValue("summary", newValue, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }}
-                    />
-                    <FormControl>
-                      <Textarea
-                        ref={(el) => {
-                          summaryRef.current = el;
-                          field.ref(el);
+                render={({ field }) => {
+                  const { ref, ...restField } = field;
+                  return (
+                    <FormItem>
+                      <FormLabel>Mô tả tóm tắt</FormLabel>
+                      <MarkdownToolbar
+                        textareaRef={summaryRef}
+                        onChange={(newValue) => {
+                          field.onChange(newValue);
+                          form.setValue("summary", newValue, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
                         }}
-                        placeholder="Mô tả ngắn gọn về bối cảnh, vấn đề và hướng giải quyết của đề tài."
-                        className="resize-y rounded-t-none"
-                        {...field}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      <FormControl>
+                        <Textarea
+                          ref={(el) => {
+                            summaryRef.current = el;
+                            ref(el);
+                          }}
+                          placeholder="Mô tả ngắn gọn về bối cảnh, vấn đề và hướng giải quyết của đề tài."
+                          className="resize-y rounded-t-none"
+                          {...restField}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
                 name="objectives"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
-                    <MarkdownToolbar
-                      textareaRef={objectivesRef}
-                      onChange={(newValue) => {
-                        field.onChange(newValue);
-                        form.setValue("objectives", newValue, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }}
-                    />
-                    <FormControl>
-                      <Textarea
-                        ref={(el) => {
-                          objectivesRef.current = el;
-                          field.ref(el);
+                render={({ field }) => {
+                  const { ref, ...restField } = field;
+                  return (
+                    <FormItem>
+                      <FormLabel>Mục tiêu của đề tài (tùy chọn)</FormLabel>
+                      <MarkdownToolbar
+                        textareaRef={objectivesRef}
+                        onChange={(newValue) => {
+                          field.onChange(newValue);
+                          form.setValue("objectives", newValue, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
                         }}
-                        placeholder="Liệt kê các mục tiêu cụ thể, ví dụ: &#10;- Nghiên cứu... &#10;- Xây dựng mô hình... &#10;- Triển khai ứng dụng..."
-                        className="resize-y rounded-t-none"
-                        {...field}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      <FormControl>
+                        <Textarea
+                          ref={(el) => {
+                            objectivesRef.current = el;
+                            ref(el);
+                          }}
+                          placeholder="Liệt kê các mục tiêu cụ thể, ví dụ: &#10;- Nghiên cứu... &#10;- Xây dựng mô hình... &#10;- Triển khai ứng dụng..."
+                          className="resize-y rounded-t-none"
+                          {...restField}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}
                 name="expectedResults"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
-                    <MarkdownToolbar
-                      textareaRef={expectedResultsRef}
-                      onChange={(newValue) => {
-                        field.onChange(newValue);
-                        form.setValue("expectedResults", newValue, {
-                          shouldDirty: true,
-                          shouldTouch: true,
-                        });
-                      }}
-                    />
-                    <FormControl>
-                      <Textarea
-                        ref={(el) => {
-                          expectedResultsRef.current = el;
-                          field.ref(el);
+                render={({ field }) => {
+                  const { ref, ...restField } = field;
+                  return (
+                    <FormItem>
+                      <FormLabel>Kết quả mong đợi (tùy chọn)</FormLabel>
+                      <MarkdownToolbar
+                        textareaRef={expectedResultsRef}
+                        onChange={(newValue) => {
+                          field.onChange(newValue);
+                          form.setValue("expectedResults", newValue, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
                         }}
-                        placeholder="Liệt kê các sản phẩm, kết quả cụ thể, ví dụ: &#10;- Báo cáo toàn văn &#10;- Source code ứng dụng &#10;- Bộ dữ liệu đã xử lý..."
-                        className="resize-y rounded-t-none"
-                        {...field}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                      <FormControl>
+                        <Textarea
+                          ref={(el) => {
+                            expectedResultsRef.current = el;
+                            ref(el);
+                          }}
+                          placeholder="Liệt kê các sản phẩm, kết quả cụ thể, ví dụ: &#10;- Báo cáo toàn văn &#10;- Source code ứng dụng &#10;- Bộ dữ liệu đã xử lý..."
+                          className="resize-y rounded-t-none"
+                          {...restField}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  );
+                }}
               />
               <FormField
                 control={form.control}

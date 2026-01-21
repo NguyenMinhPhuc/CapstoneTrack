@@ -115,6 +115,7 @@ import * as XLSX from "xlsx";
 import { saveAs } from "file-saver";
 import { usePagination } from "@/hooks/usePagination";
 import { PaginationControls } from "./ui/pagination-controls";
+import { Separator } from "./ui/separator";
 
 interface GraduationGuidanceTableProps {
   supervisorId: string;
@@ -177,7 +178,7 @@ function RegistrationRow({
   sessionMap: Map<string, string>;
   onAction: (
     type: "proposal" | "report" | "progress",
-    reg: DefenseRegistration
+    reg: DefenseRegistration,
   ) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -202,7 +203,7 @@ function RegistrationRow({
             <ChevronDown
               className={cn(
                 "h-4 w-4 transition-transform mr-2",
-                isOpen && "rotate-180"
+                isOpen && "rotate-180",
               )}
             />
             <div className="grid grid-cols-12 w-full text-left text-sm items-center gap-4">
@@ -327,7 +328,7 @@ export function GraduationGuidanceTable({
 
   const sessionsQuery = useMemoFirebase(
     () => collection(firestore, "graduationDefenseSessions"),
-    [firestore]
+    [firestore],
   );
   const { data: sessions, isLoading: isLoadingSessions } =
     useCollection<GraduationDefenseSession>(sessionsQuery);
@@ -335,12 +336,12 @@ export function GraduationGuidanceTable({
   const graduationSessions = useMemo(() => {
     if (!sessions) return [];
     return sessions.filter(
-      (s) => s.sessionType === "graduation" || s.sessionType === "combined"
+      (s) => s.sessionType === "graduation" || s.sessionType === "combined",
     );
   }, [sessions]);
 
   const registrationsQuery = useMemoFirebase(() => {
-    let q: Query = collection(firestore, "defenseRegistrations");
+    const registrationsRef = collection(firestore, "defenseRegistrations");
 
     const conditions = [];
 
@@ -370,7 +371,7 @@ export function GraduationGuidanceTable({
 
     conditions.push(where("graduationStatus", "==", "reporting"));
 
-    return query(q, ...conditions);
+    return query(registrationsRef, ...conditions);
   }, [
     firestore,
     supervisorId,
@@ -392,12 +393,18 @@ export function GraduationGuidanceTable({
   const groupedSessions = useMemo(() => {
     if (!graduationSessions)
       return { ongoing: [], upcoming: [], completed: [] };
-    return graduationSessions.reduce((acc, session) => {
-      const group = acc[session.status] || [];
-      group.push(session);
-      acc[session.status] = group;
-      return acc;
-    }, {} as Record<GraduationDefenseSession["status"], GraduationDefenseSession[]>);
+    return graduationSessions.reduce(
+      (acc, session) => {
+        const group = acc[session.status] || [];
+        group.push(session);
+        acc[session.status] = group;
+        return acc;
+      },
+      {} as Record<
+        GraduationDefenseSession["status"],
+        GraduationDefenseSession[]
+      >,
+    );
   }, [graduationSessions]);
 
   const requestSort = (key: SortKey) => {
@@ -476,7 +483,7 @@ export function GraduationGuidanceTable({
 
   const handleProposalAction = async (
     registration: DefenseRegistration,
-    action: "approve" | "reject"
+    action: "approve" | "reject",
   ) => {
     const regDocRef = doc(firestore, "defenseRegistrations", registration.id);
     const newStatus = action === "approve" ? "approved" : "rejected";
@@ -507,7 +514,7 @@ export function GraduationGuidanceTable({
 
   const handleReportAction = async (
     registration: DefenseRegistration,
-    action: "approve" | "reject"
+    action: "approve" | "reject",
   ) => {
     const regDocRef = doc(firestore, "defenseRegistrations", registration.id);
     const newStatus = action === "approve" ? "approved" : "rejected";
@@ -538,7 +545,7 @@ export function GraduationGuidanceTable({
 
   const handleActionClick = (
     type: "proposal" | "report" | "progress",
-    registration: DefenseRegistration
+    registration: DefenseRegistration,
   ) => {
     setSelectedRegistration(registration);
     if (type === "proposal") setIsProposalDialogOpen(true);
@@ -667,7 +674,7 @@ export function GraduationGuidanceTable({
                               "mr-2 h-4 w-4",
                               selectedSessionId === "all"
                                 ? "opacity-100"
-                                : "opacity-0"
+                                : "opacity-0",
                             )}
                           />
                           Tất cả các đợt
@@ -684,7 +691,7 @@ export function GraduationGuidanceTable({
                               "mr-2 h-4 w-4",
                               selectedSessionId === "ongoing"
                                 ? "opacity-100"
-                                : "opacity-0"
+                                : "opacity-0",
                             )}
                           />
                           Các đợt đang thực hiện
@@ -714,14 +721,14 @@ export function GraduationGuidanceTable({
                                         "mr-2 h-4 w-4",
                                         selectedSessionId === session.id
                                           ? "opacity-100"
-                                          : "opacity-0"
+                                          : "opacity-0",
                                       )}
                                     />
                                     {session.name}
                                   </CommandItem>
                                 ))}
                               </CommandGroup>
-                            )
+                            ),
                         )}
                       </CommandGroup>
                     </CommandList>

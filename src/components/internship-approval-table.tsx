@@ -110,6 +110,7 @@ const reportStatusLabel: Record<ReportStatus, string> = {
   not_yet_reporting: "Chưa báo cáo",
   not_reporting: "Chưa ĐK",
   completed: "Hoàn thành",
+  withdrawn: "Rút khỏi",
 };
 
 const reportStatusVariant: Record<
@@ -121,6 +122,7 @@ const reportStatusVariant: Record<
   not_yet_reporting: "outline",
   not_reporting: "outline",
   completed: "default",
+  withdrawn: "destructive",
 };
 
 const statusLabel: Record<string, string> = {

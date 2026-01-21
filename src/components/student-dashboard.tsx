@@ -61,7 +61,7 @@ import { Alert, AlertTitle, AlertDescription } from "./ui/alert";
 import { Dialog, DialogTrigger, DialogContent } from "./ui/dialog";
 import { ViewStudentEarlyInternshipProgressDialog } from "./view-student-early-internship-progress-dialog";
 import { ScrollArea } from "./ui/scroll-area";
-import { ProgressTimeline } from "./progress-timeline";
+import { ProgressTimeline, type Step } from "./progress-timeline";
 
 interface StudentDashboardProps {
   user: User;
@@ -82,6 +82,7 @@ const internshipRegStatusConfig = {
 };
 
 const earlyInternshipStatusLabel: Record<EarlyInternship["status"], string> = {
+  pending_approval: "Chờ duyệt",
   pending_admin_approval: "Chờ duyệt",
   pending_company_approval: "Chờ duyệt",
   ongoing: "Đang thực tập",
@@ -95,6 +96,7 @@ const earlyInternshipStatusVariant: Record<
   EarlyInternship["status"],
   "secondary" | "default" | "outline" | "destructive"
 > = {
+  pending_approval: "secondary",
   pending_admin_approval: "secondary",
   pending_company_approval: "secondary",
   ongoing: "default",
@@ -126,14 +128,14 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
 
   const studentDocRef = useMemoFirebase(
     () => doc(firestore, "students", user.uid),
-    [firestore, user.uid]
+    [firestore, user.uid],
   );
   const { data: studentData, isLoading: isLoadingStudent } =
     useDoc<Student>(studentDocRef);
 
   const settingsDocRef = useMemoFirebase(
     () => doc(firestore, "systemSettings", "features"),
-    [firestore]
+    [firestore],
   );
   const { data: settings } = useDoc<SystemSettings>(settingsDocRef);
   const goalHours = settings?.earlyInternshipGoalHours ?? 700;
@@ -142,9 +144,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     () =>
       query(
         collection(firestore, "graduationDefenseSessions"),
-        where("status", "in", ["ongoing", "upcoming"])
+        where("status", "in", ["ongoing", "upcoming"]),
       ),
-    [firestore]
+    [firestore],
   );
   const { data: availableSessions, isLoading: isLoadingSessions } =
     useCollection<GraduationDefenseSession>(sessionsQuery);
@@ -154,10 +156,10 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       activeGraduationRegistration
         ? query(
             collection(firestore, "weeklyProgressReports"),
-            where("registrationId", "==", activeGraduationRegistration.id)
+            where("registrationId", "==", activeGraduationRegistration.id),
           )
         : null,
-    [firestore, activeGraduationRegistration]
+    [firestore, activeGraduationRegistration],
   );
   const { data: pastReports } =
     useCollection<WeeklyProgressReport>(reportsQuery);
@@ -166,9 +168,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     () =>
       query(
         collection(firestore, "earlyInternships"),
-        where("studentId", "==", user.uid)
+        where("studentId", "==", user.uid),
       ),
-    [firestore, user.uid]
+    [firestore, user.uid],
   );
   const { data: earlyInternships, isLoading: isLoadingEarlyInternships } =
     useCollection<EarlyInternship>(earlyInternshipQuery);
@@ -178,7 +180,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     return [...earlyInternships].sort(
       (a, b) =>
         (b.startDate?.toDate()?.getTime() || 0) -
-        (a.startDate?.toDate()?.getTime() || 0)
+        (a.startDate?.toDate()?.getTime() || 0),
     )[0];
   }, [earlyInternships]);
 
@@ -187,10 +189,10 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       activeEarlyInternship
         ? query(
             collection(firestore, "earlyInternshipWeeklyReports"),
-            where("earlyInternshipId", "==", activeEarlyInternship.id)
+            where("earlyInternshipId", "==", activeEarlyInternship.id),
           )
         : null,
-    [firestore, activeEarlyInternship]
+    [firestore, activeEarlyInternship],
   );
   const { data: earlyInternshipReports } =
     useCollection<EarlyInternshipWeeklyReport>(earlyInternshipReportsQuery);
@@ -198,11 +200,11 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
   const earlyInternshipProgress = useMemo(() => {
     const approvedReports =
       earlyInternshipReports?.filter(
-        (report) => report.status === "approved"
+        (report) => report.status === "approved",
       ) || [];
     const totalHours = approvedReports.reduce(
       (sum, report) => sum + report.hours,
-      0
+      0,
     );
     return {
       totalHours,
@@ -237,29 +239,29 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         const registrationsQuery = query(
           collection(firestore, "defenseRegistrations"),
           where("studentDocId", "==", user.uid),
-          where("sessionId", "in", activeSessionIds)
+          where("sessionId", "in", activeSessionIds),
         );
         const registrationsSnapshot = await getDocs(registrationsQuery);
         const allCurrentRegistrations = registrationsSnapshot.docs.map(
-          (d) => ({ id: d.id, ...d.data() } as DefenseRegistration)
+          (d) => ({ id: d.id, ...d.data() }) as DefenseRegistration,
         );
 
         // Find Graduation Registration
         const gradReg = allCurrentRegistrations.find(
-          (r) => r.graduationStatus === "reporting"
+          (r) => r.graduationStatus === "reporting",
         );
         if (gradReg) {
           setActiveGraduationRegistration(gradReg);
           const gradSession = availableSessions.find(
-            (s) => s.id === gradReg.sessionId
+            (s) => s.id === gradReg.sessionId,
           );
           setActiveGraduationSession(gradSession || null);
         } else {
           // If no specific grad registration, set the most relevant session (e.g., ongoing)
           setActiveGraduationSession(
             availableSessions.find(
-              (s) => s.status === "ongoing" && s.sessionType !== "internship"
-            ) || null
+              (s) => s.status === "ongoing" && s.sessionType !== "internship",
+            ) || null,
           );
         }
 
@@ -269,19 +271,19 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         const internReg = allCurrentRegistrations.find(
           (r) =>
             r.internshipStatus === "reporting" ||
-            r.internshipRegistrationStatus === "approved"
+            r.internshipRegistrationStatus === "approved",
         );
         if (internReg) {
           setActiveInternshipRegistration(internReg);
           const internSession = availableSessions.find(
-            (s) => s.id === internReg.sessionId
+            (s) => s.id === internReg.sessionId,
           );
           setActiveInternshipSession(internSession || null);
         } else {
           setActiveInternshipSession(
             availableSessions.find(
-              (s) => s.status === "ongoing" && s.sessionType !== "graduation"
-            ) || null
+              (s) => s.status === "ongoing" && s.sessionType !== "graduation",
+            ) || null,
           );
         }
       } catch (error) {
@@ -329,15 +331,15 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     reportSubmission(activeInternshipSession)?.isWindowOpen ||
     settings?.forceOpenReportSubmission;
 
-  const graduationTimelineSteps = [
+  const graduationTimelineSteps: Step[] = [
     {
       name: "Đăng ký đề tài",
       status:
         activeGraduationRegistration?.projectRegistrationStatus === "approved"
           ? "completed"
           : activeGraduationRegistration?.projectTitle
-          ? "current"
-          : "pending",
+            ? "current"
+            : "pending",
       date: toDate(activeGraduationSession?.registrationDeadline),
       description: "Hạn chót",
     },
@@ -347,9 +349,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         activeGraduationRegistration?.proposalStatus === "approved"
           ? "completed"
           : activeGraduationRegistration?.projectRegistrationStatus ===
-            "approved"
-          ? "current"
-          : "pending",
+              "approved"
+            ? "current"
+            : "pending",
       date: toDate(activeGraduationSession?.registrationDeadline)
         ? add(toDate(activeGraduationSession?.registrationDeadline)!, {
             weeks: 2,
@@ -364,8 +366,8 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         !canSubmitGraduationReport
           ? "current"
           : activeGraduationRegistration?.proposalStatus === "approved"
-          ? "completed"
-          : "pending",
+            ? "completed"
+            : "pending",
     },
     {
       name: "Nộp báo cáo tốt nghiệp",
@@ -373,9 +375,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         activeGraduationRegistration?.reportStatus === "approved"
           ? "completed"
           : canSubmitGraduationReport &&
-            activeGraduationRegistration?.proposalStatus === "approved"
-          ? "current"
-          : "pending",
+              activeGraduationRegistration?.proposalStatus === "approved"
+            ? "current"
+            : "pending",
       date: reportSubmission(activeGraduationSession)?.endDate || null,
       description: "Hạn chót",
     },
@@ -390,7 +392,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
     },
   ];
 
-  const internshipTimelineSteps = [
+  const internshipTimelineSteps: Step[] = [
     {
       name: "Đăng ký thực tập",
       status:
@@ -398,8 +400,8 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         "approved"
           ? "completed"
           : activeInternshipRegistration?.internship_companyName
-          ? "current"
-          : "pending",
+            ? "current"
+            : "pending",
       date: toDate(activeInternshipSession?.registrationDeadline),
       description: "Hạn chót",
     },
@@ -408,9 +410,9 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
       status: activeInternshipRegistration?.internship_acceptanceLetterLink
         ? "completed"
         : activeInternshipRegistration?.internshipRegistrationStatus ===
-          "approved"
-        ? "current"
-        : "pending",
+            "approved"
+          ? "current"
+          : "pending",
       date: toDate(activeInternshipSession?.registrationDeadline)
         ? add(toDate(activeInternshipSession?.registrationDeadline)!, {
             weeks: 2,
@@ -425,17 +427,17 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
         !canSubmitInternshipReport
           ? "current"
           : activeInternshipRegistration?.internship_acceptanceLetterLink
-          ? "completed"
-          : "pending",
+            ? "completed"
+            : "pending",
     },
     {
       name: "Nộp báo cáo & giấy tờ",
       status: activeInternshipRegistration?.internship_reportLink
         ? "completed"
         : canSubmitInternshipReport &&
-          activeInternshipRegistration?.internship_acceptanceLetterLink
-        ? "current"
-        : "pending",
+            activeInternshipRegistration?.internship_acceptanceLetterLink
+          ? "current"
+          : "pending",
       date: reportSubmission(activeInternshipSession)?.endDate || null,
       description: "Hạn chót",
     },
@@ -587,7 +589,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                             {toDate(session.registrationDeadline)
                               ? format(
                                   toDate(session.registrationDeadline)!,
-                                  "dd/MM/yyyy"
+                                  "dd/MM/yyyy",
                                 )
                               : "N/A"}
                           </p>
@@ -596,7 +598,7 @@ export function StudentDashboard({ user }: StudentDashboardProps) {
                             {toDate(session.expectedReportDate)
                               ? format(
                                   toDate(session.expectedReportDate)!,
-                                  "dd/MM/yyyy"
+                                  "dd/MM/yyyy",
                                 )
                               : "N/A"}
                           </p>

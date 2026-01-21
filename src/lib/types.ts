@@ -25,6 +25,19 @@ export type SystemUser = {
   createdAt: any;
 };
 
+// Supervisor user profile fields are used across the app.
+// Keep these optional to support legacy data shapes.
+export type Supervisor = SystemUser & {
+  role: "supervisor";
+  userId?: string;
+  firstName?: string;
+  lastName?: string;
+  department?: string;
+  facultyRank?: string;
+  canGuideGraduation?: boolean;
+  canGuideInternship?: boolean;
+};
+
 export type DefenseSession = {
   id: string;
   name: string;
@@ -50,6 +63,9 @@ export type DefenseSession = {
   lockInternshipRegistration?: boolean;
 };
 
+// Backward-compatible alias used throughout the app.
+export type GraduationDefenseSession = DefenseSession;
+
 export type Student = {
   id: string; // This is the Firebase Auth UID
   userId: string; // This is also the Firebase Auth UID, for relation
@@ -73,7 +89,8 @@ export type ReportStatus =
   | "exempted"
   | "not_yet_reporting"
   | "not_reporting"
-  | "completed";
+  | "completed"
+  | "withdrawn";
 export type ProjectRegistrationStatus = "pending" | "approved" | "rejected";
 export type ProposalStatus =
   | "not_submitted"
@@ -136,7 +153,10 @@ export type DefenseRegistration = {
   internship_acceptanceLetterLink?: string;
   internship_feedbackFormLink?: string;
   internship_reportLink?: string;
-  internship_registrationType?: "from_list" | "self_arranged" | "early_internship";
+  internship_registrationType?:
+    | "from_list"
+    | "self_arranged"
+    | "early_internship";
   internship_positionId?: string;
   internship_positionTitle?: string;
 };
@@ -163,6 +183,7 @@ export type StudentWithRegistrationDetails = DefenseRegistration & {
 
 export type SubmissionReport = DefenseRegistration & {
   sessionName: string;
+  className?: string;
 };
 
 export type DefenseCouncilMember = {
@@ -289,6 +310,9 @@ export type InternshipCompany = {
   contactEmail?: string;
   contactPhone?: string;
   isLHU?: boolean;
+  // Legacy/alternate naming used in some screens.
+  supervisorId?: string;
+  supervisorName?: string;
   companySupervisorId?: string;
   companySupervisorName?: string;
   logoUrl?: string;
@@ -311,6 +335,7 @@ export type EarlyInternship = {
   endDate?: any;
   proofLink?: string;
   status:
+    | "pending_approval" // legacy
     | "pending_admin_approval"
     | "pending_company_approval"
     | "ongoing"
@@ -329,6 +354,10 @@ export type EarlyInternshipWeeklyReport = {
   supervisorId: string;
   weekNumber: number;
   hours: number;
+  submissionDate?: any;
+  workDone?: string;
+  nextWeekPlan?: string;
+  proofLink?: string;
   supervisorComments?: string;
   reviewDate: any;
   status: "pending_review" | "approved" | "rejected";

@@ -93,16 +93,16 @@ export function EarlyInternshipForm({
   const [selectedDepartment, setSelectedDepartment] =
     useState<InternshipCompany | null>(null);
   const [selectedPositionId, setSelectedPositionId] = useState<string | null>(
-    null
+    null,
   );
 
   const lhuDepartmentsQuery = useMemoFirebase(
     () =>
       query(
         collection(firestore, "internshipCompanies"),
-        where("isLHU", "==", true)
+        where("isLHU", "==", true),
       ),
-    [firestore]
+    [firestore],
   );
   const { data: lhuDepartments, isLoading: isLoadingDepartments } =
     useCollection<InternshipCompany>(lhuDepartmentsQuery);
@@ -309,7 +309,7 @@ export function EarlyInternshipForm({
                         field.onChange(val);
                         setSelectedPositionId(val || null);
                         const pos = selectedDepartment.positions?.find(
-                          (p) => p.id === val
+                          (p) => p.id === val,
                         );
                         if (pos?.supervisorId) {
                           form.setValue("supervisorId", pos.supervisorId);
@@ -321,7 +321,7 @@ export function EarlyInternshipForm({
                         <SelectValue placeholder="Chọn vị trí..." />
                       </SelectTrigger>
                       <SelectContent>
-                        {selectedDepartment.positions.map((pos) => (
+                        {selectedDepartment.positions?.map((pos) => (
                           <SelectItem key={pos.id} value={pos.id}>
                             {pos.title}
                           </SelectItem>
@@ -348,7 +348,7 @@ export function EarlyInternshipForm({
                         variant={"outline"}
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (
@@ -386,7 +386,7 @@ export function EarlyInternshipForm({
                         variant={"outline"}
                         className={cn(
                           "w-full pl-3 text-left font-normal",
-                          !field.value && "text-muted-foreground"
+                          !field.value && "text-muted-foreground",
                         )}
                       >
                         {field.value ? (

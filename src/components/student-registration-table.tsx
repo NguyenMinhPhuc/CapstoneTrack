@@ -141,6 +141,7 @@ const registrationStatusLabel: Record<
   not_yet_reporting: "Chưa báo cáo",
   not_reporting: "Không BC",
   completed: "Hoàn thành",
+  withdrawn: "Rút khỏi",
 };
 
 const registrationStatusVariant: Record<
@@ -152,6 +153,7 @@ const registrationStatusVariant: Record<
   not_yet_reporting: "outline",
   not_reporting: "outline",
   completed: "default",
+  withdrawn: "destructive",
 };
 
 const UNASSIGNED_VALUE = "__UNASSIGNED__";
@@ -204,12 +206,12 @@ export function StudentRegistrationTable({
     () =>
       collection(
         firestore,
-        `graduationDefenseSessions/${sessionId}/subCommittees`
+        `graduationDefenseSessions/${sessionId}/subCommittees`,
       ),
-    [firestore, sessionId]
+    [firestore, sessionId],
   );
   const { data: subCommittees } = useCollection<DefenseSubCommittee>(
-    subcommitteesCollectionRef
+    subcommitteesCollectionRef,
   );
 
   // Query để lấy tất cả báo cáo tiến độ của session này
@@ -217,9 +219,9 @@ export function StudentRegistrationTable({
     () =>
       query(
         collection(firestore, "weeklyProgressReports"),
-        where("sessionId", "==", sessionId)
+        where("sessionId", "==", sessionId),
       ),
-    [firestore, sessionId]
+    [firestore, sessionId],
   );
   const { data: progressReports } =
     useCollection<WeeklyProgressReport>(progressReportsQuery);
@@ -227,16 +229,16 @@ export function StudentRegistrationTable({
   // Query để lấy TẤT CẢ đăng ký của tất cả sinh viên (để đếm số đợt)
   const allRegistrationsQuery = useMemoFirebase(
     () => collection(firestore, "defenseRegistrations"),
-    [firestore]
+    [firestore],
   );
   const { data: allRegistrations } = useCollection<DefenseRegistration>(
-    allRegistrationsQuery
+    allRegistrationsQuery,
   );
 
   // Query để lấy tất cả các sessions (để biết sessionType)
   const allSessionsQuery = useMemoFirebase(
     () => collection(firestore, "graduationDefenseSessions"),
-    [firestore]
+    [firestore],
   );
   const { data: allSessions } = useCollection<DefenseSession>(allSessionsQuery);
 
@@ -273,7 +275,7 @@ export function StudentRegistrationTable({
 
     initialData.forEach((currentReg) => {
       const studentSessions = allRegistrations.filter(
-        (reg) => reg.studentDocId === currentReg.studentDocId
+        (reg) => reg.studentDocId === currentReg.studentDocId,
       );
 
       // Chỉ đếm các session có type là 'internship' hoặc 'combined'
@@ -283,7 +285,7 @@ export function StudentRegistrationTable({
             const type = sessionTypeMap.get(reg.sessionId);
             return type === "internship" || type === "combined";
           })
-          .map((reg) => reg.sessionId)
+          .map((reg) => reg.sessionId),
       );
 
       countMap.set(currentReg.id, internshipSessions.size);
@@ -300,7 +302,7 @@ export function StudentRegistrationTable({
 
     initialData.forEach((currentReg) => {
       const studentSessions = allRegistrations.filter(
-        (reg) => reg.studentDocId === currentReg.studentDocId
+        (reg) => reg.studentDocId === currentReg.studentDocId,
       );
 
       // Chỉ đếm các session có type là 'graduation' hoặc 'combined'
@@ -310,7 +312,7 @@ export function StudentRegistrationTable({
             const type = sessionTypeMap.get(reg.sessionId);
             return type === "graduation" || type === "combined";
           })
-          .map((reg) => reg.sessionId)
+          .map((reg) => reg.sessionId),
       );
 
       countMap.set(currentReg.id, graduationSessions.size);
@@ -428,7 +430,7 @@ export function StudentRegistrationTable({
   // Kiểm tra xem tất cả sinh viên trong trang hiện tại đã được chọn chưa
   const currentPageIds = paginatedRegistrations?.map((s) => s.id) || [];
   const selectedInCurrentPage = currentPageIds.filter((id) =>
-    selectedRowIds.includes(id)
+    selectedRowIds.includes(id),
   );
   const isAllSelected =
     currentPageIds.length > 0 &&
@@ -462,12 +464,12 @@ export function StudentRegistrationTable({
 
   const handleSubcommitteeChange = async (
     registrationId: string,
-    newSubCommitteeId: string
+    newSubCommitteeId: string,
   ) => {
     const registrationDocRef = doc(
       firestore,
       "defenseRegistrations",
-      registrationId
+      registrationId,
     );
     const subCommitteeIdToUpdate =
       newSubCommitteeId === UNASSIGNED_VALUE ? "" : newSubCommitteeId;
@@ -498,7 +500,7 @@ export function StudentRegistrationTable({
 
   const handleRevertToReporting = async (
     registrationIds: string[],
-    type: ReportStatusType
+    type: ReportStatusType,
   ) => {
     if (registrationIds.length === 0) {
       toast({
@@ -580,7 +582,7 @@ export function StudentRegistrationTable({
       const registrationDocRef = doc(
         firestore,
         "defenseRegistrations",
-        registrationToDelete.id
+        registrationToDelete.id,
       );
       batch.delete(registrationDocRef);
       count = 1;
@@ -625,7 +627,7 @@ export function StudentRegistrationTable({
       // Bỏ chọn tất cả sinh viên trong trang hiện tại
       const currentPageIds = paginatedRegistrations?.map((s) => s.id) || [];
       setSelectedRowIds((prev) =>
-        prev.filter((id) => !currentPageIds.includes(id))
+        prev.filter((id) => !currentPageIds.includes(id)),
       );
     }
   };
@@ -776,7 +778,7 @@ export function StudentRegistrationTable({
                   <SpecialExemptionForm
                     registrations={
                       initialData?.filter((reg) =>
-                        selectedRowIds.includes(reg.id)
+                        selectedRowIds.includes(reg.id),
                       ) || []
                     }
                     onFinished={handleGroupActionFinished}
@@ -795,7 +797,7 @@ export function StudentRegistrationTable({
                   <WithdrawRegistrationForm
                     registrations={
                       initialData?.filter((reg) =>
-                        selectedRowIds.includes(reg.id)
+                        selectedRowIds.includes(reg.id),
                       ) || []
                     }
                     onFinished={handleGroupActionFinished}
@@ -921,7 +923,7 @@ export function StudentRegistrationTable({
                       <SelectItem key={key} value={key}>
                         {label}
                       </SelectItem>
-                    )
+                    ),
                   )}
                 </SelectContent>
               </Select>
@@ -1003,8 +1005,8 @@ export function StudentRegistrationTable({
                       isAllSelected
                         ? true
                         : isSomeSelected
-                        ? "indeterminate"
-                        : false
+                          ? "indeterminate"
+                          : false
                     }
                     onCheckedChange={handleSelectAll}
                   />
@@ -1217,7 +1219,7 @@ export function StudentRegistrationTable({
                                 onClick={() =>
                                   handleRevertToReporting(
                                     [reg.id],
-                                    "graduation"
+                                    "graduation",
                                   )
                                 }
                                 disabled={reg.graduationStatus === "reporting"}
@@ -1228,7 +1230,7 @@ export function StudentRegistrationTable({
                                 onClick={() =>
                                   handleRevertToReporting(
                                     [reg.id],
-                                    "internship"
+                                    "internship",
                                   )
                                 }
                                 disabled={reg.internshipStatus === "reporting"}
@@ -1331,8 +1333,8 @@ export function StudentRegistrationTable({
               {selectedRowIds.length > 0
                 ? ` ${selectedRowIds.length} sinh viên đã chọn`
                 : registrationToDelete
-                ? ` sinh viên ${registrationToDelete.studentName}`
-                : " sinh viên này"}
+                  ? ` sinh viên ${registrationToDelete.studentName}`
+                  : " sinh viên này"}
               khỏi đợt báo cáo.
             </AlertDialogDescription>
           </AlertDialogHeader>

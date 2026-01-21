@@ -1,11 +1,14 @@
 import InternshipRegistrationClient from "@/components/internship-registration-client";
 
-export default function InternshipRegistrationPage({
+type SearchParams = Record<string, string | string[] | undefined>;
+
+export default async function InternshipRegistrationPage({
   searchParams,
 }: {
-  searchParams?: { [key: string]: string | string[] | undefined };
+  searchParams?: Promise<SearchParams>;
 }) {
-  const earlyIdParam = searchParams?.earlyId;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const earlyIdParam = resolvedSearchParams?.earlyId;
   const earlyId = Array.isArray(earlyIdParam)
     ? earlyIdParam[0]
     : (earlyIdParam as string | undefined);
