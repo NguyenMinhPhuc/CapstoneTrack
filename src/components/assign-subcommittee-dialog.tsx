@@ -36,9 +36,14 @@ export function AssignSubcommitteeDialog({
   const [progress, setProgress] = useState(0);
 
   const projectGroups = useMemo(() => {
-    // Filter for unassigned students who are in 'reporting' status
+    // Filter for unassigned students.
+    // Subcommittee assignment is an organizational step and shouldn't depend on the reporting state,
+    // otherwise newly added students will never get a subCommitteeId and will be invisible in council grading.
     const unassigned = allRegistrations.filter(
-      (reg) => !reg.subCommitteeId && reg.graduationStatus === "reporting",
+      (reg) =>
+        !reg.subCommitteeId &&
+        reg.graduationStatus !== "withdrawn" &&
+        reg.internshipStatus !== "withdrawn",
     );
     const groups = new Map<string, DefenseRegistration[]>();
 
@@ -69,8 +74,7 @@ export function AssignSubcommitteeDialog({
       toast({
         variant: "destructive",
         title: "Không có sinh viên nào",
-        description:
-          'Tất cả sinh viên đã được phân công hoặc không ở trạng thái "Báo cáo".',
+        description: "Tất cả sinh viên đã được phân công hoặc đã rút khỏi đợt.",
       });
       return;
     }
